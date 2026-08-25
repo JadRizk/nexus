@@ -1,0 +1,226 @@
+/* ============================================================================
+   @nexus/react — styles.css
+   Pseudo-elements and pseudo-classes for the parts a component can't reach
+   through an inline `style` prop: corner ticks, hover/active states on
+   native elements, and the capped blink. Everything here reads its values
+   from @nexus/tokens custom properties — this file owns no colours itself.
+   ========================================================================== */
+
+/* ------------------------------------------------------------------ Panel */
+/* Corner ticks read from the semantic --nx-border-accent token (a border
+   element, not text) and sit flush over the panel's own hairline border via
+   a -1px inset, matching how a real two-sided border corner would sit.
+   Reference implements only "tl" + "br" (one pseudo-element each, drawn with
+   real borders); Corner and Panel promise all four, so this extends the same
+   idea — one pseudo-element per pair of corners, each carrying two tiny
+   gradients (a horizontal arm + a vertical arm) gated by `--tl/--tr/--bl/--br`
+   through an attribute-substring selector against `data-nx-corners`. */
+.nx-panel[data-nx-corners]:not([data-nx-corners="none"]) {
+  --tl: transparent;
+  --tr: transparent;
+  --bl: transparent;
+  --br: transparent;
+}
+
+.nx-panel[data-nx-corners*="tl"] { --tl: var(--nx-border-accent); }
+.nx-panel[data-nx-corners*="tr"] { --tr: var(--nx-border-accent); }
+.nx-panel[data-nx-corners*="bl"] { --bl: var(--nx-border-accent); }
+.nx-panel[data-nx-corners*="br"] { --br: var(--nx-border-accent); }
+
+.nx-panel[data-nx-corners]:not([data-nx-corners="none"])::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  pointer-events: none;
+  background-repeat: no-repeat;
+  background-image:
+    linear-gradient(to right, var(--tl) 0 var(--nx-tick), transparent 0),
+    linear-gradient(to bottom, var(--tl) 0 var(--nx-tick), transparent 0),
+    linear-gradient(to left, var(--tr) 0 var(--nx-tick), transparent 0),
+    linear-gradient(to bottom, var(--tr) 0 var(--nx-tick), transparent 0),
+    linear-gradient(to right, var(--bl) 0 var(--nx-tick), transparent 0),
+    linear-gradient(to top, var(--bl) 0 var(--nx-tick), transparent 0),
+    linear-gradient(to left, var(--br) 0 var(--nx-tick), transparent 0),
+    linear-gradient(to top, var(--br) 0 var(--nx-tick), transparent 0);
+  background-size:
+    var(--nx-tick) var(--nx-hairline), var(--nx-hairline) var(--nx-tick),
+    var(--nx-tick) var(--nx-hairline), var(--nx-hairline) var(--nx-tick),
+    var(--nx-tick) var(--nx-hairline), var(--nx-hairline) var(--nx-tick),
+    var(--nx-tick) var(--nx-hairline), var(--nx-hairline) var(--nx-tick);
+  background-position:
+    top left, top left,
+    top right, top right,
+    bottom left, bottom left,
+    bottom right, bottom right;
+}
+
+/* ----------------------------------------------------------------- Button */
+.nx-btn {
+  font-family: var(--nx-font-mono);
+  font-size: var(--nx-text-2xs);
+  font-weight: var(--nx-weight-medium);
+  letter-spacing: var(--nx-track-wide);
+  text-transform: uppercase;
+  color: var(--nx-fg-muted);
+  background: transparent;
+  border: var(--nx-hairline) solid var(--nx-border-default);
+  border-radius: var(--nx-radius);
+  padding: var(--nx-space-3) var(--nx-space-4);
+  cursor: pointer;
+  transition:
+    background var(--nx-dur-micro) var(--nx-ease),
+    color var(--nx-dur-micro) var(--nx-ease),
+    border-color var(--nx-dur-micro) var(--nx-ease);
+}
+
+.nx-btn:hover {
+  border-color: var(--nx-border-accent);
+  color: var(--nx-fg-accent);
+  background: var(--nx-bg-hover);
+}
+
+.nx-btn[data-active="1"] {
+  background: var(--nx-fg-accent);
+  border-color: var(--nx-border-accent);
+  color: var(--nx-bg-canvas);
+}
+
+.nx-btn:disabled {
+  color: var(--nx-fg-disabled);
+  cursor: not-allowed;
+}
+
+.nx-btn:disabled:hover {
+  border-color: var(--nx-border-default);
+  background: transparent;
+}
+
+/* --------------------------------------------------------------- TabStrip */
+.nx-tab {
+  flex: 1;
+  font-family: var(--nx-font-mono);
+  font-size: var(--nx-text-2xs);
+  font-weight: var(--nx-weight-medium);
+  letter-spacing: var(--nx-track-wider);
+  text-transform: uppercase;
+  color: var(--nx-fg-subtle);
+  background: transparent;
+  border: 0;
+  padding: var(--nx-space-3) 0;
+  cursor: pointer;
+  transition: color var(--nx-dur-micro), background var(--nx-dur-micro);
+}
+
+.nx-tab:hover { color: var(--nx-fg-accent); }
+
+/* Same invert-to-accent language as Button's active state, not a tint. */
+.nx-tab[data-active="1"] {
+  background: var(--nx-fg-accent);
+  color: var(--nx-bg-canvas);
+}
+
+/* ----------------------------------------------------------------- Slider */
+/* The track uses --nx-border-strong (3:1), not the decorative hairline —
+   a slider track is a UI component boundary under WCAG 1.4.11. */
+.nx-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 2px;
+  background: var(--nx-border-strong);
+  outline: none;
+  border-radius: var(--nx-radius);
+  cursor: pointer;
+}
+
+.nx-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 8px;
+  height: 14px;
+  background: var(--nx-fg-accent);
+  border-radius: var(--nx-radius);
+  cursor: pointer;
+  box-shadow: 0 0 8px var(--nx-fg-accent);
+}
+
+.nx-slider::-moz-range-thumb {
+  width: 8px;
+  height: 14px;
+  background: var(--nx-fg-accent);
+  border: 0;
+  border-radius: var(--nx-radius);
+  cursor: pointer;
+  box-shadow: 0 0 8px var(--nx-fg-accent);
+}
+
+.nx-slider::-moz-range-track {
+  background: var(--nx-border-strong);
+  height: 2px;
+}
+
+.nx-slider:focus-visible::-webkit-slider-thumb {
+  outline: var(--nx-focus-width) solid var(--nx-focus-ring);
+  outline-offset: var(--nx-focus-offset);
+}
+
+.nx-slider:focus-visible::-moz-range-thumb {
+  outline: var(--nx-focus-width) solid var(--nx-focus-ring);
+  outline-offset: var(--nx-focus-offset);
+}
+
+/* -------------------------------------------------------------- ToggleRow */
+.nx-row {
+  display: flex;
+  align-items: center;
+  gap: var(--nx-space-3);
+  padding: var(--nx-space-1) var(--nx-space-2);
+  cursor: pointer;
+  user-select: none;
+  min-height: 24px;
+  transition: background var(--nx-dur-micro);
+}
+
+.nx-row:hover { background: var(--nx-bg-hover); }
+
+/* Negative offset keeps the ring inside the row instead of bleeding into
+   the next one in a tightly stacked list. */
+.nx-row:focus-within {
+  outline: var(--nx-focus-width) solid var(--nx-focus-ring);
+  outline-offset: calc(var(--nx-focus-offset) * -1);
+}
+
+/* ------------------------------------------------------------- BlinkCursor */
+/* 1.06s step-cursor ≈ 0.94Hz — under the WCAG 2.3.1 3Hz seizure threshold.
+   The prototype blinked at 9Hz; the cap lives on the --nx-blink token. */
+.nx-blink {
+  animation: nx-blink var(--nx-blink) steps(1) infinite;
+}
+
+@keyframes nx-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nx-blink { animation: none; opacity: 1; }
+}
+
+/* ---------------------------------------------------------------- Skip link */
+.nx-skip {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  background: var(--nx-fg-accent);
+  color: var(--nx-bg-canvas);
+  padding: var(--nx-space-2) var(--nx-space-4);
+  font-family: var(--nx-font-mono);
+  font-size: var(--nx-text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--nx-track-wide);
+}
+
+.nx-skip:focus {
+  left: var(--nx-space-4);
+  top: var(--nx-space-4);
+}

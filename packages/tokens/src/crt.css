@@ -1,0 +1,140 @@
+/* ============================================================================
+   @nexus/tokens — crt.css
+   A CSS-only approximation of the PoC's four-pass shader pipeline.
+
+   The real thing renders to a texture, bright-passes, blurs twice, then
+   composites with barrel distortion, chromatic aberration, an aperture grille,
+   a rolling refresh bar, grain and glitch slicing. You cannot run that behind
+   every panel in an application — it is a full-screen GPU pipeline.
+
+   This gets ~80% of the read for one extra composited pseudo-element and no
+   JavaScript. Reserve the shader version for a hero canvas.
+
+   Usage:
+     <div class="nx-crt">…</div>                 scanlines + vignette
+     <div class="nx-crt nx-crt--grain">…</div>   + static grain
+     <div class="nx-crt" data-nx-crt="off">      disabled, zero cost
+     <span class="nx-crt-split">TEXT</span>      chromatic fringing on text
+   ========================================================================== */
+
+/* overflow: hidden clips the rolling refresh bar to this box. Without it, the
+   translateY() animation on .nx-crt--roll::before carries the pseudo-element
+   past the container's bottom edge every cycle, and since transformed boxes
+   still count toward the nearest scrollable ancestor's scroll area, the page
+   kept growing an extra ~4.6x the container's height of empty scrollable
+   space instead of clipping the bar out of view. */
+.nx-crt { position: relative; isolation: isolate; overflow: hidden; }
+
+/* Scanlines + aperture grille + vignette, all in one painted layer.
+   pointer-events:none so it never intercepts interaction. */
+.nx-crt::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    /* vignette */
+    radial-gradient(
+      ellipse at center,
+      transparent 40%,
+      rgba(0, 0, 0, 0.35) 100%
+    ),
+    /* horizontal scanlines */
+    repeating-linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, calc(0.26 * var(--nx-crt-scan-opacity))) 0,
+      rgba(0, 0, 0, calc(0.26 * var(--nx-crt-scan-opacity))) 1px,
+      transparent 1px,
+      transparent var(--nx-crt-scan-size)
+    ),
+    /* vertical RGB aperture grille */
+    repeating-linear-gradient(
+      to right,
+      rgba(255, 0, 0, calc(0.05 * var(--nx-crt-scan-opacity))) 0px 1px,
+      rgba(0, 255, 0, calc(0.05 * var(--nx-crt-scan-opacity))) 1px 2px,
+      rgba(0, 0, 255, calc(0.05 * var(--nx-crt-scan-opacity))) 2px 3px
+    );
+}
+
+/* Rolling refresh bar. Separate element so it can be disabled independently —
+   a slow-moving luminance sweep is the part most likely to bother someone. */
+.nx-crt--roll::before {
+  content: "";
+  position: absolute;
+  left: 0; right: 0;
+  height: 22%;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(198, 241, 53, 0.035) 45%,
+    rgba(198, 241, 53, 0.055) 50%,
+    rgba(198, 241, 53, 0.035) 55%,
+    transparent
+  );
+  animation: nx-crt-roll 7s linear infinite;
+}
+
+@keyframes nx-crt-roll {
+  from { transform: translateY(-120%); }
+  to   { transform: translateY(560%); }
+}
+
+/* Static grain via inline SVG turbulence — no image request, no canvas. */
+.nx-crt--grain::after {
+  background-image:
+    url("data:image/svg+xml;utf8,\
+<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'>\
+<filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/>\
+<feColorMatrix type='saturate' values='0'/></filter>\
+<rect width='120' height='120' filter='url(%23n)' opacity='0.045'/></svg>"),
+    radial-gradient(ellipse at center, transparent 40%, rgba(0, 0, 0, 0.35) 100%),
+    repeating-linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, calc(0.26 * var(--nx-crt-scan-opacity))) 0,
+      rgba(0, 0, 0, calc(0.26 * var(--nx-crt-scan-opacity))) 1px,
+      transparent 1px,
+      transparent var(--nx-crt-scan-size)
+    );
+}
+
+/* Chromatic fringing for text. This is what keeps DOM overlays from reading as
+   pasted on top of a CRT surface — the PoC uses it on the graph labels. */
+.nx-crt-split {
+  text-shadow:
+     1px 0 var(--nx-crt-r),
+    -1px 0 var(--nx-crt-b),
+     0 0 7px rgba(0, 0, 0, 0.98);
+}
+
+.nx-crt-glow {
+  text-shadow: 0 0 8px currentColor, 0 0 2px rgba(0, 0, 0, 0.9);
+}
+
+/* ------------------------------------------------------------- opt out --
+   Two independent escape hatches. `data-nx-crt="off"` is an author decision;
+   prefers-reduced-motion is the user's, and it wins unconditionally.
+
+   Two supported placements: the same element as `.nx-crt` (self-contained
+   usage), or an ancestor — typically the theme root — turning off every
+   `.nx-crt` region beneath it in one place (how NexusProvider + Shell
+   compose in practice, since `data-nx-crt` lives on the provider root while
+   `.nx-crt` is applied further down the tree). */
+[data-nx-crt="off"]::after,
+[data-nx-crt="off"]::before,
+[data-nx-crt="off"] .nx-crt::after,
+[data-nx-crt="off"] .nx-crt::before { display: none !important; }
+
+[data-nx-crt="off"] .nx-crt-split { text-shadow: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .nx-crt--roll::before { animation: none; display: none; }
+}
+
+/* Users who ask for more contrast should not be fighting a scanline overlay. */
+@media (prefers-contrast: more) {
+  .nx-crt::after, .nx-crt::before { display: none; }
+  .nx-crt-split { text-shadow: none; }
+}

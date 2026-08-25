@@ -1,0 +1,17 @@
+{
+  "name": "nexus-ds",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w packages/tokens -w packages/react",
+    "dev": "npm run dev --workspace apps/showcase",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4"
+  }
+}
