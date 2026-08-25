@@ -11,6 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@nexus/graph": "*",
     "@nexus/react": "*",
     "@nexus/tokens": "*",
     "react": "^18.3.1",

@@ -5,7 +5,7 @@ import { HomePage } from "./pages/HomePage.js";
 import { PrimitivesPage } from "./pages/PrimitivesPage.js";
 import { OverlaysPage } from "./pages/OverlaysPage.js";
 import { TokensPage } from "./pages/TokensPage.js";
-import NexusCyberdeck from "./graph/NexusCyberdeck.jsx";
+import NexusCyberdeck from "./graph/NexusCyberdeck.js";
 import GlitchLab from "./effects/GlitchLab.jsx";
 
 type Route = "home" | "graph" | "glitch" | "primitives" | "overlays" | "tokens";

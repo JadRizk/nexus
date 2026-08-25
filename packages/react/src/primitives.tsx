@@ -170,10 +170,16 @@ export interface KeyValueProps {
 }
 
 export function KeyValue({ label, value, style }: KeyValueProps) {
+  // minWidth: 0 lets the row itself shrink inside a grid/flex column that's
+  // narrower than "label + value" at full width (a bare `1fr` track won't
+  // do this on its own — it sizes to content unless told otherwise); the
+  // ellipsis on each span is what actually degrades gracefully once shrunk,
+  // instead of the value clipping mid-character with no indication.
+  const truncate: CSSProperties = { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" };
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", gap: "var(--nx-space-4)", ...style }}>
-      <span style={{ color: "var(--nx-fg-tertiary)", letterSpacing: "var(--nx-track-wide)" }}>{label}</span>
-      <span style={{ color: "var(--nx-fg-default)", fontVariantNumeric: "tabular-nums" }}>{value}</span>
+    <div style={{ display: "flex", justifyContent: "space-between", gap: "var(--nx-space-4)", minWidth: 0, ...style }}>
+      <span style={{ color: "var(--nx-fg-tertiary)", letterSpacing: "var(--nx-track-wide)", ...truncate }}>{label}</span>
+      <span style={{ color: "var(--nx-fg-default)", fontVariantNumeric: "tabular-nums", ...truncate }}>{value}</span>
     </div>
   );
 }

@@ -151,6 +151,15 @@
    Focus was defined on a single button class in the PoC. Here it is global and
    non-removable — WCAG 2.4.7.
    ========================================================================== */
+/* The browser's default 8px body margin (and white UA background) shows
+   around a full-bleed `.nx-root` otherwise — a consumer sizing its shell to
+   100vh doesn't override either, since both live above `.nx-root` on `html`/
+   `body`, not on the tree this design system actually controls. */
+html, body {
+  margin: 0;
+  background: var(--nx-void);
+}
+
 .nx-root {
   background: var(--nx-bg-canvas);
   color: var(--nx-fg-default);
