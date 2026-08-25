@@ -1,0 +1,16 @@
+{
+  "pkg": "@nexus/react",
+  "globalName": "NexusReact",
+  "projectId": "8749f66b-3b06-4391-9ae6-412ca39cb4bf",
+  "shape": "package",
+  "buildCmd": "npm run build -w packages/tokens -w packages/react",
+  "provider": {
+    "component": "NexusProvider",
+    "props": { "theme": "hud-aa", "crt": false }
+  },
+  "overrides": {
+    "Drawer": { "cardMode": "single", "viewport": "420x520" },
+    "CommandPalette": { "cardMode": "single", "viewport": "620x520" }
+  },
+  "readmeHeader": ".design-sync/conventions.md"
+}

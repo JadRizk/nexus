@@ -3,3 +3,10 @@ dist/
 *.tsbuildinfo
 .DS_Store
 .claude/scheduled_tasks.lock
+
+# design-sync
+.ds-sync/
+ds-bundle/
+.design-sync/.cache/
+.design-sync/learnings/
+.design-sync/node_modules
