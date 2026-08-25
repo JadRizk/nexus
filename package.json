@@ -7,11 +7,14 @@
     "apps/*"
   ],
   "scripts": {
-    "build": "npm run build -w packages/tokens -w packages/react",
+    "build": "npm run build -w packages/tokens -w packages/react && npm run build:preview",
+    "build:preview": "node scripts/build-preview.mjs",
     "dev": "npm run dev --workspace apps/showcase",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
   },
   "devDependencies": {
+    "esbuild": "^0.27.0",
     "typescript": "^5.5.4"
   }
 }

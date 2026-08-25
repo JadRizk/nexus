@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run typecheck
+
+      - run: npm run test
+
+      - name: Build (packages + reference/preview.jsx)
+        run: npm run build
+
+      - name: Fail if reference/preview.jsx has drifted from packages/
+        run: |
+          if ! git diff --quiet -- reference/preview.jsx; then
+            echo "::error file=reference/preview.jsx::reference/preview.jsx is out of date. Run 'npm run build:preview' and commit the result."
+            git diff -- reference/preview.jsx
+            exit 1
+          fi

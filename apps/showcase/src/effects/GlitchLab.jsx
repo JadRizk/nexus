@@ -620,7 +620,7 @@ const CHAINS = [
 const EV_BY_ID = Object.fromEntries(EVENTS.map((e) => [e.id, e]));
 
 /** Sample a keyframe track. A "step" key holds the previous value, then jumps. */
-function sampleKeys(keys, u) {
+export function sampleKeys(keys, u) {
   if (u <= keys[0][0]) return keys[0][1];
   for (let i = 1; i < keys.length; i++) {
     const k1 = keys[i], k0 = keys[i - 1];
@@ -633,14 +633,14 @@ function sampleKeys(keys, u) {
   return keys[keys.length - 1][1];
 }
 
-const hashf = (n) => { const s = Math.sin(n) * 43758.5453123; return s - Math.floor(s); };
+export const hashf = (n) => { const s = Math.sin(n) * 43758.5453123; return s - Math.floor(s); };
 
 /**
  * The chaos term. Quantised to ~24Hz so it stutters like frames dropping
  * rather than shimmering like noise, and it only ever *reduces* the envelope —
  * a fault that randomly gets stronger than its own peak feels wrong.
  */
-function chaosEnv(u, chaos, seed) {
+export function chaosEnv(u, chaos, seed) {
   if (chaos <= 0) return 1;
   const f = Math.floor(u * 24);
   const n = hashf(f * 7.13 + seed * 31.7);

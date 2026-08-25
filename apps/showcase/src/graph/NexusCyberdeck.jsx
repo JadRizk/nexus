@@ -1,24 +1,42 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import * as THREE from "three";
+import tokens from "@nexus/tokens/tokens.json";
+import {
+  Panel, Button, TabStrip, Slider, ToggleRow, SectionHeading, HazardRule, Wordmark, BlinkCursor,
+  KeyValue, Stat, MeterRow, Glyph, LinkGlyph, GLYPH_SHAPES, useFocusTrap,
+} from "@nexus/react";
 
 /* ============================================================================
    NEXUS // CYBERDECK  —  typed knowledge graph on a CRT
 
    Passes: scene→RT (accumulating) · bright+blurH · blurV · composite
+
+   The console chrome below is built from @nexus/react — it used to be a
+   second hand-rolled copy of Panel/Button/Slider/Drawer (its own `cx-*` CSS
+   classes) with its own retyped hex palette. Ported the same way GlitchLab
+   was: the physics/shaders/render loop below are untouched.
    ========================================================================== */
 
-const VOID = "#08090A";
-const ACID = "#C6F135";
-const ALARM = "#FF2E63";
-const DATA = "#17E2E5";
-const SODIUM = "#FF8A1E";
-const PHOS = "#DFF5C7";
-const GRID = "#1B2318";
-const DIM = "#3D4C39";
-const MID = "#6E8768";
+// GPU buffers (Three.js colour parsing) and the canvas 2D `font` property
+// used for label-width measurement both sit outside the CSSOM, so neither
+// can resolve a `var(--nx-*)` custom property — they need real values. These
+// are sourced from tokens.json (the same source tokens.css is generated
+// from) instead of being retyped, so they can't drift from it.
+const VOID = tokens.primitive.colour.void;
+const ACID = tokens.primitive.colour.acid.value;
+const ALARM = tokens.primitive.colour.alarm.value;
+const DATA = tokens.primitive.colour.data.value;
+const SODIUM = tokens.primitive.colour.sodium.value;
+const PHOS = tokens.primitive.colour.phosphor.value;
+// The console keeps the prototype's original "hud" grey ramp on purpose —
+// like the site CRT toggle, this page opts out of the AA theme switch.
+const GRID = tokens.primitive.greyRamp.hud["grey-100"];
+const DIM = tokens.primitive.greyRamp.hud["grey-300"];
+const MID = tokens.primitive.greyRamp.hud["grey-600"];
 
+// Canvas measureText() cannot resolve var(--nx-font-mono) either — kept as
+// the literal stack tokens.css itself expands that custom property to.
 const MONO = 'ui-monospace,"SF Mono",Menlo,Consolas,monospace';
-const STENCIL = 'Impact,Haettenschweiler,"Arial Narrow Bold","Arial Narrow",sans-serif';
 
 /* Label tiers. A graph where every node shouts its name is unreadable, and one
    where nothing is named is unnavigable. Tier decides when a name earns screen
@@ -1253,296 +1271,252 @@ export default function NexusCyberdeck() {
 
   if (fatal) {
     return (
-      <div style={{ width: "100%", height: "100%", background: VOID, color: PHOS, padding: 40, font: `400 12px/1.8 ${MONO}` }}>
-        <div style={{ color: ALARM, letterSpacing: ".24em", marginBottom: 12 }}>▚ SYSTEM HALT</div>
+      <div style={{
+        width: "100%", height: "100%", background: "var(--nx-bg-canvas)", color: "var(--nx-fg-default)",
+        padding: "var(--nx-space-8)", fontFamily: "var(--nx-font-mono)", fontSize: "var(--nx-text-sm)", lineHeight: 1.8,
+      }}>
+        <div style={{ color: "var(--nx-fg-critical)", letterSpacing: "var(--nx-track-wider)", marginBottom: "var(--nx-space-4)" }}>▚ SYSTEM HALT</div>
         <div>{fatal}</div>
       </div>
     );
   }
 
   return (
-    <div style={{ position: "relative", width: "100%", height: "100%", background: VOID, overflow: "hidden" }}>
-      <style>{`
-        @keyframes nxblink { 0%,49%{opacity:1} 50%,100%{opacity:0} }
-        .cx-cur { animation: nxblink 1.06s steps(1) infinite; }
-        .cx-s { -webkit-appearance:none; appearance:none; width:100%; height:1px; background:${GRID}; outline:none; }
-        .cx-s::-webkit-slider-thumb { -webkit-appearance:none; width:8px; height:12px; background:${ACID};
-          cursor:pointer; box-shadow:0 0 8px ${ACID}; }
-        .cx-s::-moz-range-thumb { width:8px; height:12px; border:none; border-radius:0; background:${ACID};
-          cursor:pointer; box-shadow:0 0 8px ${ACID}; }
-        .cx-p { position:relative; background:rgba(8,10,9,.9); border:1px solid ${GRID};
-          font:400 9.5px/1.5 ${MONO}; color:${MID}; letter-spacing:.06em;
-          box-shadow:inset 0 0 40px rgba(198,241,53,.035); }
-        .cx-p::before { content:""; position:absolute; top:-1px; left:-1px; width:9px; height:9px;
-          border-top:1px solid ${ACID}; border-left:1px solid ${ACID}; }
-        .cx-p::after { content:""; position:absolute; bottom:-1px; right:-1px; width:9px; height:9px;
-          border-bottom:1px solid ${ACID}; border-right:1px solid ${ACID}; }
-        .cx-r { display:flex; align-items:center; gap:7px; padding:2px 4px; cursor:pointer;
-          user-select:none; transition:background .1s; }
-        .cx-r:hover { background:rgba(198,241,53,.09); }
-        .cx-b { border:1px solid ${GRID}; background:transparent; color:#8FA886; cursor:pointer;
-          font:600 9px/1 ${MONO}; letter-spacing:.14em; padding:7px 6px; text-transform:uppercase; }
-        .cx-b:hover { border-color:${ACID}; color:${ACID}; background:rgba(198,241,53,.08); }
-        .cx-b[data-on="1"] { border-color:${ACID}; color:${VOID}; background:${ACID}; }
-        .cx-t { flex:1; border:none; background:transparent; cursor:pointer; padding:5px 0;
-          font:600 8.5px/1 ${MONO}; letter-spacing:.16em; text-transform:uppercase; }
-        .cx-hz { height:5px; background:repeating-linear-gradient(-45deg,${ACID} 0 4px,transparent 4px 9px); opacity:.32; }
-        .cx-col { position:absolute; top:14px; left:14px; width:218px; display:flex; flex-direction:column;
-          gap:10px; max-height:calc(100% - 28px); overflow-y:auto; scrollbar-width:none; }
-        .cx-col::-webkit-scrollbar { display:none; }
-        .cx-lb::before { content:""; position:absolute; left:-8px; top:50%; width:7px; height:1px;
-          background:currentColor; opacity:.5; }
-        .cx-nb { display:flex; align-items:center; gap:6px; padding:3px 5px; cursor:pointer;
-          border-left:1px solid transparent; transition:all .1s; }
-        .cx-nb:hover { background:rgba(198,241,53,.10); border-left-color:${ACID}; }
-        .cx-dr { position:absolute; top:14px; right:14px; bottom:14px; width:296px;
-          display:flex; flex-direction:column; transition:transform .22s cubic-bezier(.2,.9,.3,1), opacity .18s; }
-      `}</style>
-
+    <div data-nx-theme="hud" style={{
+      position: "relative", width: "100%", height: "100%", background: "var(--nx-bg-canvas)", overflow: "hidden",
+    }}>
+      {/* Leader tick for the imperatively-created label pool (see the mount
+          effect above) — a pseudo-element on a dynamically created DOM node
+          has no other way to be styled, so this one rule stays local. */}
+      <style>{`.cx-lb::before { content:""; position:absolute; left:-8px; top:50%; width:7px; height:1px; background:currentColor; opacity:.5; }`}</style>
       <div ref={mountRef} style={{ position: "absolute", inset: 0 }} />
       <div ref={labelRef} style={{ position: "absolute", inset: 0, pointerEvents: "none" }} />
 
       {/* -------------------------------------------------- left: console+legend */}
-      <div className="cx-col">
-        <div className="cx-p" style={{ padding: "0 0 9px", flexShrink: 0 }}>
-          <div style={{ padding: "9px 10px 7px", borderBottom: `1px solid ${GRID}` }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-              <span style={{ font: `400 21px/0.8 ${STENCIL}`, color: PHOS, letterSpacing: "-.02em",
-                transform: "skewX(-9deg)", display: "inline-block", textShadow: `2px 0 ${ALARM}55,-2px 0 ${DATA}55` }}>NEXUS</span>
-              <span style={{ font: `400 20px/0.8 ${STENCIL}`, color: stats.fps > 50 ? ACID : stats.fps > 28 ? SODIUM : ALARM }}>{stats.fps}</span>
-            </div>
-            <div style={{ marginTop: 5, color: "#4A5C46", fontSize: 8.5, letterSpacing: ".2em" }}>
-              CYBERDECK v2.6 <span className="cx-cur" style={{ color: ACID }}>█</span>
-            </div>
+      <div style={{
+        position: "absolute", top: "var(--nx-space-5)", left: "var(--nx-space-5)", width: 218,
+        display: "flex", flexDirection: "column", gap: "var(--nx-space-3)",
+        maxHeight: "calc(100% - var(--nx-space-6))", overflowY: "auto", scrollbarWidth: "none",
+      }}>
+        <Panel style={{ flexShrink: 0 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+            <Wordmark size="var(--nx-text-lg)">NEXUS</Wordmark>
+            <span style={{
+              fontFamily: "var(--nx-font-stencil)", fontSize: "var(--nx-text-xl)", lineHeight: 0.8,
+              color: stats.fps > 50 ? "var(--nx-fg-accent)" : stats.fps > 28 ? "var(--nx-fg-warning)" : "var(--nx-fg-critical)",
+            }}>{stats.fps}</span>
           </div>
-          <div className="cx-hz" />
-          <div style={{ padding: "8px 10px 0", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1px 9px" }}>
-            <KV k="NODES" v={stats.nodes} /><KV k="LINKS" v={stats.edges} />
-            <KV k="DRAWN" v={stats.drawn} /><KV k="FRAME" v={stats.ms} />
-            <KV k="SOLVER" v={<span style={{ color: stats.sim === "LOCKED" ? ACID : SODIUM }}>{stats.sim}</span>} />
-            <KV k="VTXATTR" v={<span style={{ color: stats.attribs >= 8 ? MID : ALARM }}>{stats.attribs}/7</span>} />
+          <div style={{ marginTop: "var(--nx-space-2)", color: "var(--nx-fg-tertiary)", fontSize: "var(--nx-text-2xs)", letterSpacing: "var(--nx-track-wider)" }}>
+            CYBERDECK v2.6 <BlinkCursor />
           </div>
-          <div style={{ display: "flex", margin: "9px 10px 7px", border: `1px solid ${GRID}` }}>
-            {["crt", "sim"].map((t) => (
-              <button key={t} className="cx-t" onClick={() => setTab(t)}
-                style={{ color: tab === t ? VOID : "#5E7359", background: tab === t ? ACID : "transparent" }}>
-                {t === "crt" ? "OPTICS" : "SOLVER"}
-              </button>
-            ))}
+          <HazardRule style={{ margin: "var(--nx-space-3) 0" }} />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1px var(--nx-space-4)" }}>
+            <KeyValue label="NODES" value={stats.nodes} />
+            <KeyValue label="LINKS" value={stats.edges} />
+            <KeyValue label="DRAWN" value={stats.drawn} />
+            <KeyValue label="FRAME" value={stats.ms} />
+            <KeyValue label="SOLVER" value={<span style={{ color: stats.sim === "LOCKED" ? "var(--nx-fg-accent)" : "var(--nx-fg-warning)" }}>{stats.sim}</span>} />
+            <KeyValue label="VTXATTR" value={<span style={{ color: stats.attribs >= 8 ? "var(--nx-fg-muted)" : "var(--nx-fg-critical)" }}>{stats.attribs}/7</span>} />
           </div>
-          <div style={{ padding: "0 10px" }}>
-            {tab === "crt" ? (
-              <>
-                <S l="scanlines" v={cfg.scan} min={0} max={1} step={.02} on={(v) => set("scan", v)} f={(x) => x.toFixed(2)} />
-                <S l="aberration" v={cfg.aberr} min={0} max={3} step={.05} on={(v) => set("aberr", v)} f={(x) => x.toFixed(2)} />
-                <S l="curvature" v={cfg.curve} min={0} max={1.6} step={.02} on={(v) => set("curve", v)} f={(x) => x.toFixed(2)} />
-                <S l="bloom" v={cfg.bloom} min={0} max={2.5} step={.05} on={(v) => set("bloom", v)} f={(x) => x.toFixed(2)} />
-                <S l="grain" v={cfg.grain} min={0} max={1.5} step={.02} on={(v) => set("grain", v)} f={(x) => x.toFixed(2)} />
-                <S l="glitch" v={cfg.glitch} min={0} max={2} step={.05} on={(v) => set("glitch", v)} f={(x) => x.toFixed(2)} />
-                <S l="persistence" v={cfg.trails} min={0} max={.92} step={.01} on={(v) => set("trails", v)} f={(x) => x.toFixed(2)} />
-                <S l="packet rate" v={cfg.flowSpeed} min={0} max={1} step={.01} on={(v) => set("flowSpeed", v)} f={(x) => x.toFixed(2)} />
-              </>
-            ) : (
-              <>
-                <S l="link width" v={cfg.edgeWidth} min={.6} max={5} step={.1} on={(v) => set("edgeWidth", v)} f={(x) => x.toFixed(1)} />
-                <S l="link gain" v={cfg.edgeOpacity} min={0} max={2.5} step={.05} on={(v) => set("edgeOpacity", v)} f={(x) => x.toFixed(2)} />
-                <S l="node glow" v={cfg.glow} min={0} max={2.5} step={.05} on={(v) => set("glow", v)} f={(x) => x.toFixed(2)} />
-                <S l="repulsion" v={cfg.repulsion} min={100} max={2200} step={20} on={(v) => set("repulsion", v)} />
-                <S l="link length" v={cfg.linkDistance} min={20} max={200} step={2} on={(v) => set("linkDistance", v)} />
-                <S l="cursor field" v={cfg.cursorForce} min={-1} max={1} step={.05} on={(v) => set("cursorForce", v)} f={(x) => x.toFixed(2)} />
-                <S l="drift" v={cfg.settle} min={0} max={.06} step={.002} on={(v) => set("settle", v)} f={(x) => (x === 0 ? "LOCK" : x.toFixed(3))} />
-                <S l="corpus size" v={total} min={60} max={600} step={20}
-                  on={(v) => { setSelected(null); setIsolate(-1); setTotal(v); }} />
-              </>
-            )}
-          </div>
-          <div style={{ padding: "4px 10px 0" }}>
-            <div style={{ color: DIM, letterSpacing: ".15em", fontSize: 8.5, textTransform: "uppercase", marginBottom: 4 }}>names</div>
-            <div style={{ display: "flex", border: `1px solid ${GRID}` }}>
-              {[["auto", "AUTO"], ["key", "KEY"], ["all", "ALL"], ["off", "OFF"]].map(([v, l]) => (
-                <button key={v} className="cx-t" onClick={() => setLabelMode(v)}
-                  style={{ color: labelMode === v ? VOID : "#5E7359", background: labelMode === v ? ACID : "transparent" }}>{l}</button>
-              ))}
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: 4, padding: "8px 10px 0" }}>
-            <button className="cx-b" style={{ flex: 1 }} onClick={() => api.current.fit?.()}>Fit</button>
-            <button className="cx-b" style={{ flex: 1 }} onClick={() => api.current.reheat?.()}>Reheat</button>
-            <button className="cx-b" style={{ flex: 1 }} onClick={() => setRunning((r) => !r)}>{running ? "Halt" : "Run"}</button>
-            <button className="cx-b" style={{ flex: 1 }} onClick={() => { setSelected(null); setIsolate(-1); setSeed((s) => s + 1); }}>Reseed</button>
-          </div>
-        </div>
 
-        <div className="cx-p" style={{ padding: "9px 8px", flexShrink: 0 }}>
-          <Hd>/// entity class</Hd>
+          <div style={{ margin: "var(--nx-space-4) 0 var(--nx-space-3)" }}>
+            <TabStrip
+              value={tab}
+              onChange={setTab}
+              label="Optics or solver controls"
+              tabs={[{ value: "crt", label: "Optics" }, { value: "sim", label: "Solver" }]}
+            />
+          </div>
+
+          {tab === "crt" ? (
+            <>
+              <Slider label="scanlines" value={cfg.scan} min={0} max={1} step={0.02} onChange={(v) => set("scan", v)} format={(x) => x.toFixed(2)} />
+              <Slider label="aberration" value={cfg.aberr} min={0} max={3} step={0.05} onChange={(v) => set("aberr", v)} format={(x) => x.toFixed(2)} />
+              <Slider label="curvature" value={cfg.curve} min={0} max={1.6} step={0.02} onChange={(v) => set("curve", v)} format={(x) => x.toFixed(2)} />
+              <Slider label="bloom" value={cfg.bloom} min={0} max={2.5} step={0.05} onChange={(v) => set("bloom", v)} format={(x) => x.toFixed(2)} />
+              <Slider label="grain" value={cfg.grain} min={0} max={1.5} step={0.02} onChange={(v) => set("grain", v)} format={(x) => x.toFixed(2)} />
+              <Slider label="glitch" value={cfg.glitch} min={0} max={2} step={0.05} onChange={(v) => set("glitch", v)} format={(x) => x.toFixed(2)} />
+              <Slider label="persistence" value={cfg.trails} min={0} max={0.92} step={0.01} onChange={(v) => set("trails", v)} format={(x) => x.toFixed(2)} />
+              <Slider label="packet rate" value={cfg.flowSpeed} min={0} max={1} step={0.01} onChange={(v) => set("flowSpeed", v)} format={(x) => x.toFixed(2)} />
+            </>
+          ) : (
+            <>
+              <Slider label="link width" value={cfg.edgeWidth} min={0.6} max={5} step={0.1} onChange={(v) => set("edgeWidth", v)} format={(x) => x.toFixed(1)} />
+              <Slider label="link gain" value={cfg.edgeOpacity} min={0} max={2.5} step={0.05} onChange={(v) => set("edgeOpacity", v)} format={(x) => x.toFixed(2)} />
+              <Slider label="node glow" value={cfg.glow} min={0} max={2.5} step={0.05} onChange={(v) => set("glow", v)} format={(x) => x.toFixed(2)} />
+              <Slider label="repulsion" value={cfg.repulsion} min={100} max={2200} step={20} onChange={(v) => set("repulsion", v)} />
+              <Slider label="link length" value={cfg.linkDistance} min={20} max={200} step={2} onChange={(v) => set("linkDistance", v)} />
+              <Slider label="cursor field" value={cfg.cursorForce} min={-1} max={1} step={0.05} onChange={(v) => set("cursorForce", v)} format={(x) => x.toFixed(2)} />
+              <Slider label="drift" value={cfg.settle} min={0} max={0.06} step={0.002} onChange={(v) => set("settle", v)} format={(x) => (x === 0 ? "LOCK" : x.toFixed(3))} />
+              <Slider label="corpus size" value={total} min={60} max={600} step={20}
+                onChange={(v) => { setSelected(null); setIsolate(-1); setTotal(v); }} />
+            </>
+          )}
+
+          <div style={{ color: "var(--nx-fg-tertiary)", fontSize: "var(--nx-text-2xs)", letterSpacing: "var(--nx-track-wide)", textTransform: "uppercase", marginBottom: "var(--nx-space-1)" }}>names</div>
+          <TabStrip
+            value={labelMode}
+            onChange={setLabelMode}
+            label="Label mode"
+            tabs={[{ value: "auto", label: "Auto" }, { value: "key", label: "Key" }, { value: "all", label: "All" }, { value: "off", label: "Off" }]}
+          />
+
+          <div style={{ display: "flex", gap: "var(--nx-space-2)", marginTop: "var(--nx-space-3)" }}>
+            <Button style={{ flex: 1 }} onClick={() => api.current.fit?.()}>Fit</Button>
+            <Button style={{ flex: 1 }} onClick={() => api.current.reheat?.()}>Reheat</Button>
+            <Button style={{ flex: 1 }} onClick={() => setRunning((r) => !r)}>{running ? "Halt" : "Run"}</Button>
+            <Button style={{ flex: 1 }} onClick={() => { setSelected(null); setIsolate(-1); setSeed((s) => s + 1); }}>Reseed</Button>
+          </div>
+        </Panel>
+
+        <Panel style={{ flexShrink: 0 }}>
+          <SectionHeading>/// entity class</SectionHeading>
           {NODE_KEYS.map((k) => (
-            <div key={k} className="cx-r" onClick={() => setNodeOn((p) => ({ ...p, [k]: !p[k] }))}>
-              <Glyph shape={NODE_TYPES[k].shape} color={NODE_TYPES[k].color} off={!nodeOn[k]} />
-              <span style={{ color: nodeOn[k] ? PHOS : "#33402F", flex: 1, letterSpacing: ".13em" }}>{NODE_TYPES[k].label}</span>
-              <span style={{ color: nodeOn[k] ? (NODE_TYPES[k].tier === 0 ? ACID : "#4A5C46") : "#2A3527", fontSize: 8 }}>
-                {NODE_TYPES[k].tier === 0 ? "ALWAYS" : `z${TIER_ZOOM[NODE_TYPES[k].tier].toFixed(1)}`}
-              </span>
-            </div>
+            <ToggleRow
+              key={k}
+              checked={!!nodeOn[k]}
+              onChange={(v) => setNodeOn((p) => ({ ...p, [k]: v }))}
+              icon={<Glyph shape={GLYPH_SHAPES[NODE_TYPES[k].shape]} colour={NODE_TYPES[k].color} muted={!nodeOn[k]} />}
+              label={NODE_TYPES[k].label}
+              meta={NODE_TYPES[k].tier === 0 ? "ALWAYS" : `z${TIER_ZOOM[NODE_TYPES[k].tier].toFixed(1)}`}
+            />
           ))}
-          <div style={{ height: 8 }} />
-          <Hd>/// relation</Hd>
+          <div style={{ height: "var(--nx-space-3)" }} />
+          <SectionHeading>/// relation</SectionHeading>
           {LINK_KEYS.map((k) => (
-            <div key={k} className="cx-r" onClick={() => setLinkOn((p) => ({ ...p, [k]: !p[k] }))}>
-              <LGlyph t={LINK_TYPES[k]} off={!linkOn[k]} />
-              <span style={{ color: linkOn[k] ? PHOS : "#33402F", flex: 1, letterSpacing: ".13em" }}>{LINK_TYPES[k].label}</span>
-            </div>
+            <ToggleRow
+              key={k}
+              checked={!!linkOn[k]}
+              onChange={(v) => setLinkOn((p) => ({ ...p, [k]: v }))}
+              icon={<LinkGlyph colour={LINK_TYPES[k].color} dashed={!!LINK_TYPES[k].dash} arrow={!!LINK_TYPES[k].arrow} width={LINK_TYPES[k].width * 1.05} muted={!linkOn[k]} />}
+              label={LINK_TYPES[k].label}
+            />
           ))}
-        </div>
+        </Panel>
       </div>
 
       {/* ------------------------------------------------------------- drawer */}
-      <div className="cx-dr" style={{
-        transform: selected ? "translateX(0)" : "translateX(324px)",
-        opacity: selected ? 1 : 0, pointerEvents: selected ? "auto" : "none",
-      }}>
-        {selected && (
-          <div className="cx-p" style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
-            <div style={{ padding: "10px 11px 8px", borderBottom: `1px solid ${GRID}`, flexShrink: 0 }}>
-              <div style={{ display: "flex", alignItems: "flex-start", gap: 7 }}>
-                <div style={{ paddingTop: 2 }}>
-                  <Glyph shape={NODE_TYPES[selected.type].shape} color={NODE_TYPES[selected.type].color} />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ color: NODE_TYPES[selected.type].color, font: `700 12px/1.25 ${MONO}`,
-                    letterSpacing: ".08em", textTransform: "uppercase", wordBreak: "break-all" }}>
-                    {selected.name}
-                  </div>
-                  <div style={{ color: DIM, marginTop: 3, letterSpacing: ".16em" }}>
-                    0x{selected.hex} · {NODE_TYPES[selected.type].code}
-                  </div>
-                </div>
-                <button className="cx-b" style={{ padding: "3px 6px", lineHeight: 1 }}
-                  onClick={() => { setSelected(null); setIsolate(-1); }}>✕</button>
-              </div>
-            </div>
-            <div className="cx-hz" style={{ flexShrink: 0 }} />
-
-            <div style={{ padding: "9px 11px", display: "grid", gridTemplateColumns: "1fr 1fr 1fr",
-              gap: 8, borderBottom: `1px solid ${GRID}`, flexShrink: 0 }}>
-              <Stat k="CLASS" v={NODE_TYPES[selected.type].label} c={NODE_TYPES[selected.type].color} />
-              <Stat k="STATE" v={selected.state} c={selected.state === "HOT" ? SODIUM : selected.state === "ORPHAN" ? ALARM : PHOS} />
-              <Stat k="DEGREE" v={String(selected.degree)} c={PHOS} />
-            </div>
-
-            <div style={{ padding: "9px 11px 4px", flexShrink: 0 }}>
-              <Hd>/// relation profile</Hd>
-              {selected.groups.map((g) => (
-                <div key={g.key} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
-                  <span style={{ color: LINK_TYPES[g.key].color, letterSpacing: ".12em", width: 66, flexShrink: 0 }}>
-                    {LINK_TYPES[g.key].label}
-                  </span>
-                  <div style={{ flex: 1, height: 4, background: "rgba(255,255,255,.045)" }}>
-                    <div style={{ height: "100%", width: `${Math.min(100, (g.rows.length / Math.max(1, selected.degree)) * 100)}%`,
-                      background: LINK_TYPES[g.key].color, boxShadow: `0 0 6px ${LINK_TYPES[g.key].color}` }} />
-                  </div>
-                  <span style={{ color: PHOS, width: 16, textAlign: "right" }}>{g.rows.length}</span>
-                </div>
-              ))}
-            </div>
-
-            <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "6px 11px 10px", scrollbarWidth: "thin" }}>
-              <Hd>/// adjacency [{selected.degree}]</Hd>
-              {selected.groups.map((g) => (
-                <div key={g.key} style={{ marginBottom: 7 }}>
-                  <div style={{ color: LINK_TYPES[g.key].color, fontSize: 8, letterSpacing: ".2em",
-                    opacity: .75, margin: "4px 0 2px" }}>{LINK_TYPES[g.key].label}</div>
-                  {g.rows.map((r) => (
-                    <div key={r.id} className="cx-nb" onClick={() => goTo(r.id)}>
-                      <span style={{ color: LINK_TYPES[g.key].color, width: 8, flexShrink: 0 }}>{r.out ? "▸" : "◂"}</span>
-                      <Glyph shape={NODE_TYPES[r.type].shape} color={NODE_TYPES[r.type].color} small />
-                      <span style={{ color: NODE_TYPES[r.type].color, flex: 1, textTransform: "uppercase",
-                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: ".07em" }}>
-                        {r.name}
-                      </span>
-                      <span style={{ color: "#3A4836", fontSize: 8, flexShrink: 0 }}>{NODE_TYPES[r.type].code}</span>
-                    </div>
-                  ))}
-                </div>
-              ))}
-            </div>
-
-            <div style={{ display: "flex", gap: 4, padding: "8px 11px", borderTop: `1px solid ${GRID}`, flexShrink: 0 }}>
-              <button className="cx-b" style={{ flex: 1 }} onClick={() => api.current.focus?.(selected.id)}>Focus</button>
-              <button className="cx-b" style={{ flex: 1 }} data-on={isolate === selected.id ? "1" : "0"}
-                onClick={() => setIsolate((v) => (v === selected.id ? -1 : selected.id))}>
-                {isolate === selected.id ? "Restore" : "Isolate"}
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+      <InspectorDrawer
+        selected={selected}
+        onClose={() => { setSelected(null); setIsolate(-1); }}
+        isolate={isolate}
+        onIsolate={() => setIsolate((v) => (v === selected.id ? -1 : selected.id))}
+        onFocus={() => api.current.focus?.(selected?.id)}
+        onGoTo={goTo}
+      />
 
       {/* ------------------------------------------------------------ hint bar */}
-      <div style={{ position: "absolute", bottom: 14, left: "50%", transform: "translateX(-50%)",
-        font: `400 8.5px/1 ${MONO}`, letterSpacing: ".2em", color: "#31402E",
-        textTransform: "uppercase", pointerEvents: "none", whiteSpace: "nowrap" }}>
+      <div style={{
+        position: "absolute", bottom: "var(--nx-space-4)", left: "50%", transform: "translateX(-50%)",
+        fontFamily: "var(--nx-font-mono)", fontSize: "var(--nx-text-2xs)", letterSpacing: "var(--nx-track-wider)",
+        color: "var(--nx-fg-disabled)", textTransform: "uppercase", pointerEvents: "none", whiteSpace: "nowrap",
+      }}>
         click lock · drag pan · scroll zoom · esc clear
       </div>
     </div>
   );
 }
 
-/* ------------------------------------------------------------------- bits */
-function Hd({ children }) {
-  return <div style={{ color: ACID, letterSpacing: ".2em", fontSize: 8, marginBottom: 4, opacity: .8 }}>{children}</div>;
-}
-function KV({ k, v }) {
+/* ------------------------------------------------------------------- bits
+   The node/edge inspector. Positioned `absolute` within this page's own
+   full-bleed root rather than the real <Drawer> component's `fixed`
+   viewport anchoring — this console sits below the site's sticky header, so
+   a viewport-fixed drawer would render partway behind it. Reuses
+   useFocusTrap directly to get the same focus-trap/Escape/restore behaviour
+   as <Drawer> without inheriting its positioning. */
+function InspectorDrawer({ selected, onClose, isolate, onIsolate, onFocus, onGoTo }) {
+  const trapRef = useFocusTrap(!!selected, onClose);
+  const titleId = React.useId();
   return (
-    <div style={{ display: "flex", justifyContent: "space-between" }}>
-      <span style={{ color: DIM, letterSpacing: ".14em" }}>{k}</span>
-      <span style={{ color: PHOS }}>{v}</span>
-    </div>
-  );
-}
-function Stat({ k, v, c }) {
-  return (
-    <div>
-      <div style={{ color: DIM, fontSize: 8, letterSpacing: ".18em", marginBottom: 2 }}>{k}</div>
-      <div style={{ color: c, fontSize: 9.5, letterSpacing: ".08em", overflow: "hidden", textOverflow: "ellipsis" }}>{v}</div>
-    </div>
-  );
-}
-function Glyph({ shape, color, off, small }) {
-  const c = off ? "#2C3729" : color;
-  const s = small ? 10 : 13;
-  const p = [
-    <circle key="0" cx="7" cy="7" r="4.3" />,
-    <polygon key="1" points="7,2.4 11,4.8 11,9.2 7,11.6 3,9.2 3,4.8" />,
-    <polygon key="2" points="7,2.2 11.4,7 7,11.8 2.6,7" />,
-    <circle key="3" cx="7" cy="7" r="4.1" fill="none" strokeWidth="2.1" stroke={c} />,
-    <rect key="4" x="3.2" y="3.2" width="7.6" height="7.6" />,
-    <polygon key="5" points="7,2.3 11.6,10.6 2.4,10.6" />,
-  ];
-  return (
-    <svg width={s} height={s} viewBox="0 0 14 14" style={{ flexShrink: 0, filter: off ? "none" : `drop-shadow(0 0 4px ${c})` }}>
-      <g fill={shape === 3 ? "none" : c}>{p[shape]}</g>
-    </svg>
-  );
-}
-function LGlyph({ t, off }) {
-  const c = off ? "#2C3729" : t.color;
-  return (
-    <svg width="13" height="13" viewBox="0 0 14 14" style={{ flexShrink: 0 }}>
-      <path d="M1 9.5 Q7 2 13 9.5" fill="none" stroke={c} strokeWidth={t.width * 1.05}
-        strokeDasharray={t.dash ? "2.2 1.9" : "none"} />
-      {t.arrow ? <polygon points="13,9.5 10,7.8 10.7,10.9" fill={c} /> : null}
-    </svg>
-  );
-}
-function S({ l, v, min, max, step, on, f }) {
-  return (
-    <div style={{ marginBottom: 7 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
-        <span style={{ color: DIM, letterSpacing: ".15em", fontSize: 8.5, textTransform: "uppercase" }}>{l}</span>
-        <span style={{ color: PHOS, fontSize: 8.5 }}>{f ? f(v) : v}</span>
-      </div>
-      <input className="cx-s" type="range" min={min} max={max} step={step} value={v}
-        onChange={(e) => on(parseFloat(e.target.value))} />
+    <div
+      ref={trapRef}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={selected ? titleId : undefined}
+      aria-hidden={selected ? undefined : true}
+      tabIndex={-1}
+      style={{
+        position: "absolute", top: "var(--nx-space-5)", right: "var(--nx-space-5)", bottom: "var(--nx-space-5)",
+        width: 296, display: "flex", flexDirection: "column",
+        transform: selected ? "translateX(0)" : "translateX(324px)",
+        opacity: selected ? 1 : 0, pointerEvents: selected ? "auto" : "none",
+        transition: "transform var(--nx-dur-panel) var(--nx-ease), opacity var(--nx-dur-fade) linear",
+      }}
+    >
+      {selected && (
+        <Panel padded={false} raised style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
+          <div style={{ padding: "var(--nx-space-5)", borderBottom: "var(--nx-hairline) solid var(--nx-border-default)", flexShrink: 0 }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: "var(--nx-space-3)" }}>
+              <div style={{ paddingTop: 2 }}>
+                <Glyph shape={GLYPH_SHAPES[NODE_TYPES[selected.type].shape]} colour={NODE_TYPES[selected.type].color} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div id={titleId} style={{
+                  color: NODE_TYPES[selected.type].color, fontFamily: "var(--nx-font-mono)", fontSize: "var(--nx-text-md)",
+                  fontWeight: 700, letterSpacing: "var(--nx-track-normal)", textTransform: "uppercase", wordBreak: "break-all",
+                }}>{selected.name}</div>
+                <div style={{ color: "var(--nx-fg-tertiary)", marginTop: "var(--nx-space-1)", letterSpacing: "var(--nx-track-wide)" }}>
+                  0x{selected.hex} · {NODE_TYPES[selected.type].code}
+                </div>
+              </div>
+              <Button onClick={onClose} aria-label="Close details" style={{ padding: "3px 6px", lineHeight: 1 }}>✕</Button>
+            </div>
+          </div>
+          <HazardRule style={{ flexShrink: 0 }} />
+
+          <div style={{
+            padding: "var(--nx-space-4) var(--nx-space-5)", display: "grid", gridTemplateColumns: "1fr 1fr 1fr",
+            gap: "var(--nx-space-3)", borderBottom: "var(--nx-hairline) solid var(--nx-border-default)", flexShrink: 0,
+          }}>
+            {/* CLASS carries the node's own category colour, which sits outside
+                the closed Tone enum (violet/lime aren't semantic tones) — same
+                markup Stat renders internally, with an explicit colour instead. */}
+            <div>
+              <div style={{ color: "var(--nx-fg-tertiary)", fontSize: "var(--nx-text-2xs)", letterSpacing: "var(--nx-track-wide)", marginBottom: "var(--nx-space-1)", textTransform: "uppercase" }}>CLASS</div>
+              <div style={{ color: NODE_TYPES[selected.type].color, fontSize: "var(--nx-text-xs)", letterSpacing: "var(--nx-track-normal)" }}>{NODE_TYPES[selected.type].label}</div>
+            </div>
+            <Stat label="STATE" value={selected.state} tone={selected.state === "HOT" ? "warning" : selected.state === "ORPHAN" ? "critical" : "default"} />
+            <Stat label="DEGREE" value={String(selected.degree)} />
+          </div>
+
+          <div style={{ padding: "var(--nx-space-4) var(--nx-space-5) var(--nx-space-1)", flexShrink: 0 }}>
+            <SectionHeading>/// relation profile</SectionHeading>
+            {selected.groups.map((g) => (
+              <MeterRow key={g.key} label={LINK_TYPES[g.key].label} value={g.rows.length} total={selected.degree} colour={LINK_TYPES[g.key].color} />
+            ))}
+          </div>
+
+          <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "var(--nx-space-2) var(--nx-space-5) var(--nx-space-4)" }}>
+            <SectionHeading>/// adjacency [{selected.degree}]</SectionHeading>
+            {selected.groups.map((g) => (
+              <div key={g.key} style={{ marginBottom: "var(--nx-space-3)" }}>
+                <div style={{ color: LINK_TYPES[g.key].color, fontSize: "var(--nx-text-2xs)", letterSpacing: "var(--nx-track-wider)", opacity: 0.75, margin: "var(--nx-space-2) 0" }}>
+                  {LINK_TYPES[g.key].label}
+                </div>
+                {g.rows.map((r) => (
+                  <button key={r.id} type="button" className="nx-row" onClick={() => onGoTo(r.id)}
+                    style={{ width: "100%", background: "none", border: 0, textAlign: "left", paddingLeft: 0 }}>
+                    <span aria-hidden="true" style={{ color: LINK_TYPES[g.key].color, width: 8, flexShrink: 0 }}>{r.out ? "▸" : "◂"}</span>
+                    <Glyph shape={GLYPH_SHAPES[NODE_TYPES[r.type].shape]} colour={NODE_TYPES[r.type].color} size={10} />
+                    <span style={{
+                      flex: 1, color: NODE_TYPES[r.type].color, textTransform: "uppercase",
+                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: "var(--nx-track-tight)",
+                    }}>{r.name}</span>
+                    <span style={{ color: "var(--nx-fg-disabled)", fontSize: "var(--nx-text-2xs)", flexShrink: 0 }}>{NODE_TYPES[r.type].code}</span>
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display: "flex", gap: "var(--nx-space-2)", padding: "var(--nx-space-4) var(--nx-space-5)", borderTop: "var(--nx-hairline) solid var(--nx-border-default)", flexShrink: 0 }}>
+            <Button style={{ flex: 1 }} onClick={onFocus}>Focus</Button>
+            <Button style={{ flex: 1 }} active={isolate === selected.id} onClick={onIsolate}>
+              {isolate === selected.id ? "Restore" : "Isolate"}
+            </Button>
+          </div>
+        </Panel>
+      )}
     </div>
   );
 }
