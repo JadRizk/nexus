@@ -1,0 +1,98 @@
+.nx-drawer {
+  position: fixed;
+  top: var(--nx-drawer-inset, var(--nx-space-5));
+  right: var(--nx-drawer-inset, var(--nx-space-5));
+  bottom: var(--nx-drawer-inset, var(--nx-space-5));
+  width: var(--nx-drawer-width, 296px);
+  display: flex;
+  flex-direction: column;
+  transition:
+    transform var(--nx-dur-panel) var(--nx-ease),
+    opacity var(--nx-dur-fade) linear;
+}
+
+/* Slides rather than mounting and unmounting, so the motion reads as one
+   object moving instead of two objects swapping. It travels its own width plus
+   the gutter, which is what clears the edge completely. */
+.nx-drawer[data-open="0"] {
+  transform: translateX(calc(var(--nx-drawer-width, 296px) + 28px));
+  opacity: 0;
+  pointer-events: none;
+}
+
+.nx-drawer[data-open="1"] {
+  transform: translateX(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.nx-drawer__panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.nx-drawer__header {
+  padding: var(--nx-space-5);
+  border-bottom: var(--nx-hairline) solid var(--nx-drawer-divider, var(--nx-border-default));
+  flex-shrink: 0;
+}
+
+.nx-drawer__head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--nx-space-3);
+}
+
+.nx-drawer__icon {
+  padding-top: 2px;
+}
+
+.nx-drawer__titles {
+  flex: 1;
+  min-width: 0;
+}
+
+.nx-drawer__title {
+  margin: 0;
+  color: var(--nx-drawer-accent, var(--nx-fg-info));
+  font-family: var(--nx-font-mono);
+  font-size: var(--nx-text-md);
+  font-weight: var(--nx-weight-bold);
+  line-height: 1.25;
+  letter-spacing: var(--nx-track-normal);
+  text-transform: uppercase;
+  /* Subjects are machine identifiers with no spaces to break on. */
+  word-break: break-all;
+}
+
+.nx-drawer__subtitle {
+  color: var(--nx-fg-tertiary);
+  margin-top: var(--nx-space-1);
+  letter-spacing: var(--nx-track-wide);
+}
+
+.nx-drawer__close {
+  padding: 3px 6px;
+  line-height: 1;
+}
+
+.nx-drawer__rule {
+  flex-shrink: 0;
+}
+
+.nx-drawer__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--nx-space-5);
+}
+
+.nx-drawer__footer {
+  display: flex;
+  gap: var(--nx-space-2);
+  padding: var(--nx-space-4) var(--nx-space-5);
+  border-top: var(--nx-hairline) solid var(--nx-drawer-divider, var(--nx-border-default));
+  flex-shrink: 0;
+}

@@ -37,7 +37,10 @@ function Shell() {
       {/* skip link — first tab stop, WCAG 2.4.1 */}
       <a href="#main" className="nx-skip">Skip to content</a>
 
-      <Panel corners="none" padded={false} style={{
+      {/* A banner landmark: screen-reader users can jump to it, and it gives
+          the site chrome a name distinct from the theme controls the Home
+          page renders in its own panel. */}
+      <Panel role="banner" corners="none" padded={false} style={{
         flexShrink: 0, borderTop: 0, borderLeft: 0, borderRight: 0,
       }}>
         <div style={{
@@ -49,7 +52,7 @@ function Shell() {
             <span style={{
               color: "var(--nx-fg-tertiary)", fontSize: "var(--nx-text-2xs)",
               letterSpacing: "var(--nx-track-wider)",
-            }}>DS v1.0 <BlinkCursor /></span>
+            }}>DS v2.0 <BlinkCursor /></span>
           </div>
 
           <nav aria-label="Sections" style={{ display: "flex", gap: "var(--nx-space-2)", flex: 1 }}>
@@ -74,7 +77,16 @@ function Shell() {
         <HazardRule />
       </Panel>
 
-      <main id="main" style={{ flex: 1, minHeight: 0, overflow: FULL_BLEED.has(route) ? "hidden" : "auto" }}>
+      {/* tabIndex=0 because this element scrolls. A scrollable region that is
+          not focusable cannot be scrolled by keyboard at all when it holds no
+          focusable content of its own — which is exactly the Tokens page, a
+          long column of swatches with nothing to tab to. It doubles as the
+          skip link's landing target. */}
+      <main
+        id="main"
+        tabIndex={0}
+        style={{ flex: 1, minHeight: 0, overflow: FULL_BLEED.has(route) ? "hidden" : "auto" }}
+      >
         {route === "home" && <HomePage />}
         {route === "graph" && <NexusCyberdeck />}
         {route === "glitch" && <GlitchLab />}
@@ -93,7 +105,7 @@ function Shell() {
           fontSize: "var(--nx-text-2xs)", letterSpacing: "var(--nx-track-wider)",
           textTransform: "uppercase", borderTop: "var(--nx-hairline) solid var(--nx-border-default)",
         }}>
-          {`Zero runtime dependencies · 78 tokens · 16 components${route === "overlays" ? " · ⌘K opens the palette" : ""}`}
+          {`Zero runtime dependencies · 83 tokens · 19 components${route === "overlays" ? " · ⌘K opens the palette" : ""}`}
         </footer>
       )}
     </div>

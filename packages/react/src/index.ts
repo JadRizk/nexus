@@ -2,8 +2,10 @@
    @nexus/react — public entry point
    ========================================================================== */
 
-export * from "./primitives.js";
-export * from "./overlays.js";
+export * from "./components/index.js";
+export * from "./hooks/index.js";
+export * from "./search/index.js";
+export * from "./colour.js";
 export * from "./types.js";
 
 export type { NexusTheme, Tone, Surface, BorderTone, SpaceStep, TextSize, Tracking, Duration } from "@nexus/tokens";

@@ -1,0 +1,9 @@
+.nx-hazard {
+  height: var(--nx-hazard-height, 5px);
+  opacity: var(--nx-hazard-opacity, 0.32);
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--nx-hazard-fg, var(--nx-fg-accent)) 0 4px,
+    transparent 4px 9px
+  );
+}

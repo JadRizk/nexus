@@ -1,0 +1,8 @@
+.nx-heading {
+  color: var(--nx-heading-fg, var(--nx-fg-accent));
+  font-size: var(--nx-heading-size, var(--nx-text-2xs));
+  letter-spacing: var(--nx-heading-tracking, var(--nx-track-wider));
+  text-transform: uppercase;
+  margin-bottom: var(--nx-space-2);
+  opacity: 0.85;
+}

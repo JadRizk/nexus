@@ -1,0 +1,32 @@
+.nx-meter {
+  display: flex;
+  align-items: center;
+  gap: var(--nx-space-3);
+  margin-bottom: var(--nx-space-1);
+}
+
+.nx-meter__label {
+  color: var(--nx-meter-fg, var(--nx-fg-info));
+  letter-spacing: var(--nx-track-wide);
+  width: var(--nx-meter-label-width, 66px);
+  flex-shrink: 0;
+}
+
+.nx-meter__track {
+  flex: 1;
+  height: var(--nx-meter-height, 4px);
+  background: var(--nx-meter-track, var(--nx-bg-track));
+}
+
+.nx-meter__fill {
+  height: 100%;
+  background: var(--nx-meter-fg, var(--nx-fg-info));
+  box-shadow: 0 0 6px var(--nx-meter-fg, var(--nx-fg-info));
+}
+
+.nx-meter__value {
+  color: var(--nx-meter-value-fg, var(--nx-fg-default));
+  width: 18px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}

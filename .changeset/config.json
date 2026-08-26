@@ -1,0 +1,16 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@3.1.4/schema.json",
+  "changelog": "@changesets/cli/changelog",
+  "commit": false,
+  "access": "public",
+  "baseBranch": "main",
+
+  "fixed": [["@nexus/tokens", "@nexus/react"]],
+  "linked": [],
+
+  "updateInternalDependencies": "patch",
+
+  "ignore": ["showcase"],
+
+  "privatePackages": { "version": true, "tag": true }
+}

@@ -1,0 +1,30 @@
+import { resolveColour } from "../../colour.js";
+import type { ToneProps } from "../../colour.js";
+
+export interface LinkGlyphProps extends ToneProps {
+  dashed?: boolean;
+  arrow?: boolean;
+  width?: number;
+  muted?: boolean;
+  size?: number;
+  title?: string;
+}
+
+/** Relation glyph: curve, optional dash pattern, optional arrowhead. */
+export function LinkGlyph({
+  tone, colour, dashed = false, arrow = false,
+  width = 1.2, muted = false, size = 13, title,
+}: LinkGlyphProps) {
+  const c = muted
+    ? "var(--nx-fg-disabled)"
+    : resolveColour({ tone, colour }, "var(--nx-fg-info)");
+  return (
+    <svg width={size} height={size} viewBox="0 0 14 14"
+      role={title ? "img" : undefined} aria-label={title} aria-hidden={title ? undefined : true}
+      style={{ flexShrink: 0 }}>
+      <path d="M1 9.5 Q7 2 13 9.5" fill="none" stroke={c} strokeWidth={width}
+        strokeDasharray={dashed ? "2.2 1.9" : undefined} strokeLinecap="round" />
+      {arrow && <polygon points="13,9.5 10,7.8 10.7,10.9" fill={c} />}
+    </svg>
+  );
+}

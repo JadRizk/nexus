@@ -1,0 +1,18 @@
+import { describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { SectionHeading } from "./SectionHeading.js";
+
+describe("SectionHeading", () => {
+  it("renders its children and forwards props", () => {
+    render(<SectionHeading id="subject">/// subject</SectionHeading>);
+    const heading = screen.getByText("/// subject");
+    expect(heading).toHaveAttribute("id", "subject");
+  });
+
+  it("is not a heading element, so it never lands in the document outline", () => {
+    // Deliberate: these are dense panel labels, not document structure. A
+    // screen reader's heading list should not fill up with them.
+    render(<SectionHeading>/// subject</SectionHeading>);
+    expect(screen.queryByRole("heading")).toBeNull();
+  });
+});

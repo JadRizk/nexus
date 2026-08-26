@@ -23,13 +23,13 @@ export function Open() {
       onClose={() => {}}
       title="tidal_aperture"
       subtitle="0x493B · NDE"
-      accent="var(--nx-fg-info)"
-      icon={<Glyph shape="circle" colour="var(--nx-fg-info)" />}
+      tone="info"
+      icon={<Glyph shape="circle" tone="info" />}
       footer={<><Button style={{ flex: 1 }}>Focus</Button><Button style={{ flex: 1 }} active>Isolate</Button></>}
     >
       <SectionHeading>/// relation profile</SectionHeading>
       <MeterRow label="LINK" value={5} total={7} colour="#3AC6D4" />
-      <MeterRow label="CITE" value={2} total={7} colour="var(--nx-fg-warning)" />
+      <MeterRow label="CITE" value={2} total={7} tone="warning" />
       <div style={{ height: 16 }} />
       <SectionHeading>/// adjacency [3]</SectionHeading>
       {ADJACENT.map((it) => (

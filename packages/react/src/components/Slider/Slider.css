@@ -1,0 +1,47 @@
+/* The track uses --nx-border-strong (3:1), not the decorative hairline —
+   a slider track is a UI component boundary under WCAG 1.4.11. */
+.nx-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 2px;
+  background: var(--nx-slider-track, var(--nx-border-strong));
+  outline: none;
+  border-radius: var(--nx-radius);
+  cursor: pointer;
+}
+
+.nx-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: var(--nx-slider-thumb-width, 8px);
+  height: var(--nx-slider-thumb-height, 14px);
+  background: var(--nx-slider-thumb, var(--nx-fg-accent));
+  border-radius: var(--nx-radius);
+  cursor: pointer;
+  box-shadow: 0 0 8px var(--nx-slider-thumb, var(--nx-fg-accent));
+}
+
+.nx-slider::-moz-range-thumb {
+  width: var(--nx-slider-thumb-width, 8px);
+  height: var(--nx-slider-thumb-height, 14px);
+  background: var(--nx-slider-thumb, var(--nx-fg-accent));
+  border: 0;
+  border-radius: var(--nx-radius);
+  cursor: pointer;
+  box-shadow: 0 0 8px var(--nx-slider-thumb, var(--nx-fg-accent));
+}
+
+.nx-slider::-moz-range-track {
+  background: var(--nx-slider-track, var(--nx-border-strong));
+  height: 2px;
+}
+
+.nx-slider:focus-visible::-webkit-slider-thumb {
+  outline: var(--nx-focus-width) solid var(--nx-focus-ring);
+  outline-offset: var(--nx-focus-offset);
+}
+
+.nx-slider:focus-visible::-moz-range-thumb {
+  outline: var(--nx-focus-width) solid var(--nx-focus-ring);
+  outline-offset: var(--nx-focus-offset);
+}

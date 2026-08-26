@@ -164,13 +164,13 @@ export function HomePage() {
         onClose={() => setDrawer(false)}
         title={picked.label}
         subtitle={`0x${hex} · ${picked.code}`}
-        accent={picked.colour}
+        colour={picked.colour}
         icon={<Glyph shape={picked.shape} colour={picked.colour} />}
         footer={<><Button style={{ flex: 1 }}>Focus</Button><Button style={{ flex: 1 }} active>Isolate</Button></>}
       >
         <SectionHeading>/// relation profile</SectionHeading>
         <MeterRow label="LINK" value={5} total={7} colour="#3AC6D4" />
-        <MeterRow label="CITE" value={2} total={7} colour="var(--nx-fg-warning)" />
+        <MeterRow label="CITE" value={2} total={7} tone="warning" />
         <div style={{ height: "var(--nx-space-5)" }} />
         <SectionHeading>/// adjacency [7]</SectionHeading>
         {ITEMS.slice(2, 8).map((it) => (

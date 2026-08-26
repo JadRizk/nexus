@@ -19,12 +19,30 @@ jobs:
 
       - run: npm ci
 
+      # Lint before typecheck: it is the faster of the two and catches the
+      # class of mistake (a primitive token referenced directly, a ref written
+      # during render) that a type error never will.
+      - name: Lint (eslint + stylelint)
+        run: npm run lint
+
       - run: npm run typecheck
 
       - run: npm run test
 
+      # Coverage thresholds live in packages/react/vitest.config.ts and are set
+      # just under the current measured baseline, so this fails only when
+      # coverage drops — never merely because it is low.
+      - name: Coverage threshold
+        run: npm run test:coverage
+
       - name: Build (packages + reference/preview.jsx)
         run: npm run build
+
+      # The showcase is the only place the packages are consumed end to end, so
+      # a build failure here is the earliest signal that an API change broke a
+      # real consumer rather than only the tests.
+      - name: Build showcase
+        run: npm run build -w apps/showcase
 
       - name: Fail if reference/preview.jsx has drifted from packages/
         run: |
@@ -33,3 +51,70 @@ jobs:
             git diff -- reference/preview.jsx
             exit 1
           fi
+
+      # tokens.css and contrast.gen.ts are generated from tokens.json. The
+      # build already fails if a theme misses the contrast floors it declares;
+      # this catches the other failure mode — someone edits a generated file by
+      # hand, or changes tokens.json without regenerating.
+      - name: Fail if generated token files have drifted from tokens.json
+        run: |
+          npm run build:tokens
+          if ! git diff --quiet -- packages/tokens/src/tokens.css packages/tokens/src/contrast.gen.ts; then
+            echo "::error file=packages/tokens/src/tokens.json::Generated token files are out of date. Run 'npm run build:tokens' and commit the result."
+            git diff -- packages/tokens/src/tokens.css packages/tokens/src/contrast.gen.ts
+            exit 1
+          fi
+
+      - name: Fail if the generated stylesheet has drifted from its parts
+        run: |
+          npm run build:styles
+          if ! git diff --quiet -- packages/react/src/styles.css; then
+            echo "::error file=packages/react/src/styles.css::styles.css is out of date. Run 'npm run build:styles' and commit the result."
+            git diff -- packages/react/src/styles.css
+            exit 1
+          fi
+
+      - name: Documented figures match the code
+        run: node scripts/check-docs.mjs
+
+      # A changeset is how a consumer finds out what changed. Asking for one on
+      # the pull request is the only moment anybody remembers the reasoning; a
+      # changelog reconstructed from commit messages at release time is written
+      # by whoever is releasing, about work they may not have done.
+      - name: Changeset present for package changes
+        if: github.event_name == 'pull_request'
+        run: node scripts/check-changeset.mjs
+
+  # Pixel baselines are only comparable when the renderer is, so this runs in
+  # the same pinned image `npm run test:visual` uses locally. Anything else —
+  # ubuntu-latest with its own font packages, or a developer's laptop — renders
+  # differently enough to fail on antialiasing and teach everyone to ignore it.
+  browser:
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      # Chromium needs more than the default 64MB of shared memory.
+      options: --ipc=host
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Visual regression and accessibility
+        run: npx playwright test
+
+      - name: Upload diffs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-diff
+          path: |
+            playwright-report/
+            browser/.results/
+          retention-days: 14

@@ -1,0 +1,63 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+# Only one release run at a time: two concurrent runs would race to open or
+# update the same "Version Packages" pull request.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Changesets needs the history to work out what has already shipped.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      - run: npm ci
+
+      # A release must not be the first time the build is exercised. CI runs
+      # these on the pull request too; repeating them here is what stops a
+      # green PR merged next to a red main from publishing anyway.
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test
+      - run: npm run build
+
+      # Opens (or updates) a "Version Packages" pull request applying the
+      # pending changesets. Merging that PR is the release — versions bump,
+      # changelogs are written, and this workflow runs again on the merge
+      # commit with no changesets left, at which point `publish` runs instead.
+      #
+      # While the packages are still `"private": true`, `changeset publish`
+      # versions and tags but pushes nothing to the registry. Removing
+      # `private` from a package is the only change needed to start
+      # publishing it; nothing here has to be edited.
+      - name: Version or publish
+        uses: changesets/action@v1
+        with:
+          version: npx changeset version
+          publish: npx changeset publish
+          commit: "chore: version packages"
+          title: "chore: version packages"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Unset until the packages go public — `changeset publish` skips
+          # private packages, so its absence is not an error today.
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

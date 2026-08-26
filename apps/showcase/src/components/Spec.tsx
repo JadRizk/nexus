@@ -48,7 +48,11 @@ export interface SpecProps {
 
 export function Spec({ name, note, a11y, code, children }: SpecProps) {
   return (
-    <section style={{ marginBottom: "var(--nx-space-8)" }}>
+    // `data-spec` is the anchor the visual regression suite locates each
+    // example by. Screenshotting a named example rather than a whole page
+    // keeps a diff pointed at the component that actually changed, instead of
+    // failing every test whenever a paragraph above it reflows.
+    <section data-spec={name} style={{ marginBottom: "var(--nx-space-8)" }}>
       <SectionHeading>/// {name}</SectionHeading>
       <Panel style={{ marginTop: "var(--nx-space-2)" }}>{children}</Panel>
       {note && (

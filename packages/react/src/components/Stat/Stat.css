@@ -1,0 +1,13 @@
+.nx-stat__label {
+  color: var(--nx-stat-label-fg, var(--nx-fg-tertiary));
+  font-size: var(--nx-text-2xs);
+  letter-spacing: var(--nx-track-wide);
+  margin-bottom: var(--nx-space-1);
+  text-transform: uppercase;
+}
+
+.nx-stat__value {
+  color: var(--nx-stat-value-fg, var(--nx-fg-default));
+  font-size: var(--nx-text-xs);
+  letter-spacing: var(--nx-track-normal);
+}

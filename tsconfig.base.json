@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ES2020",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "module": "ESNext",
     "moduleResolution": "bundler",
     "jsx": "react-jsx",
@@ -11,6 +15,24 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "noEmit": true
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@nexus/tokens": [
+        "./packages/tokens/src/index.ts"
+      ],
+      "@nexus/tokens/*": [
+        "./packages/tokens/src/*"
+      ],
+      "@nexus/react": [
+        "./packages/react/src/index.ts"
+      ],
+      "@nexus/react/*": [
+        "./packages/react/src/*"
+      ],
+      "@nexus/graph": [
+        "./packages/graph/src/index.ts"
+      ]
+    }
   }
 }

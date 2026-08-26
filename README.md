@@ -8,17 +8,26 @@ everything — with a WCAG AA mode that keeps the language intact.
 nexus-ds/
 ├── packages/
 │   ├── tokens/          @nexus/tokens   CSS custom properties + typed handles
+│   │   ├── build-tokens.mjs             the generator
+│   │   ├── lib/wcag.mjs                 contrast maths, dependency-free
 │   │   └── src/
-│   │       ├── tokens.css               both themes
+│   │       ├── tokens.json              SOURCE OF TRUTH — the only file to edit
+│   │       ├── tokens.css               generated · both themes
+│   │       ├── contrast.gen.ts          generated · computed ratios
+│   │       ├── base.css                 hand-authored base + focus rules
 │   │       ├── crt.css                  CSS-only CRT layer
-│   │       ├── tokens.json              source of truth
-│   │       └── index.ts                 typed accessors + contrast data
-│   └── react/           @nexus/react    16 components, no runtime deps
-│       └── src/
-│           ├── primitives.tsx           Panel, Button, Slider, Glyph, …
-│           ├── overlays.tsx             Drawer, CommandPalette, Legend
-│           ├── types.ts                 useFocusTrap, useHotkey, rankItems
-│           └── styles.css               pseudo-elements and pseudo-classes
+│   │       └── index.ts                 typed accessors
+│   ├── react/           @nexus/react    19 components, no runtime deps
+│   │   ├── build-styles.mjs             assembles the shipped stylesheet
+│   │   └── src/
+│   │       ├── components/<Name>/       one folder per component:
+│   │       │                             <Name>.tsx · <Name>.css · <Name>.test.tsx
+│   │       ├── hooks/                   useFocusTrap, useHotkey (+ tests)
+│   │       ├── search/                  rankItems (+ tests)
+│   │       ├── colour.ts                the tone/colour resolver
+│   │       ├── types.ts                 shared types only
+│   │       └── styles.css               generated · concatenated components
+│   └── graph/           @nexus/graph   force-directed WebGL canvas
 └── apps/
     └── showcase/        Primitives · Overlays · Tokens
 ```
@@ -30,7 +39,79 @@ npm install
 npm run build      # builds both packages with tsup (ESM + CJS + .d.ts)
 npm run dev        # showcase on :5173
 npm run typecheck  # tsc -b, strict
+npm run lint       # eslint + stylelint
+npm run test       # unit tests, all workspaces
+npm run test:browser # visual regression + a11y (needs Docker)
 ```
+
+## Layout
+
+One folder per component, holding everything about it — implementation, its own
+CSS where it needs any, and its tests:
+
+```
+src/components/Panel/
+  Panel.tsx
+  Panel.css        ← concatenated into the shipped styles.css
+  Panel.test.tsx
+  index.ts
+```
+
+`styles.css` is **generated** by `npm run build:styles`; edit the component's
+own stylesheet. Components import each other by path rather than through the
+barrel, so an import cycle is not possible. Adding a component means adding a
+folder — there is no central list to remember to update.
+
+## Releasing
+
+Versions and changelogs are managed with [Changesets](https://github.com/changesets/changesets).
+Any change a consumer could notice needs one:
+
+```bash
+npx changeset      # pick packages, pick the bump, describe the change
+```
+
+CI asks for one on any pull request that touches `packages/*/src`. The entry
+you write becomes the changelog verbatim, so write it for someone upgrading.
+
+`@nexus/tokens` and `@nexus/react` are versioned in **lockstep**, and `react`
+depends on an exact `tokens` version rather than a range. The two communicate
+through CSS custom property names at runtime — a component asking for a token
+a newer build no longer defines does not fail to compile, it renders the wrong
+colour. Pinning is what makes that mismatch unreachable. `@nexus/graph`
+versions independently: the README is explicit that the graph is a product
+built *with* the system rather than part of it.
+
+The packages are still `"private": true`, so nothing publishes yet. Versioning
+and changelogs work regardless — the history accumulates from now rather than
+from the day someone decides to publish. Removing `private` from a package is
+the only change needed to start publishing it; the workflow is already wired.
+
+## Visual regression
+
+37 screenshot tests cover the things jsdom cannot see: Panel's corner ticks,
+focus rings, hover states, both themes, the CRT layer, and the overlays.
+
+```bash
+npm run test:visual          # run the suite
+npm run test:visual:update   # re-record after an intended visual change
+```
+
+**Docker is required, and that is deliberate.** Chromium renders text
+differently on macOS and Linux, so a baseline captured on a laptop fails on CI
+for reasons unrelated to the change — which is how visual suites end up
+permanently red and then permanently ignored. There is one supported renderer:
+the official Playwright container, pinned to the same version as the
+`@playwright/test` dependency. CI runs the job in that image; the script above
+runs the same image locally. Baselines are therefore Linux-only and byte-
+comparable everywhere.
+
+The comparison threshold is **zero differing pixels**. If the suite ever goes
+flaky the fix is to stabilise the input — wait for a font, disable an
+animation, pin a viewport — never to widen the tolerance. An earlier draft of
+this config allowed a 0.2% pixel ratio, which sounds conservative and permits
+around 360 changed pixels on a panel screenshot; Panel's four corner ticks are
+roughly 120 pixels in total, so deleting the entire corner-tick system passed.
 
 ## Usage
 
@@ -57,7 +138,18 @@ Set `data-nx-theme` on any element and the custom properties cascade.
 
 ## Token architecture
 
-Three layers. **Components may reference only the semantic layer.**
+`src/tokens.json` is the source of truth, in W3C DTCG format. `tokens.css` and
+`contrast.gen.ts` are **generated** from it:
+
+```bash
+npm run build:tokens     # regenerates both; runs as part of npm run build
+```
+
+Editing either generated file by hand is caught in CI. Style Dictionary v4+ and
+Figma/Tokens Studio can read the token file unchanged, should you want them.
+
+Three layers. **Components may reference only the semantic layer** — enforced
+by ESLint and stylelint, not by convention.
 
 ```
 primitive   --nx-acid, --nx-grey-300        raw values, never used directly
@@ -92,7 +184,32 @@ Only the muted ramp had to move.
 The ramp was solved rather than eyeballed: hue 100°, saturation 13%,
 binary-searched per step against exact contrast targets.
 
+Every ratio quoted above is **computed at build time** from the resolved token
+values, not transcribed — including the comments in `tokens.css` itself. Each
+theme declares the floors it holds itself to in `tokens.json`, and the build
+fails if a colour moves past one:
+
+```
+hud-aa/grey-300 is 4.21:1, below the 4.5:1 floor for disabled text — WCAG 1.4.3.
+```
+
+That check is itself tested: `lib/build-tokens.test.mjs` feeds the generator a
+deliberately broken palette and asserts it refuses to emit.
+
 ## Accessibility
+
+Every claim below is asserted by a machine. `browser/a11y.spec.ts` runs
+axe-core over the real rendered page — once per route, once per component, and
+once per overlay state — plus direct assertions for the things axe cannot see.
+
+```bash
+npm run test:a11y
+```
+
+axe is treated as a floor, not a ceiling. It found a malformed listbox in
+`CommandPalette`'s empty state and a scrollable region with no keyboard access;
+it did **not** notice that the showcase traps focus in a modal drawer at page
+load. Automated coverage does not replace using the thing with a keyboard.
 
 Verified behaviours:
 
@@ -112,6 +229,9 @@ Verified behaviours:
 - **Slider tracks use `--nx-border-strong`** (3:1) not the decorative hairline,
   because a track is a UI component boundary under 1.4.11
 - `prefers-reduced-motion` and `prefers-contrast` both honoured
+- **The contrast bargain is asserted in both directions** — `hud-aa` passes
+  axe's colour-contrast rule and `hud` is required to fail it, so the
+  documented trade-off cannot silently become an undocumented one
 
 ## CRT layer
 
@@ -143,4 +263,6 @@ CRT pipeline are a *product*, not a design system. They live in
 - **No keyboard path to a canvas surface** (WCAG 2.1.1). This belongs in the
   consuming visualisation, not the component layer.
 - No Storybook yet; the showcase app covers the same ground.
-- No visual regression tests.
+- No automated a11y (axe) suite yet — the behaviours above are asserted by
+  hand-written tests, the contrast claims by the token build, and the focus
+  rings by the visual suite.

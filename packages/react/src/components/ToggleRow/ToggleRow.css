@@ -1,0 +1,19 @@
+.nx-row {
+  display: flex;
+  align-items: center;
+  gap: var(--nx-space-3);
+  padding: var(--nx-space-1) var(--nx-space-2);
+  cursor: pointer;
+  user-select: none;
+  min-height: var(--nx-row-height, 24px);
+  transition: background var(--nx-dur-micro);
+}
+
+.nx-row:hover { background: var(--nx-row-hover-bg, var(--nx-bg-hover)); }
+
+/* Negative offset keeps the ring inside the row instead of bleeding into
+   the next one in a tightly stacked list. */
+.nx-row:focus-within {
+  outline: var(--nx-focus-width) solid var(--nx-focus-ring);
+  outline-offset: calc(var(--nx-focus-offset) * -1);
+}

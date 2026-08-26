@@ -1,0 +1,45 @@
+/* States move the token, they do not restate the property. A consumer
+   retheming buttons sets one of these on any ancestor and every state follows,
+   because custom properties inherit and the states all read the same names. */
+.nx-btn {
+  font-family: var(--nx-font-mono);
+  font-size: var(--nx-text-2xs);
+  font-weight: var(--nx-weight-medium);
+  letter-spacing: var(--nx-track-wide);
+  text-transform: uppercase;
+  color: var(--nx-btn-fg, var(--nx-fg-muted));
+  background: var(--nx-btn-bg, transparent);
+  border: var(--nx-hairline) solid var(--nx-btn-border, var(--nx-border-default));
+  border-radius: var(--nx-radius);
+  padding: var(--nx-btn-padding, var(--nx-space-3) var(--nx-space-4));
+  cursor: pointer;
+  transition:
+    background var(--nx-dur-micro) var(--nx-ease),
+    color var(--nx-dur-micro) var(--nx-ease),
+    border-color var(--nx-dur-micro) var(--nx-ease);
+}
+
+.nx-btn:hover {
+  --nx-btn-fg: var(--nx-fg-accent);
+  --nx-btn-bg: var(--nx-bg-hover);
+  --nx-btn-border: var(--nx-border-accent);
+}
+
+/* Inverted, not tinted: the active state is the accent carrying the label
+   rather than the label sitting on a wash of it. */
+.nx-btn[data-active="1"] {
+  --nx-btn-fg: var(--nx-bg-canvas);
+  --nx-btn-bg: var(--nx-fg-accent);
+  --nx-btn-border: var(--nx-border-accent);
+}
+
+.nx-btn:disabled {
+  --nx-btn-fg: var(--nx-fg-disabled);
+
+  cursor: not-allowed;
+}
+
+.nx-btn:disabled:hover {
+  --nx-btn-bg: transparent;
+  --nx-btn-border: var(--nx-border-default);
+}
