@@ -1,0 +1,10 @@
+.nx-wordmark {
+  display: inline-block;
+  font-family: var(--nx-font-stencil);
+  font-size: var(--nx-wordmark-size, var(--nx-text-xl));
+  line-height: 0.8;
+  color: var(--nx-wordmark-fg, var(--nx-fg-default));
+  letter-spacing: -0.02em;
+  transform: skewX(var(--nx-wordmark-skew, -9deg));
+  text-shadow: 2px 0 var(--nx-split-r), -2px 0 var(--nx-split-b);
+}

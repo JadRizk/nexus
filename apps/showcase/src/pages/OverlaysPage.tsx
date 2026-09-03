@@ -35,7 +35,7 @@ export function OverlaysPage() {
         a11y="role=dialog with aria-modal. Focus is trapped while open and restored to whatever
               opened it on close. Escape dismisses. When closed the subtree is aria-hidden, so a
               screen reader never wanders into offscreen content."
-        code={`<Drawer open={open} onClose={close} title="tidal_aperture"\n  subtitle="0x493B · NDE" accent={tone("info")}\n  footer={<Button active>Isolate</Button>}>…</Drawer>`}
+        code={`<Drawer open={open} onClose={close} title="tidal_aperture"\n  subtitle="0x493B · NDE" tone="info"\n  footer={<Button active>Isolate</Button>}>…</Drawer>`}
       >
         <Row>
           <Button active={drawer} onClick={() => setDrawer((d) => !d)}>
@@ -79,8 +79,8 @@ export function OverlaysPage() {
       >
         <div style={{ maxWidth: 320 }}>
           <MeterRow label="LINK" value={5} total={7} colour="#3AC6D4" />
-          <MeterRow label="CITE" value={2} total={7} colour="var(--nx-fg-warning)" />
-          <MeterRow label="CONFLICT" value={1} total={7} colour="var(--nx-fg-critical)" />
+          <MeterRow label="CITE" value={2} total={7} tone="warning" />
+          <MeterRow label="CONFLICT" value={1} total={7} tone="critical" />
         </div>
       </Spec>
 
@@ -89,13 +89,13 @@ export function OverlaysPage() {
         onClose={() => setDrawer(false)}
         title={picked.label}
         subtitle={`0x${hex} · ${picked.code}`}
-        accent={picked.colour}
+        colour={picked.colour}
         icon={<Glyph shape={picked.shape} colour={picked.colour} />}
         footer={<><Button style={{ flex: 1 }}>Focus</Button><Button style={{ flex: 1 }} active>Isolate</Button></>}
       >
         <SectionHeading>/// relation profile</SectionHeading>
         <MeterRow label="LINK" value={5} total={7} colour="#3AC6D4" />
-        <MeterRow label="CITE" value={2} total={7} colour="var(--nx-fg-warning)" />
+        <MeterRow label="CITE" value={2} total={7} tone="warning" />
         <div style={{ height: "var(--nx-space-5)" }} />
         <SectionHeading>/// adjacency [7]</SectionHeading>
         {ITEMS.slice(3, 10).map((it) => (

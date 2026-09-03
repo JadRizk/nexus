@@ -1,0 +1,23 @@
+.nx-kv {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--nx-kv-gap, var(--nx-space-4));
+  min-width: 0;
+}
+
+.nx-kv__label,
+.nx-kv__value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nx-kv__label {
+  color: var(--nx-kv-label-fg, var(--nx-fg-tertiary));
+  letter-spacing: var(--nx-track-wide);
+}
+
+.nx-kv__value {
+  color: var(--nx-kv-value-fg, var(--nx-fg-default));
+  font-variant-numeric: tabular-nums;
+}

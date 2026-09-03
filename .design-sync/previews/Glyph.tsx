@@ -18,8 +18,8 @@ export function AllShapes() {
 export function Muted() {
   return (
     <div style={{ display: "flex", gap: 16 }}>
-      <Glyph shape="hexagon" colour="var(--nx-fg-accent)" title="Atlas" />
-      <Glyph shape="hexagon" colour="var(--nx-fg-accent)" muted title="Atlas (muted)" />
+      <Glyph shape="hexagon" tone="accent" title="Atlas" />
+      <Glyph shape="hexagon" tone="accent" muted title="Atlas (muted)" />
     </div>
   );
 }

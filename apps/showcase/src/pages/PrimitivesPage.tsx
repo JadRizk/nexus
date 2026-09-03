@@ -126,7 +126,7 @@ export function PrimitivesPage() {
         name="Glyph"
         note="Six distinct silhouettes. This is what satisfies WCAG 1.4.1 — category is never
               communicated by colour alone, which is the criterion most dark-neon systems fail."
-        code={`<Glyph shape="hexagon" colour={tone("accent")} title="Atlas" />`}
+        code={`<Glyph shape="hexagon" tone="accent" title="Atlas" />`}
       >
         <Row gap="var(--nx-space-6)">
           {GLYPH_SHAPES.map((s, i) => (
@@ -172,7 +172,7 @@ export function PrimitivesPage() {
 
       <Spec name="Tooltip" note="Absolutely positioned, pointer-events none, accent bar keyed to the subject's class.">
         <div style={{ position: "relative", height: 54 }}>
-          <Tooltip x={0} y={8} accent="var(--nx-fg-info)">
+          <Tooltip x={0} y={8} tone="info">
             <span style={{ color: "var(--nx-fg-info)" }}>tidal_aperture</span>
             <span style={{ color: "var(--nx-fg-tertiary)" }}> · NDE · 7</span>
           </Tooltip>

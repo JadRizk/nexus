@@ -1,0 +1,39 @@
+.nx-row {
+  display: flex;
+  align-items: center;
+  gap: var(--nx-space-3);
+  padding: var(--nx-space-1) var(--nx-space-2);
+  cursor: pointer;
+  user-select: none;
+  min-height: var(--nx-row-height, 24px);
+  transition: background var(--nx-dur-micro);
+}
+
+.nx-row:hover { background: var(--nx-row-hover-bg, var(--nx-bg-hover)); }
+
+.nx-row__label {
+  flex: 1;
+  color: var(--nx-row-label-fg-off, var(--nx-fg-disabled));
+  letter-spacing: var(--nx-track-normal);
+}
+
+/* Checked/unchecked moves the token, the same "state moves the token, not the
+   property" rule every other stateful component (Button, TabStrip) follows —
+   not a JS ternary resolving a colour string, which was the one place this
+   pattern hadn't been applied and had no CSS handle for a consumer to
+   override. */
+.nx-row[data-checked="1"] .nx-row__label {
+  color: var(--nx-row-label-fg-on, var(--nx-fg-default));
+}
+
+.nx-row__meta {
+  color: var(--nx-row-meta-fg, var(--nx-fg-tertiary));
+  font-size: var(--nx-text-2xs);
+}
+
+/* Negative offset keeps the ring inside the row instead of bleeding into
+   the next one in a tightly stacked list. */
+.nx-row:focus-within {
+  outline: var(--nx-focus-width) solid var(--nx-focus-ring);
+  outline-offset: calc(var(--nx-focus-offset) * -1);
+}

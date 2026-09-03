@@ -976,7 +976,7 @@ const SOURCES = ["GRAPH", "BARS", "HUD"];
 const GROUPS = ["TAPE", "SIGNAL", "DIGITAL", "DISPLAY", "GLASS"];
 const TRACK_COL = [
   "var(--nx-fg-accent)", "var(--nx-fg-info)", "var(--nx-fg-warning)", "var(--nx-fg-critical)",
-  "var(--nx-violet)", "var(--nx-lime)", "var(--nx-fg-default)", "#3AC6D4",
+  "var(--nx-fg-cat-violet)", "var(--nx-fg-cat-lime)", "var(--nx-fg-default)", "#3AC6D4",
 ];
 const fmt = (v) => (Math.abs(v) >= 10 ? v.toFixed(0) : v.toFixed(3));
 
@@ -1007,10 +1007,20 @@ export default function GlitchLab() {
     return b;
   };
   const [cfg, setCfg] = useState(() => makeBase("VHS 1987"));
-  const cfgRef = useRef(cfg); cfgRef.current = cfg;
-  const srcRef = useRef(source); srcRef.current = source;
-  const autoRef = useRef(autoFire); autoRef.current = autoFire;
-  const rateRef = useRef(rate); rateRef.current = rate;
+  // The render loop reads these asynchronously via requestAnimationFrame, so
+  // they only ever need to be current as of the last commit. Assigning during
+  // render instead would leave them holding values from a render React threw
+  // away, which is exactly the case concurrent rendering makes reachable.
+  const cfgRef = useRef(cfg);
+  const srcRef = useRef(source);
+  const autoRef = useRef(autoFire);
+  const rateRef = useRef(rate);
+  useEffect(() => {
+    cfgRef.current = cfg;
+    srcRef.current = source;
+    autoRef.current = autoFire;
+    rateRef.current = rate;
+  });
   const activeRef = useRef([]);
   const queueRef = useRef([]);
 

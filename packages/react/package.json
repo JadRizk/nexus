@@ -1,16 +1,31 @@
 {
   "name": "@nexus/react",
-  "version": "1.0.0",
+  "version": "2.0.0",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./styles.css": "./dist/styles.css"
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "private": true,
   "type": "module",
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
-  "exports": {
-    ".": "./src/index.ts",
-    "./styles.css": "./src/styles.css"
-  },
   "scripts": {
-    "build": "tsup && cp src/styles.css dist/",
+    "build:styles": "node build-styles.mjs",
+    "build": "npm run build:styles && tsup && cp src/styles.css dist/",
     "typecheck": "tsc --noEmit -p .",
     "test": "vitest run"
   },
@@ -19,7 +34,7 @@
     "react-dom": "^18.3.0 || ^19.0.0"
   },
   "dependencies": {
-    "@nexus/tokens": "*"
+    "@nexus/tokens": "2.0.0"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",

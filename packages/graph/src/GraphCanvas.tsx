@@ -102,12 +102,10 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
       repulsion: physicsCfg.repulsion, linkDistance: physicsCfg.linkDistance,
       cursorForce: physicsCfg.cursorForce, settle: physicsCfg.settle,
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [physicsCfg.repulsion, physicsCfg.linkDistance, physicsCfg.cursorForce, physicsCfg.settle]);
 
   useEffect(() => {
     api.current.refilterInternal?.();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hiddenNodeCategories, hiddenLinkCategories, isolateId]);
 
   useEffect(() => {
@@ -857,6 +855,10 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
         api.current = {};
       };
     }
+    // Deliberate: this effect builds and tears down the entire WebGL scene, so
+    // it may only re-run when the graph data itself changes. Optics, callbacks
+    // and selection are read through the refs above precisely so a slider drag
+    // doesn't reallocate every buffer on the GPU.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nodes, edges, nodeCategories, linkCategories]);
 

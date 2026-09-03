@@ -1,0 +1,27 @@
+/* ============================================================================
+   @nexus/react — utilities
+
+   Rules that belong to no single component. The skip link is a page-level
+   affordance the consuming app renders, not something this library exports
+   as a component — but it needs the system's type and colour, so it ships
+   here rather than being reinvented per app.
+   ========================================================================== */
+
+.nx-skip {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  background: var(--nx-fg-accent);
+  color: var(--nx-bg-canvas);
+  padding: var(--nx-space-2) var(--nx-space-4);
+  font-family: var(--nx-font-mono);
+  font-size: var(--nx-text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--nx-track-wide);
+}
+
+.nx-skip:focus {
+  left: var(--nx-space-4);
+  top: var(--nx-space-4);
+}

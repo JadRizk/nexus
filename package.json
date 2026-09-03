@@ -8,13 +8,37 @@
   ],
   "scripts": {
     "build": "npm run build -w packages/tokens -w packages/react -w packages/graph && npm run build:preview",
+    "build:tokens": "npm run build:tokens -w packages/tokens",
     "build:preview": "node scripts/build-preview.mjs",
     "dev": "npm run dev --workspace apps/showcase",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present"
+    "lint": "eslint . && stylelint \"packages/**/src/**/*.css\"",
+    "lint:fix": "eslint . --fix && stylelint \"packages/**/src/**/*.css\" --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "npm run test --workspaces --if-present",
+    "test:coverage": "npm run test -w packages/react -- --coverage",
+    "test:browser": "node scripts/browser-tests.mjs",
+    "test:browser:update": "node scripts/browser-tests.mjs --update-snapshots",
+    "test:visual": "node scripts/browser-tests.mjs browser/components.spec.ts browser/states.spec.ts",
+    "test:a11y": "node scripts/browser-tests.mjs browser/a11y.spec.ts",
+    "build:styles": "npm run build:styles -w packages/react"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@changesets/cli": "^2.31.1",
+    "@playwright/test": "^1.62.1",
+    "@vitest/coverage-v8": "^3.2.7",
+    "axe-core": "^4.13.0",
     "esbuild": "^0.27.0",
-    "typescript": "^5.5.4"
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.11.0",
+    "prettier": "^3.9.6",
+    "stylelint": "^17.14.1",
+    "stylelint-config-standard": "^40.0.0",
+    "typescript": "^5.5.4",
+    "typescript-eslint": "^8.68.0"
   }
 }

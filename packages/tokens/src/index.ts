@@ -1,12 +1,19 @@
 /* ============================================================================
    @nexus/tokens
-   The CSS custom properties are the runtime source of truth. This module gives
-   TypeScript consumers typed handles to them, so a component can say
-   `tone("critical")` instead of hardcoding `var(--nx-fg-critical)` and getting
-   the name subtly wrong.
+
+   tokens.json is the source of truth. Both tokens.css and contrast.gen.ts are
+   generated from it — see packages/tokens/build-tokens.mjs.
+
+   This module is the hand-written part: typed handles to the custom properties
+   so a component can say `tone("critical")` instead of hardcoding
+   `var(--nx-fg-critical)` and getting the name subtly wrong.
    ========================================================================== */
 
-export type NexusTheme = "hud" | "hud-aa";
+export { contrast, themeTargets } from "./contrast.gen.js";
+export type { NexusTheme } from "./contrast.gen.js";
+
+import { contrast, themeTargets } from "./contrast.gen.js";
+import type { NexusTheme } from "./contrast.gen.js";
 
 /** Foreground roles. `critical` is the only route to the alarm colour. */
 export type Tone =
@@ -50,26 +57,6 @@ export const shape = {
   tick: "var(--nx-tick)",
 } as const;
 
-/**
- * Measured contrast of every palette entry against `--nx-bg-surface`.
- * Exported so a consuming app can assert its own colour choices in a test
- * rather than discovering the problem in an audit.
- */
-export const contrast = {
-  "hud-aa": {
-    phosphor: 16.84, acid: 14.98, lime: 15.2, data: 12.19, sodium: 8.32,
-    violet: 6.27, alarm: 5.44,
-    "grey-100": 1.61, "grey-200": 3.01, "grey-300": 4.52,
-    "grey-400": 5.5, "grey-500": 7.0, "grey-600": 10.0,
-  },
-  hud: {
-    phosphor: 16.84, acid: 14.98, lime: 15.2, data: 12.19, sodium: 8.32,
-    violet: 6.27, alarm: 5.44,
-    "grey-100": 1.21, "grey-200": 1.57, "grey-300": 2.14,
-    "grey-400": 2.72, "grey-500": 3.8, "grey-600": 4.98,
-  },
-} as const;
-
 /** WCAG 2.2 thresholds, for assertions in consumer tests. */
 export const WCAG = {
   AA_TEXT: 4.5,
@@ -78,8 +65,21 @@ export const WCAG = {
   AAA_TEXT: 7.0,
 } as const;
 
-/** True when every foreground role in the theme clears AA body contrast. */
+/**
+ * True when the theme clears the contrast floors it declares for itself.
+ *
+ * Both the ratios and the floors are generated from tokens.json, and the token
+ * build already fails if a theme misses its own targets — so this is the
+ * runtime echo of a guarantee that is enforced at build time, not the only
+ * thing standing between a colour change and a shipped accessibility bug.
+ *
+ * A theme with no declared targets (`hud`) is not AA and returns false.
+ */
 export function themeMeetsAA(theme: NexusTheme): boolean {
+  const targets = (themeTargets as Record<string, { text: number; nonText: number } | undefined>)[
+    theme
+  ];
+  if (!targets) return false;
   const c = contrast[theme];
-  return c["grey-300"] >= WCAG.AA_TEXT && c["grey-200"] >= WCAG.AA_NON_TEXT;
+  return c["grey-300"] >= targets.text && c["grey-200"] >= targets.nonText;
 }

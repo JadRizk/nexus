@@ -1,0 +1,18 @@
+/* A fieldset carries the group name into the accessibility tree, but brings a
+   browser default border, margin and padding that have nothing to do with this
+   design. */
+.nx-legend__group {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+/* Gap between groups rather than a margin on the first — `:not(:first-of-type)`
+   keeps the first group flush against whatever sits above the legend. */
+.nx-legend__group:not(:first-of-type) {
+  margin-top: var(--nx-legend-group-gap, var(--nx-space-4));
+}
+
+.nx-legend__title {
+  padding: 0;
+}

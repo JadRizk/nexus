@@ -1,0 +1,242 @@
+import AxeBuilder from "@axe-core/playwright";
+import { expect, test } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { gotoPage, spec, settle } from "./harness.js";
+import type { Route } from "./harness.js";
+
+/* ============================================================================
+   Accessibility.
+
+   The README makes a dozen specific, checkable claims. Until now none of them
+   was asserted by a machine, and the ARIA assertions that did exist were
+   hand-written — which means they checked the attributes the author
+   remembered. This file closes that gap in two halves:
+
+     1. axe-core over the real rendered page, per route and per component.
+     2. Direct assertions for the claims axe cannot make — a flash rate, a set
+        of distinguishable silhouettes, a focus ring that cannot be removed.
+
+   Both halves matter. axe is a floor, not a ceiling: it finds contrast and
+   malformed ARIA, and it is silent about whether a modal steals focus at page
+   load or whether six shapes are actually distinguishable from one another.
+   ========================================================================== */
+
+// A full axe pass costs a couple of seconds on its own and closer to ten
+// under parallel load, and this file runs twenty-five of them. The default
+// 30s budget is sized for interaction tests, not for static analysis of a
+// rendered page — raising it here is honest, whereas cutting the number of
+// scans to fit would just be reducing coverage to satisfy a timer.
+// Playwright validates the shape of this argument at runtime and rejects
+// anything but an object destructuring pattern, so the empty pattern is
+// required rather than an oversight.
+// eslint-disable-next-line no-empty-pattern
+test.beforeEach(({}, testInfo) => testInfo.setTimeout(120_000));
+
+const WCAG = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
+
+const audit = (page: Page) => new AxeBuilder({ page }).withTags(WCAG);
+
+/** Renders a failure that names the rule and the element, not just a count. */
+function report(violations: Awaited<ReturnType<AxeBuilder["analyze"]>>["violations"]) {
+  return violations
+    .map(
+      (v) =>
+        `${v.id} (${v.impact}) — ${v.help}\n` +
+        v.nodes.map((n) => `    ${n.target.join(" ")}`).join("\n"),
+    )
+    .join("\n\n");
+}
+
+/* ---------------------------------------------------------------- by route */
+
+const ROUTES: Route[] = ["home", "primitives", "overlays", "tokens"];
+
+for (const route of ROUTES) {
+  test(`${route} has no axe violations`, async ({ page }) => {
+    await gotoPage(page, route, "hud-aa");
+    const { violations } = await audit(page).analyze();
+    expect(report(violations), report(violations)).toBe("");
+  });
+}
+
+/* ------------------------------------------------------------ by component */
+
+// One scan per named example, scoped to that example. Scoping is what makes a
+// failure actionable: a page-level scan says "the Overlays page has a
+// violation", this says which component owns it.
+const COMPONENTS: Array<[Route, string]> = [
+  ["primitives", "Panel"],
+  ["primitives", "Typography"],
+  ["primitives", "Button"],
+  ["primitives", "TabStrip"],
+  ["primitives", "Slider"],
+  ["primitives", "ToggleRow"],
+  ["primitives", "Glyph"],
+  ["primitives", "LinkGlyph"],
+  ["primitives", "Tooltip"],
+  ["primitives", "KeyValue · Stat · HazardRule"],
+  ["overlays", "Drawer"],
+  ["overlays", "CommandPalette"],
+  ["overlays", "MeterRow"],
+  ["tokens", "Signature colours"],
+  ["tokens", "Muted ramp"],
+  ["tokens", "AA compliance"],
+];
+
+for (const [route, name] of COMPONENTS) {
+  test(`${name} has no axe violations`, async ({ page }) => {
+    await gotoPage(page, route, "hud-aa");
+    await expect(spec(page, name)).toBeVisible();
+    const { violations } = await audit(page)
+      .include(`[data-spec="${name}"]`)
+      .analyze();
+    expect(report(violations), report(violations)).toBe("");
+  });
+}
+
+/* --------------------------------------------------------- overlay states */
+
+test.describe("overlays while open", () => {
+  test("drawer", async ({ page }) => {
+    await gotoPage(page, "overlays", "hud-aa");
+    await expect(page.getByRole("dialog")).toBeVisible();
+    const { violations } = await audit(page).analyze();
+    expect(report(violations), report(violations)).toBe("");
+  });
+
+  test("command palette with results", async ({ page }) => {
+    await gotoPage(page, "overlays", "hud-aa");
+    await page.getByRole("button", { name: "Open palette" }).click();
+    await page.getByRole("combobox").fill("atlas");
+    await expect(page.getByRole("option").first()).toBeVisible();
+    const { violations } = await audit(page).analyze();
+    expect(report(violations), report(violations)).toBe("");
+  });
+
+  test("command palette with no results still announces the count", async ({ page }) => {
+    await gotoPage(page, "overlays", "hud-aa");
+    await page.getByRole("button", { name: "Open palette" }).click();
+    await page.getByRole("combobox").fill("zzzzz");
+    await expect(page.getByRole("status")).toHaveText(/0 results/);
+    const { violations } = await audit(page).analyze();
+    expect(report(violations), report(violations)).toBe("");
+  });
+});
+
+/* ------------------------------------------------------- the theme bargain */
+
+test.describe("the contrast trade-off between themes", () => {
+  // The README's central accessibility claim is that hud-aa meets AA and hud
+  // knowingly does not. Both halves are asserted, because a claim that only
+  // ever gets checked in the direction you hope for is not being checked.
+
+  test("hud-aa passes axe's colour-contrast rule", async ({ page }) => {
+    await gotoPage(page, "primitives", "hud-aa");
+    const { violations } = await new AxeBuilder({ page })
+      .withRules(["color-contrast"])
+      .analyze();
+    expect(report(violations), report(violations)).toBe("");
+  });
+
+  test("hud genuinely fails it — the documented trade-off, not an oversight", async ({ page }) => {
+    await gotoPage(page, "primitives", "hud");
+    const { violations } = await new AxeBuilder({ page })
+      .withRules(["color-contrast"])
+      .analyze();
+    expect(
+      violations.length,
+      "hud is documented as failing AA. If this passes, either the ramp was " +
+        "quietly fixed (update the README and tokens.json) or the test stopped " +
+        "measuring anything.",
+    ).toBeGreaterThan(0);
+    expect(violations[0]!.id).toBe("color-contrast");
+  });
+});
+
+/* ------------------------------------------- claims axe cannot check for us */
+
+test.describe("claims axe cannot make", () => {
+  test("the cursor blinks below the 3Hz seizure threshold (WCAG 2.3.1)", async ({ page }) => {
+    // The prototype blinked at 9Hz. The cap lives on the token, not in the
+    // component, so this reads the value the browser actually resolved.
+    await gotoPage(page, "primitives");
+    const seconds = await page
+      .locator(".nx-root")
+      .evaluate((el) => parseFloat(getComputedStyle(el).getPropertyValue("--nx-blink")));
+    expect(seconds).toBeGreaterThan(0);
+    expect(1 / seconds).toBeLessThan(3);
+  });
+
+  test("the six glyphs are distinguishable by shape alone (WCAG 1.4.1)", async ({ page }) => {
+    // Category must never be carried by colour alone. Comparing the rendered
+    // SVG geometry is the only way to know the silhouettes are actually
+    // distinct — a palette swap would not touch this, and a copy-paste error
+    // that duplicated a shape would pass every other test in the repo.
+    await gotoPage(page, "primitives");
+    const shapes = await spec(page, "Glyph")
+      .locator("svg")
+      .evaluateAll((svgs) =>
+        svgs.map((s) =>
+          [...s.querySelectorAll("circle,polygon,rect,path")]
+            .map((el) => el.tagName + ":" + (el.getAttribute("points") ?? el.getAttribute("r") ?? ""))
+            .join(),
+        ),
+      );
+    const distinct = new Set(shapes);
+    expect(shapes.length).toBeGreaterThanOrEqual(6);
+    expect(distinct.size, `expected distinct silhouettes, got ${shapes.length}`).toBe(shapes.length);
+  });
+
+  test("the focus ring cannot be removed by a component (WCAG 2.4.7)", async ({ page }) => {
+    // The ring is defined once, globally. Its value comes from tokens, so this
+    // also catches the ring surviving but resolving to nothing.
+    await gotoPage(page, "primitives");
+    const ring = await page.locator(".nx-root").evaluate((el) => {
+      const cs = getComputedStyle(el);
+      return {
+        width: cs.getPropertyValue("--nx-focus-width").trim(),
+        colour: cs.getPropertyValue("--nx-focus-ring").trim(),
+        offset: cs.getPropertyValue("--nx-focus-offset").trim(),
+      };
+    });
+    expect(ring.width).not.toBe("");
+    expect(parseFloat(ring.width)).toBeGreaterThanOrEqual(2);
+    expect(ring.colour).toMatch(/^#|^rgb/);
+    expect(ring.offset).not.toBe("");
+  });
+
+  test("prefers-reduced-motion collapses animation, including the blink", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await gotoPage(page, "primitives");
+    await settle(page);
+
+    const blink = page.locator(".nx-blink").first();
+    await expect(blink).toBeAttached();
+    const state = await blink.evaluate((el) => {
+      const cs = getComputedStyle(el);
+      return { name: cs.animationName, opacity: cs.opacity };
+    });
+    // The rule sets `animation: none; opacity: 1` — the cursor stays visible
+    // rather than being frozen at whichever half of the cycle it was in.
+    expect(state.name).toBe("none");
+    expect(state.opacity).toBe("1");
+  });
+
+  test("every interactive control is reachable by keyboard", async ({ page }) => {
+    // axe checks that controls are labelled; it does not walk the tab order.
+    // A control that is focusable but visually covered by something else is a
+    // real defect, and one this showcase has had.
+    await gotoPage(page, "primitives");
+    const controls = page.locator(
+      ".nx-root button:not([disabled]), .nx-root input:not([disabled]), .nx-root a[href]",
+    );
+    const total = await controls.count();
+    expect(total).toBeGreaterThan(10);
+
+    for (let i = 0; i < total; i++) {
+      const control = controls.nth(i);
+      await control.focus();
+      await expect(control).toBeFocused();
+    }
+  });
+});

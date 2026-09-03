@@ -1,0 +1,17 @@
+.nx-tooltip {
+  position: absolute;
+  z-index: 30;
+  max-width: var(--nx-tooltip-max-width, 270px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+  background: var(--nx-tooltip-bg, var(--nx-bg-surface));
+  border: var(--nx-hairline) solid var(--nx-tooltip-border, var(--nx-border-default));
+  border-left: 2px solid var(--nx-tooltip-accent, var(--nx-fg-info));
+  padding: var(--nx-space-2) var(--nx-space-3);
+  font-family: var(--nx-font-mono);
+  font-size: var(--nx-text-2xs);
+  letter-spacing: var(--nx-track-normal);
+  text-transform: uppercase;
+}

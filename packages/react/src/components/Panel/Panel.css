@@ -1,0 +1,88 @@
+/* The surface itself. Every value is a component token defaulted from the
+   semantic layer, so a consumer can restyle panels — padding included — by
+   setting one variable on any ancestor. Previously all of this was an inline
+   style object, which no stylesheet could reach. */
+.nx-panel {
+  /* Corner-tick arms. Defaulted transparent here, at (0,1,0), so the
+     per-corner rules below at (0,2,0) can turn them on. */
+  --tl: transparent;
+  --tr: transparent;
+  --bl: transparent;
+  --br: transparent;
+
+  position: relative;
+  background: var(--nx-panel-bg, var(--nx-bg-surface));
+  border: var(--nx-hairline) solid var(--nx-panel-border, var(--nx-border-default));
+  border-radius: var(--nx-radius);
+  box-shadow: var(--nx-panel-shadow, var(--nx-glow-inset));
+  padding: var(--nx-panel-padding, var(--nx-space-5));
+  color: var(--nx-panel-fg, var(--nx-fg-subtle));
+  font-family: var(--nx-font-mono);
+  font-size: var(--nx-text-xs);
+}
+
+.nx-panel[data-nx-padded="0"] { --nx-panel-padding: 0; }
+
+.nx-panel[data-nx-raised="1"] {
+  --nx-panel-shadow: var(--nx-glow-raised), var(--nx-glow-inset);
+}
+
+/* Corner ticks read from the semantic --nx-border-accent token (a border
+   element, not text) and sit flush over the panel's own hairline border via
+   a -1px inset, matching how a real two-sided border corner would sit.
+   Reference implements only "tl" + "br" (one pseudo-element each, drawn with
+   real borders); Corner and Panel promise all four, so this extends the same
+   idea — one pseudo-element per pair of corners, each carrying two tiny
+   gradients (a horizontal arm + a vertical arm) gated by `--tl/--tr/--bl/--br`
+   through an attribute-substring selector against `data-nx-corners`. */
+/* The defaults sit on the bare class, at (0,1,0). They used to sit on
+   `.nx-panel[data-nx-corners]:not([data-nx-corners="none"])`, which is
+   (0,3,0) — `:not()` contributes its argument's specificity — and therefore
+   outranked every `[data-nx-corners*="tl"]` rule below at (0,2,0), regardless
+   of source order. The result was that all four ticks resolved to
+   `transparent` on every panel: the signature detail of the system never
+   rendered at all. Keeping these lower than the per-corner rules is what makes
+   the cascade work; the "none" case is handled by suppressing the pseudo-
+   element instead of by out-specifying these. */
+.nx-panel[data-nx-corners*="tl"] { --tl: var(--nx-border-accent); }
+.nx-panel[data-nx-corners*="tr"] { --tr: var(--nx-border-accent); }
+.nx-panel[data-nx-corners*="bl"] { --bl: var(--nx-border-accent); }
+.nx-panel[data-nx-corners*="br"] { --br: var(--nx-border-accent); }
+
+.nx-panel[data-nx-corners="none"]::before { content: none; }
+
+/* :not() here is deliberate, and different from the removed-specificity bug
+   above: it makes the two ::before rules target mutually exclusive states
+   (none vs. not-none) instead of the same element at equal specificity, where
+   whichever is declared later wins regardless of intent. Without it, this
+   rule and the one above both matched a "none" panel at identical
+   specificity (0,2,1) — content: "" being declared second silently overrode
+   content: none, so the pseudo-element was generated anyway (invisible only
+   because --tl/--tr/--bl/--br still default to transparent). Scoping them to
+   disjoint selectors means neither can be reordered into fighting the other. */
+.nx-panel[data-nx-corners]:not([data-nx-corners="none"])::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  pointer-events: none;
+  background-repeat: no-repeat;
+  background-image:
+    linear-gradient(to right, var(--tl) 0 var(--nx-tick), transparent 0),
+    linear-gradient(to bottom, var(--tl) 0 var(--nx-tick), transparent 0),
+    linear-gradient(to left, var(--tr) 0 var(--nx-tick), transparent 0),
+    linear-gradient(to bottom, var(--tr) 0 var(--nx-tick), transparent 0),
+    linear-gradient(to right, var(--bl) 0 var(--nx-tick), transparent 0),
+    linear-gradient(to top, var(--bl) 0 var(--nx-tick), transparent 0),
+    linear-gradient(to left, var(--br) 0 var(--nx-tick), transparent 0),
+    linear-gradient(to top, var(--br) 0 var(--nx-tick), transparent 0);
+  background-size:
+    var(--nx-tick) var(--nx-hairline), var(--nx-hairline) var(--nx-tick),
+    var(--nx-tick) var(--nx-hairline), var(--nx-hairline) var(--nx-tick),
+    var(--nx-tick) var(--nx-hairline), var(--nx-hairline) var(--nx-tick),
+    var(--nx-tick) var(--nx-hairline), var(--nx-hairline) var(--nx-tick);
+  background-position:
+    top left, top left,
+    top right, top right,
+    bottom left, bottom left,
+    bottom right, bottom right;
+}

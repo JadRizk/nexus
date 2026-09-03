@@ -13,20 +13,461 @@
      import { Panel, Drawer } from "@nexus/react";
    ========================================================================== */
 
-// packages/react/src/primitives.tsx
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useId,
-  useRef,
-  useState
-} from "react";
+// packages/react/src/components/BlinkCursor/BlinkCursor.tsx
+function BlinkCursor({ char = "\u2588", style }) {
+  return /* @__PURE__ */ React.createElement("span", { "aria-hidden": "true", className: "nx-blink", style }, char);
+}
+
+// packages/react/src/components/Button/Button.tsx
+function Button({ active = false, children, ...rest }) {
+  return /* @__PURE__ */ React.createElement("button", { type: "button", className: "nx-btn", "data-active": active ? "1" : "0", ...rest }, children);
+}
+
+// packages/react/src/components/CommandPalette/CommandPalette.tsx
+import { useEffect as useEffect3, useId, useMemo, useRef as useRef3, useState } from "react";
+
+// packages/react/src/className.ts
+function mergeClassName(base, className) {
+  return className ? `${base} ${className}`.trim() : base;
+}
+
+// packages/react/src/components/Panel/Panel.tsx
+function Panel({
+  corners = ["tl", "br"],
+  padded = true,
+  raised = false,
+  className = "",
+  children,
+  ...rest
+}) {
+  return /* @__PURE__ */ React.createElement(
+    "div",
+    {
+      className: mergeClassName("nx-panel", className),
+      "data-nx-corners": corners === "none" ? "none" : corners.join(" "),
+      "data-nx-padded": padded ? "1" : "0",
+      "data-nx-raised": raised ? "1" : "0",
+      ...rest
+    },
+    children
+  );
+}
+
+// packages/react/src/components/HazardRule/HazardRule.tsx
+function HazardRule({ height, opacity, className = "", style }) {
+  return /* @__PURE__ */ React.createElement(
+    "div",
+    {
+      "aria-hidden": "true",
+      className: mergeClassName("nx-hazard", className),
+      style: {
+        ...height != null ? { "--nx-hazard-height": `${height}px` } : null,
+        ...opacity != null ? { "--nx-hazard-opacity": String(opacity) } : null,
+        ...style
+      }
+    }
+  );
+}
 
 // packages/tokens/src/index.ts
 var tone = (t) => `var(--nx-fg-${t})`;
 
-// packages/react/src/primitives.tsx
+// packages/react/src/colour.ts
+function resolveColour({ tone: tone2, colour, muted }, fallback) {
+  if (muted) return tone("disabled");
+  if (tone2) return tone(tone2);
+  return colour ?? fallback;
+}
+function iconA11y(title) {
+  return title ? { role: "img", "aria-label": title } : { "aria-hidden": true };
+}
+
+// packages/react/src/components/Glyph/Glyph.tsx
+var GLYPH_SHAPES = ["circle", "hexagon", "diamond", "ring", "square", "triangle"];
+var PATHS = {
+  circle: /* @__PURE__ */ React.createElement("circle", { cx: "7", cy: "7", r: "4.3" }),
+  hexagon: /* @__PURE__ */ React.createElement("polygon", { points: "7,2.4 11,4.8 11,9.2 7,11.6 3,9.2 3,4.8" }),
+  diamond: /* @__PURE__ */ React.createElement("polygon", { points: "7,2.2 11.4,7 7,11.8 2.6,7" }),
+  square: /* @__PURE__ */ React.createElement("rect", { x: "3.2", y: "3.2", width: "7.6", height: "7.6" }),
+  triangle: /* @__PURE__ */ React.createElement("polygon", { points: "7,2.3 11.6,10.6 2.4,10.6" })
+};
+function Glyph({ shape = "circle", tone: tone2, colour, muted = false, size = 13, title }) {
+  const c = resolveColour({ tone: tone2, colour, muted }, "var(--nx-fg-info)");
+  return /* @__PURE__ */ React.createElement(
+    "svg",
+    {
+      width: size,
+      height: size,
+      viewBox: "0 0 14 14",
+      ...iconA11y(title),
+      style: { flexShrink: 0, filter: muted ? "none" : `drop-shadow(0 0 4px ${c})` }
+    },
+    shape === "ring" ? /* @__PURE__ */ React.createElement("circle", { cx: "7", cy: "7", r: "4.1", fill: "none", strokeWidth: "2.1", stroke: c }) : /* @__PURE__ */ React.createElement("g", { fill: c }, PATHS[shape])
+  );
+}
+
+// packages/react/src/hooks/useFocusTrap.ts
+import { useEffect, useRef } from "react";
+function useFocusTrap(active, onDismiss) {
+  const ref = useRef(null);
+  const restoreTo = useRef(null);
+  const onDismissRef = useRef(onDismiss);
+  useEffect(() => {
+    onDismissRef.current = onDismiss;
+  });
+  useEffect(() => {
+    if (!active) return void 0;
+    restoreTo.current = document.activeElement;
+    const node = ref.current;
+    const SEL = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+    const focusables = () => Array.from(node?.querySelectorAll(SEL) ?? []).filter((el) => el.offsetParent !== null);
+    (focusables()[0] ?? node)?.focus?.();
+    const onKey = (e) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        onDismissRef.current?.();
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const list = focusables();
+      if (list.length === 0) {
+        e.preventDefault();
+        return;
+      }
+      const i = list.indexOf(document.activeElement);
+      if (e.shiftKey && i <= 0) {
+        e.preventDefault();
+        list[list.length - 1]?.focus();
+      } else if (!e.shiftKey && i === list.length - 1) {
+        e.preventDefault();
+        list[0]?.focus();
+      }
+    };
+    node?.addEventListener("keydown", onKey);
+    return () => {
+      node?.removeEventListener("keydown", onKey);
+      const el = restoreTo.current;
+      if (el && typeof el.focus === "function") el.focus();
+    };
+  }, [active]);
+  return ref;
+}
+
+// packages/react/src/hooks/useHotkey.ts
+import { useEffect as useEffect2, useRef as useRef2 } from "react";
+function useHotkey(combo, handler) {
+  const handlerRef = useRef2(handler);
+  useEffect2(() => {
+    handlerRef.current = handler;
+  });
+  useEffect2(() => {
+    const parts = combo.toLowerCase().split("+");
+    const key = parts[parts.length - 1] ?? "";
+    const wantMod = parts.includes("mod");
+    const wantShift = parts.includes("shift");
+    const on = (e) => {
+      const mod = e.metaKey || e.ctrlKey;
+      if (wantMod !== mod) return;
+      if (wantShift !== e.shiftKey) return;
+      if (e.key.toLowerCase() !== key) return;
+      if (!wantMod) {
+        const t = e.target;
+        const typing = !!t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable);
+        if (typing) return;
+      }
+      e.preventDefault();
+      handlerRef.current(e);
+    };
+    window.addEventListener("keydown", on);
+    return () => window.removeEventListener("keydown", on);
+  }, [combo]);
+}
+
+// packages/react/src/search/rankItems.ts
+function rankItems(items, query, limit = 40) {
+  const needle = query.trim().toLowerCase();
+  const scored = [];
+  for (const it of items) {
+    const name = String(it.label).toLowerCase();
+    let score;
+    if (!needle) score = 40;
+    else if (name === needle) score = 100;
+    else if (name.startsWith(needle)) score = 80;
+    else if (name.includes(`_${needle}`) || name.includes(`#${needle}`) || name.includes(` ${needle}`)) score = 65;
+    else if (name.includes(needle)) score = 50;
+    else if (String(it.code ?? "").toLowerCase().startsWith(needle)) score = 45;
+    else continue;
+    scored.push([score * 1e3 + (it.weight ?? 0), it]);
+  }
+  scored.sort((a, b) => b[0] - a[0]);
+  return scored.slice(0, limit).map(([, it]) => it);
+}
+
+// packages/react/src/components/CommandPalette/CommandPalette.tsx
+function CommandPalette({
+  open,
+  onClose,
+  items,
+  onSelect,
+  placeholder = "SEARCH",
+  emptyLabel = "NO MATCH",
+  hint = [["\u2191\u2193", "MOVE"], ["\u21B5", "SELECT"], ["ESC", "CLOSE"]],
+  renderMeta,
+  width = 520
+}) {
+  const [query, setQuery] = useState("");
+  const [cursor, setCursor] = useState(0);
+  const inputRef = useRef3(null);
+  const listRef = useRef3(null);
+  const trapRef = useFocusTrap(open, onClose);
+  const listId = useId();
+  useEffect3(() => {
+    if (open) {
+      setQuery("");
+      setCursor(0);
+    }
+  }, [open]);
+  useEffect3(() => {
+    if (open) requestAnimationFrame(() => inputRef.current?.focus());
+  }, [open]);
+  useEffect3(() => {
+    setCursor(0);
+  }, [query]);
+  const hits = useMemo(() => rankItems(items, query), [items, query]);
+  useEffect3(() => {
+    setCursor((c) => Math.min(c, Math.max(0, hits.length - 1)));
+  }, [hits.length]);
+  useEffect3(() => {
+    const el = listRef.current?.children[cursor];
+    el?.scrollIntoView?.({ block: "nearest" });
+  }, [cursor]);
+  if (!open) return null;
+  const active = hits[cursor];
+  return /* @__PURE__ */ React.createElement(
+    "div",
+    {
+      className: "nx-palette__scrim",
+      onMouseDown: (e) => {
+        if (e.target === e.currentTarget) onClose();
+      }
+    },
+    /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        ref: trapRef,
+        role: "dialog",
+        "aria-modal": "true",
+        "aria-label": placeholder,
+        tabIndex: -1,
+        className: "nx-palette",
+        style: { "--nx-palette-width": `${width}px` }
+      },
+      /* @__PURE__ */ React.createElement(Panel, { padded: false, raised: true, className: "nx-palette__panel" }, /* @__PURE__ */ React.createElement("div", { className: "nx-palette__field" }, /* @__PURE__ */ React.createElement("span", { "aria-hidden": "true", className: "nx-palette__prompt" }, ">"), /* @__PURE__ */ React.createElement(
+        "input",
+        {
+          ref: inputRef,
+          value: query,
+          onChange: (e) => setQuery(e.target.value),
+          placeholder,
+          className: "nx-palette__input",
+          role: "combobox",
+          "aria-expanded": true,
+          "aria-controls": listId,
+          "aria-autocomplete": "list",
+          "aria-activedescendant": active ? `${listId}-${cursor}` : void 0,
+          "aria-label": placeholder,
+          onKeyDown: (e) => {
+            if (e.key === "ArrowDown") {
+              e.preventDefault();
+              setCursor((c) => Math.min(hits.length - 1, c + 1));
+            } else if (e.key === "ArrowUp") {
+              e.preventDefault();
+              setCursor((c) => Math.max(0, c - 1));
+            } else if (e.key === "Home") {
+              e.preventDefault();
+              setCursor(0);
+            } else if (e.key === "End") {
+              e.preventDefault();
+              setCursor(Math.max(0, hits.length - 1));
+            } else if (e.key === "Enter" && active) {
+              e.preventDefault();
+              onSelect(active);
+            }
+          }
+        }
+      ), /* @__PURE__ */ React.createElement("span", { "aria-hidden": "true", className: "nx-palette__count" }, hits.length)), /* @__PURE__ */ React.createElement(HazardRule, { className: "nx-palette__rule" }), /* @__PURE__ */ React.createElement("div", { className: "nx-sr", role: "status", "aria-live": "polite" }, hits.length, " result", hits.length === 1 ? "" : "s"), hits.length === 0 && /* @__PURE__ */ React.createElement("div", { className: "nx-palette__empty" }, emptyLabel), /* @__PURE__ */ React.createElement("ul", { ref: listRef, id: listId, role: "listbox", "aria-label": "Results", className: "nx-palette__list" }, hits.map((it, i) => /* @__PURE__ */ React.createElement(
+        "li",
+        {
+          key: it.id,
+          id: `${listId}-${i}`,
+          role: "option",
+          "aria-selected": i === cursor,
+          className: "nx-palette__option",
+          onMouseEnter: () => setCursor(i),
+          onMouseDown: (e) => {
+            e.preventDefault();
+            onSelect(it);
+          }
+        },
+        it.shape && /* @__PURE__ */ React.createElement(Glyph, { shape: it.shape, colour: it.colour, size: 10 }),
+        /* @__PURE__ */ React.createElement("span", { className: "nx-palette__label" }, it.label),
+        it.code && /* @__PURE__ */ React.createElement(
+          "span",
+          {
+            className: "nx-palette__code",
+            style: { "--nx-palette-code-fg": it.colour }
+          },
+          it.code
+        ),
+        renderMeta?.(it)
+      ))), /* @__PURE__ */ React.createElement("div", { "aria-hidden": "true", className: "nx-palette__hints" }, hint.map(([k, v]) => /* @__PURE__ */ React.createElement("span", { key: k }, k, " ", v))))
+    )
+  );
+}
+
+// packages/react/src/components/Drawer/Drawer.tsx
+import { useId as useId2, version as reactVersion } from "react";
+
+// packages/react/src/components/Drawer/inert.ts
+function inertAttr(reactVersion2) {
+  return /^18\./.test(reactVersion2) ? "" : true;
+}
+
+// packages/react/src/components/Drawer/Drawer.tsx
+var INERT_VALUE = inertAttr(reactVersion);
+var inertWhenClosed = (open) => open ? {} : { inert: INERT_VALUE };
+function Drawer({
+  open,
+  onClose,
+  title,
+  subtitle,
+  tone: tone2,
+  colour,
+  icon,
+  footer,
+  width = 296,
+  children
+}) {
+  const trapRef = useFocusTrap(open, onClose);
+  const titleId = useId2();
+  const accent = resolveColour({ tone: tone2, colour }, "var(--nx-fg-info)");
+  return /* @__PURE__ */ React.createElement(
+    "div",
+    {
+      ref: trapRef,
+      role: "dialog",
+      "aria-modal": "true",
+      "aria-labelledby": titleId,
+      "aria-hidden": open ? void 0 : true,
+      ...inertWhenClosed(open),
+      tabIndex: -1,
+      className: "nx-drawer",
+      "data-open": open ? "1" : "0",
+      style: { "--nx-drawer-width": `${width}px` }
+    },
+    /* @__PURE__ */ React.createElement(Panel, { padded: false, raised: true, className: "nx-drawer__panel" }, /* @__PURE__ */ React.createElement("header", { className: "nx-drawer__header" }, /* @__PURE__ */ React.createElement("div", { className: "nx-drawer__head" }, icon && /* @__PURE__ */ React.createElement("div", { className: "nx-drawer__icon" }, icon), /* @__PURE__ */ React.createElement("div", { className: "nx-drawer__titles" }, /* @__PURE__ */ React.createElement(
+      "h2",
+      {
+        id: titleId,
+        className: "nx-drawer__title",
+        style: { "--nx-drawer-accent": accent }
+      },
+      title
+    ), subtitle != null && /* @__PURE__ */ React.createElement("div", { className: "nx-drawer__subtitle" }, subtitle)), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        type: "button",
+        className: "nx-btn nx-drawer__close",
+        onClick: onClose,
+        "aria-label": "Close details"
+      },
+      "\u2715"
+    ))), /* @__PURE__ */ React.createElement(HazardRule, { className: "nx-drawer__rule" }), /* @__PURE__ */ React.createElement("div", { className: "nx-drawer__body" }, children), footer && /* @__PURE__ */ React.createElement("div", { className: "nx-drawer__footer" }, footer))
+  );
+}
+
+// packages/react/src/components/KeyValue/KeyValue.tsx
+function KeyValue({ label, value, style }) {
+  return /* @__PURE__ */ React.createElement("div", { className: "nx-kv", style }, /* @__PURE__ */ React.createElement("span", { className: "nx-kv__label" }, label), /* @__PURE__ */ React.createElement("span", { className: "nx-kv__value" }, value));
+}
+
+// packages/react/src/components/SectionHeading/SectionHeading.tsx
+function SectionHeading({ children, className = "", ...rest }) {
+  return /* @__PURE__ */ React.createElement("div", { className: mergeClassName("nx-heading", className), ...rest }, children);
+}
+
+// packages/react/src/components/Legend/Legend.tsx
+function Legend({ groups, style }) {
+  return /* @__PURE__ */ React.createElement("div", { className: "nx-legend", style }, groups.map((group) => /* @__PURE__ */ React.createElement("fieldset", { key: group.title, className: "nx-legend__group" }, /* @__PURE__ */ React.createElement("legend", { className: "nx-legend__title" }, /* @__PURE__ */ React.createElement(SectionHeading, null, "/// ", group.title)), group.rows)));
+}
+
+// packages/react/src/components/LinkGlyph/LinkGlyph.tsx
+function LinkGlyph({
+  tone: tone2,
+  colour,
+  dashed = false,
+  arrow = false,
+  width = 1.2,
+  muted = false,
+  size = 13,
+  title
+}) {
+  const c = resolveColour({ tone: tone2, colour, muted }, "var(--nx-fg-info)");
+  return /* @__PURE__ */ React.createElement(
+    "svg",
+    {
+      width: size,
+      height: size,
+      viewBox: "0 0 14 14",
+      ...iconA11y(title),
+      style: { flexShrink: 0 }
+    },
+    /* @__PURE__ */ React.createElement(
+      "path",
+      {
+        d: "M1 9.5 Q7 2 13 9.5",
+        fill: "none",
+        stroke: c,
+        strokeWidth: width,
+        strokeDasharray: dashed ? "2.2 1.9" : void 0,
+        strokeLinecap: "round"
+      }
+    ),
+    arrow && /* @__PURE__ */ React.createElement("polygon", { points: "13,9.5 10,7.8 10.7,10.9", fill: c })
+  );
+}
+
+// packages/react/src/components/MeterRow/MeterRow.tsx
+function MeterRow({ label, value, total, tone: tone2, colour, labelWidth }) {
+  const pct = total > 0 ? Math.min(100, Math.max(0, value / total * 100)) : 0;
+  return /* @__PURE__ */ React.createElement(
+    "div",
+    {
+      className: "nx-meter",
+      style: {
+        "--nx-meter-fg": resolveColour({ tone: tone2, colour }, "var(--nx-fg-info)"),
+        ...labelWidth != null ? { "--nx-meter-label-width": `${labelWidth}px` } : null
+      }
+    },
+    /* @__PURE__ */ React.createElement("span", { className: "nx-meter__label" }, label),
+    /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        className: "nx-meter__track",
+        role: "meter",
+        "aria-valuenow": value,
+        "aria-valuemin": 0,
+        "aria-valuemax": total,
+        "aria-label": `${label}: ${value} of ${total}`
+      },
+      /* @__PURE__ */ React.createElement("div", { className: "nx-meter__fill", style: { width: `${pct}%` } })
+    ),
+    /* @__PURE__ */ React.createElement("span", { className: "nx-meter__value" }, value)
+  );
+}
+
+// packages/react/src/components/NexusProvider/NexusProvider.tsx
+import { createContext, useContext, useEffect as useEffect4, useState as useState2 } from "react";
 var Ctx = createContext({
   theme: "hud-aa",
   crt: true,
@@ -43,113 +484,49 @@ function NexusProvider({
   className = "",
   ...rest
 }) {
-  const [t, setTheme] = useState(theme);
-  const [c, setCrt] = useState(crt);
-  useEffect(() => setTheme(theme), [theme]);
-  useEffect(() => setCrt(crt), [crt]);
-  return /* @__PURE__ */ React.createElement(Ctx.Provider, { value: { theme: t, crt: c, setTheme, setCrt } }, /* @__PURE__ */ React.createElement("div", { className: `nx-root ${className}`, "data-nx-theme": t, "data-nx-crt": c ? "on" : "off", ...rest }, children));
+  const [t, setTheme] = useState2(theme);
+  const [c, setCrt] = useState2(crt);
+  useEffect4(() => setTheme(theme), [theme]);
+  useEffect4(() => setCrt(crt), [crt]);
+  return /* @__PURE__ */ React.createElement(Ctx.Provider, { value: { theme: t, crt: c, setTheme, setCrt } }, /* @__PURE__ */ React.createElement("div", { className: mergeClassName("nx-root", className), "data-nx-theme": t, "data-nx-crt": c ? "on" : "off", ...rest }, children));
 }
-function Panel({
-  corners = ["tl", "br"],
-  padded = true,
-  raised = false,
-  style,
-  children,
-  ...rest
-}) {
-  const attr = corners === "none" ? "none" : corners.join(" ");
-  return /* @__PURE__ */ React.createElement(
-    "div",
+
+// packages/react/src/components/Slider/Slider.tsx
+import { useId as useId3 } from "react";
+function Slider({ label, value, min, max, step = 1, onChange, format, style }) {
+  const id = useId3();
+  const shown = format ? format(value) : String(value);
+  return /* @__PURE__ */ React.createElement("div", { className: "nx-slider-field", style }, /* @__PURE__ */ React.createElement("div", { className: "nx-slider-row" }, /* @__PURE__ */ React.createElement("label", { htmlFor: id, className: "nx-slider-label" }, label), /* @__PURE__ */ React.createElement("span", { "aria-hidden": "true", className: "nx-slider-value" }, shown)), /* @__PURE__ */ React.createElement(
+    "input",
     {
-      className: "nx-panel",
-      "data-nx-corners": attr,
-      style: {
-        position: "relative",
-        background: "var(--nx-bg-surface)",
-        border: "var(--nx-hairline) solid var(--nx-border-default)",
-        borderRadius: "var(--nx-radius)",
-        boxShadow: raised ? "var(--nx-glow-raised), var(--nx-glow-inset)" : "var(--nx-glow-inset)",
-        padding: padded ? "var(--nx-space-5)" : 0,
-        color: "var(--nx-fg-subtle)",
-        fontFamily: "var(--nx-font-mono)",
-        fontSize: "var(--nx-text-xs)",
-        ...style
-      },
-      ...rest
-    },
-    children
-  );
-}
-function HazardRule({ height = 5, opacity = 0.32, style }) {
-  return /* @__PURE__ */ React.createElement(
-    "div",
-    {
-      "aria-hidden": "true",
-      style: {
-        height,
-        opacity,
-        background: "repeating-linear-gradient(-45deg, var(--nx-fg-accent) 0 4px, transparent 4px 9px)",
-        ...style
-      }
+      id,
+      className: "nx-slider",
+      type: "range",
+      min,
+      max,
+      step,
+      value,
+      "aria-valuetext": shown,
+      onChange: (e) => onChange(parseFloat(e.target.value))
     }
-  );
+  ));
 }
-function SectionHeading({ children, style, ...rest }) {
+
+// packages/react/src/components/Stat/Stat.tsx
+function Stat({ label, value, tone: tone2, colour, style }) {
   return /* @__PURE__ */ React.createElement(
     "div",
     {
-      style: {
-        color: "var(--nx-fg-accent)",
-        fontSize: "var(--nx-text-2xs)",
-        letterSpacing: "var(--nx-track-wider)",
-        textTransform: "uppercase",
-        marginBottom: "var(--nx-space-2)",
-        opacity: 0.85,
-        ...style
-      },
-      ...rest
+      className: "nx-stat",
+      style: { "--nx-stat-value-fg": resolveColour({ tone: tone2, colour }, "var(--nx-fg-default)"), ...style }
     },
-    children
+    /* @__PURE__ */ React.createElement("div", { className: "nx-stat__label" }, label),
+    /* @__PURE__ */ React.createElement("div", { className: "nx-stat__value" }, value)
   );
 }
-function Wordmark({ children, size = "var(--nx-text-xl)", skew = -9, style, ...rest }) {
-  return /* @__PURE__ */ React.createElement(
-    "span",
-    {
-      style: {
-        fontFamily: "var(--nx-font-stencil)",
-        fontSize: size,
-        lineHeight: 0.8,
-        color: "var(--nx-fg-default)",
-        letterSpacing: "-0.02em",
-        transform: `skewX(${skew}deg)`,
-        display: "inline-block",
-        textShadow: "2px 0 rgba(255,46,99,.33), -2px 0 rgba(23,226,229,.33)",
-        ...style
-      },
-      ...rest
-    },
-    children
-  );
-}
-function BlinkCursor({ char = "\u2588", style }) {
-  return /* @__PURE__ */ React.createElement("span", { "aria-hidden": "true", className: "nx-blink", style: { color: "var(--nx-fg-accent)", ...style } }, char);
-}
-function KeyValue({ label, value, style }) {
-  return /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", gap: "var(--nx-space-4)", ...style } }, /* @__PURE__ */ React.createElement("span", { style: { color: "var(--nx-fg-tertiary)", letterSpacing: "var(--nx-track-wide)" } }, label), /* @__PURE__ */ React.createElement("span", { style: { color: "var(--nx-fg-default)", fontVariantNumeric: "tabular-nums" } }, value));
-}
-function Stat({ label, value, tone: tone2 = "default", style }) {
-  return /* @__PURE__ */ React.createElement("div", { style }, /* @__PURE__ */ React.createElement("div", { style: {
-    color: "var(--nx-fg-tertiary)",
-    fontSize: "var(--nx-text-2xs)",
-    letterSpacing: "var(--nx-track-wide)",
-    marginBottom: "var(--nx-space-1)",
-    textTransform: "uppercase"
-  } }, label), /* @__PURE__ */ React.createElement("div", { style: { color: tone(tone2), fontSize: "var(--nx-text-xs)", letterSpacing: "var(--nx-track-normal)" } }, value));
-}
-function Button({ active = false, children, ...rest }) {
-  return /* @__PURE__ */ React.createElement("button", { type: "button", className: "nx-btn", "data-active": active ? "1" : "0", ...rest }, children);
-}
+
+// packages/react/src/components/TabStrip/TabStrip.tsx
+import { useRef as useRef4 } from "react";
 function TabStrip({
   tabs,
   value,
@@ -157,7 +534,7 @@ function TabStrip({
   label = "View",
   style
 }) {
-  const refs = useRef([]);
+  const refs = useRef4([]);
   const idx = tabs.findIndex((t) => t.value === value);
   const move = (delta) => {
     const n = (idx + delta + tabs.length) % tabs.length;
@@ -171,7 +548,8 @@ function TabStrip({
     {
       role: "tablist",
       "aria-label": label,
-      style: { display: "flex", border: "var(--nx-hairline) solid var(--nx-border-default)", ...style },
+      className: "nx-tabstrip",
+      style,
       onKeyDown: (e) => {
         if (e.key === "ArrowRight") {
           e.preventDefault();
@@ -216,122 +594,23 @@ function TabStrip({
     ))
   );
 }
-function Slider({ label, value, min, max, step = 1, onChange, format, style }) {
-  const id = useId();
-  const shown = format ? format(value) : String(value);
-  return /* @__PURE__ */ React.createElement("div", { style: { marginBottom: "var(--nx-space-4)", ...style } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", marginBottom: "var(--nx-space-1)" } }, /* @__PURE__ */ React.createElement("label", { htmlFor: id, style: {
-    color: "var(--nx-fg-tertiary)",
-    fontSize: "var(--nx-text-2xs)",
-    letterSpacing: "var(--nx-track-wide)",
-    textTransform: "uppercase"
-  } }, label), /* @__PURE__ */ React.createElement("span", { "aria-hidden": "true", style: {
-    color: "var(--nx-fg-default)",
-    fontSize: "var(--nx-text-2xs)",
-    fontVariantNumeric: "tabular-nums"
-  } }, shown)), /* @__PURE__ */ React.createElement(
-    "input",
-    {
-      id,
-      className: "nx-slider",
-      type: "range",
-      min,
-      max,
-      step,
-      value,
-      "aria-valuetext": shown,
-      onChange: (e) => onChange(parseFloat(e.target.value))
-    }
-  ));
-}
+
+// packages/react/src/components/ToggleRow/ToggleRow.tsx
 function ToggleRow({ checked, onChange, icon, label, meta, style }) {
-  return /* @__PURE__ */ React.createElement("label", { className: "nx-row", style }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", className: "nx-sr", checked, onChange: (e) => onChange(e.target.checked) }), icon, /* @__PURE__ */ React.createElement("span", { style: {
-    flex: 1,
-    color: checked ? "var(--nx-fg-default)" : "var(--nx-fg-disabled)",
-    letterSpacing: "var(--nx-track-normal)"
-  } }, label), meta != null && /* @__PURE__ */ React.createElement("span", { style: { color: "var(--nx-fg-tertiary)", fontSize: "var(--nx-text-2xs)" } }, meta));
+  return /* @__PURE__ */ React.createElement("label", { className: "nx-row", "data-checked": checked ? "1" : "0", style }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", className: "nx-sr", checked, onChange: (e) => onChange(e.target.checked) }), icon, /* @__PURE__ */ React.createElement("span", { className: "nx-row__label" }, label), meta != null && /* @__PURE__ */ React.createElement("span", { className: "nx-row__meta" }, meta));
 }
-var GLYPH_SHAPES = ["circle", "hexagon", "diamond", "ring", "square", "triangle"];
-var PATHS = {
-  circle: /* @__PURE__ */ React.createElement("circle", { cx: "7", cy: "7", r: "4.3" }),
-  hexagon: /* @__PURE__ */ React.createElement("polygon", { points: "7,2.4 11,4.8 11,9.2 7,11.6 3,9.2 3,4.8" }),
-  diamond: /* @__PURE__ */ React.createElement("polygon", { points: "7,2.2 11.4,7 7,11.8 2.6,7" }),
-  square: /* @__PURE__ */ React.createElement("rect", { x: "3.2", y: "3.2", width: "7.6", height: "7.6" }),
-  triangle: /* @__PURE__ */ React.createElement("polygon", { points: "7,2.3 11.6,10.6 2.4,10.6" })
-};
-function Glyph({ shape = "circle", colour = "var(--nx-fg-info)", muted = false, size = 13, title }) {
-  const c = muted ? "var(--nx-fg-disabled)" : colour;
-  return /* @__PURE__ */ React.createElement(
-    "svg",
-    {
-      width: size,
-      height: size,
-      viewBox: "0 0 14 14",
-      role: title ? "img" : void 0,
-      "aria-label": title,
-      "aria-hidden": title ? void 0 : true,
-      style: { flexShrink: 0, filter: muted ? "none" : `drop-shadow(0 0 4px ${c})` }
-    },
-    shape === "ring" ? /* @__PURE__ */ React.createElement("circle", { cx: "7", cy: "7", r: "4.1", fill: "none", strokeWidth: "2.1", stroke: c }) : /* @__PURE__ */ React.createElement("g", { fill: c }, PATHS[shape])
-  );
-}
-function LinkGlyph({
-  colour = "var(--nx-fg-info)",
-  dashed = false,
-  arrow = false,
-  width = 1.2,
-  muted = false,
-  size = 13,
-  title
-}) {
-  const c = muted ? "var(--nx-fg-disabled)" : colour;
-  return /* @__PURE__ */ React.createElement(
-    "svg",
-    {
-      width: size,
-      height: size,
-      viewBox: "0 0 14 14",
-      role: title ? "img" : void 0,
-      "aria-label": title,
-      "aria-hidden": title ? void 0 : true,
-      style: { flexShrink: 0 }
-    },
-    /* @__PURE__ */ React.createElement(
-      "path",
-      {
-        d: "M1 9.5 Q7 2 13 9.5",
-        fill: "none",
-        stroke: c,
-        strokeWidth: width,
-        strokeDasharray: dashed ? "2.2 1.9" : void 0,
-        strokeLinecap: "round"
-      }
-    ),
-    arrow && /* @__PURE__ */ React.createElement("polygon", { points: "13,9.5 10,7.8 10.7,10.9", fill: c })
-  );
-}
-function Tooltip({ x, y, accent = "var(--nx-fg-info)", children, style }) {
+
+// packages/react/src/components/Tooltip/Tooltip.tsx
+function Tooltip({ x, y, tone: tone2, colour, children, style }) {
   return /* @__PURE__ */ React.createElement(
     "div",
     {
       role: "tooltip",
+      className: "nx-tooltip",
       style: {
-        position: "absolute",
         left: x,
         top: y,
-        pointerEvents: "none",
-        zIndex: 30,
-        maxWidth: 270,
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        whiteSpace: "nowrap",
-        background: "var(--nx-bg-surface)",
-        border: "var(--nx-hairline) solid var(--nx-border-default)",
-        borderLeft: `2px solid ${accent}`,
-        padding: "var(--nx-space-2) var(--nx-space-3)",
-        fontFamily: "var(--nx-font-mono)",
-        fontSize: "var(--nx-text-2xs)",
-        letterSpacing: "var(--nx-track-normal)",
-        textTransform: "uppercase",
+        "--nx-tooltip-accent": resolveColour({ tone: tone2, colour }, "var(--nx-fg-info)"),
         ...style
       }
     },
@@ -339,370 +618,24 @@ function Tooltip({ x, y, accent = "var(--nx-fg-info)", children, style }) {
   );
 }
 
-// packages/react/src/overlays.tsx
-import { useEffect as useEffect3, useId as useId2, useMemo, useRef as useRef3, useState as useState2 } from "react";
-
-// packages/react/src/types.ts
-import { useCallback, useEffect as useEffect2, useRef as useRef2 } from "react";
-function useFocusTrap(active, onDismiss) {
-  const ref = useRef2(null);
-  const restoreTo = useRef2(null);
-  const onDismissRef = useRef2(onDismiss);
-  onDismissRef.current = onDismiss;
-  useEffect2(() => {
-    if (!active) return void 0;
-    restoreTo.current = document.activeElement;
-    const node = ref.current;
-    const SEL = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
-    const focusables = () => Array.from(node?.querySelectorAll(SEL) ?? []).filter((el) => el.offsetParent !== null);
-    (focusables()[0] ?? node)?.focus?.();
-    const onKey = (e) => {
-      if (e.key === "Escape") {
-        e.stopPropagation();
-        onDismissRef.current?.();
-        return;
-      }
-      if (e.key !== "Tab") return;
-      const list = focusables();
-      if (list.length === 0) {
-        e.preventDefault();
-        return;
-      }
-      const i = list.indexOf(document.activeElement);
-      if (e.shiftKey && i <= 0) {
-        e.preventDefault();
-        list[list.length - 1]?.focus();
-      } else if (!e.shiftKey && i === list.length - 1) {
-        e.preventDefault();
-        list[0]?.focus();
-      }
-    };
-    node?.addEventListener("keydown", onKey);
-    return () => {
-      node?.removeEventListener("keydown", onKey);
-      const el = restoreTo.current;
-      if (el && typeof el.focus === "function") el.focus();
-    };
-  }, [active]);
-  return ref;
-}
-function useHotkey(combo, handler) {
-  const cb = useCallback(handler, [handler]);
-  useEffect2(() => {
-    const parts = combo.toLowerCase().split("+");
-    const key = parts[parts.length - 1] ?? "";
-    const wantMod = parts.includes("mod");
-    const wantShift = parts.includes("shift");
-    const on = (e) => {
-      const t = e.target;
-      const typing = !!t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable);
-      const mod = e.metaKey || e.ctrlKey;
-      if (wantMod !== mod) return;
-      if (wantShift !== e.shiftKey) return;
-      if (typing) return;
-      if (e.key.toLowerCase() !== key) return;
-      e.preventDefault();
-      cb(e);
-    };
-    window.addEventListener("keydown", on);
-    return () => window.removeEventListener("keydown", on);
-  }, [combo, cb]);
-}
-function rankItems(items, query, limit = 40) {
-  const needle = query.trim().toLowerCase();
-  const scored = [];
-  for (const it of items) {
-    const name = String(it.label).toLowerCase();
-    let score;
-    if (!needle) score = 40;
-    else if (name === needle) score = 100;
-    else if (name.startsWith(needle)) score = 80;
-    else if (name.includes(`_${needle}`) || name.includes(`#${needle}`) || name.includes(` ${needle}`)) score = 65;
-    else if (name.includes(needle)) score = 50;
-    else if (String(it.code ?? "").toLowerCase().startsWith(needle)) score = 45;
-    else continue;
-    scored.push([score * 1e3 + (it.weight ?? 0), it]);
-  }
-  scored.sort((a, b) => b[0] - a[0]);
-  return scored.slice(0, limit).map(([, it]) => it);
-}
-
-// packages/react/src/overlays.tsx
-function Drawer({
-  open,
-  onClose,
-  title,
-  subtitle,
-  accent = "var(--nx-fg-info)",
-  icon,
-  footer,
-  width = 296,
-  children
+// packages/react/src/components/Wordmark/Wordmark.tsx
+function Wordmark({
+  children,
+  size,
+  skew = -9,
+  className = "",
+  style,
+  ...rest
 }) {
-  const trapRef = useFocusTrap(open, onClose);
-  const titleId = useId2();
   return /* @__PURE__ */ React.createElement(
-    "div",
+    "span",
     {
-      ref: trapRef,
-      role: "dialog",
-      "aria-modal": "true",
-      "aria-labelledby": titleId,
-      "aria-hidden": open ? void 0 : true,
-      inert: open ? void 0 : "",
-      tabIndex: -1,
-      style: {
-        position: "fixed",
-        top: "var(--nx-space-5)",
-        right: "var(--nx-space-5)",
-        bottom: "var(--nx-space-5)",
-        width,
-        display: "flex",
-        flexDirection: "column",
-        transform: open ? "translateX(0)" : `translateX(${width + 28}px)`,
-        opacity: open ? 1 : 0,
-        pointerEvents: open ? "auto" : "none",
-        transition: "transform var(--nx-dur-panel) var(--nx-ease), opacity var(--nx-dur-fade) linear"
-      }
+      className: mergeClassName("nx-wordmark", className),
+      style: { "--nx-wordmark-size": size, "--nx-wordmark-skew": `${skew}deg`, ...style },
+      ...rest
     },
-    /* @__PURE__ */ React.createElement(Panel, { padded: false, raised: true, style: { display: "flex", flexDirection: "column", height: "100%", minHeight: 0 } }, /* @__PURE__ */ React.createElement("header", { style: {
-      padding: "var(--nx-space-5)",
-      borderBottom: "var(--nx-hairline) solid var(--nx-border-default)",
-      flexShrink: 0
-    } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "flex-start", gap: "var(--nx-space-3)" } }, icon && /* @__PURE__ */ React.createElement("div", { style: { paddingTop: 2 } }, icon), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minWidth: 0 } }, /* @__PURE__ */ React.createElement("h2", { id: titleId, style: {
-      margin: 0,
-      color: accent,
-      fontFamily: "var(--nx-font-mono)",
-      fontSize: "var(--nx-text-md)",
-      fontWeight: 700,
-      lineHeight: 1.25,
-      letterSpacing: "var(--nx-track-normal)",
-      textTransform: "uppercase",
-      wordBreak: "break-all"
-    } }, title), subtitle != null && /* @__PURE__ */ React.createElement("div", { style: {
-      color: "var(--nx-fg-tertiary)",
-      marginTop: "var(--nx-space-1)",
-      letterSpacing: "var(--nx-track-wide)"
-    } }, subtitle)), /* @__PURE__ */ React.createElement(
-      "button",
-      {
-        type: "button",
-        className: "nx-btn",
-        onClick: onClose,
-        "aria-label": "Close details",
-        style: { padding: "3px 6px", lineHeight: 1 }
-      },
-      "\u2715"
-    ))), /* @__PURE__ */ React.createElement(HazardRule, { style: { flexShrink: 0 } }), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minHeight: 0, overflowY: "auto", padding: "var(--nx-space-5)" } }, children), footer && /* @__PURE__ */ React.createElement("div", { style: {
-      display: "flex",
-      gap: "var(--nx-space-2)",
-      padding: "var(--nx-space-4) var(--nx-space-5)",
-      borderTop: "var(--nx-hairline) solid var(--nx-border-default)",
-      flexShrink: 0
-    } }, footer))
+    children
   );
-}
-function MeterRow({ label, value, total, colour, labelWidth = 66 }) {
-  const pct = total > 0 ? Math.min(100, Math.max(0, value / total * 100)) : 0;
-  return /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "var(--nx-space-3)", marginBottom: "var(--nx-space-1)" } }, /* @__PURE__ */ React.createElement("span", { style: { color: colour, letterSpacing: "var(--nx-track-wide)", width: labelWidth, flexShrink: 0 } }, label), /* @__PURE__ */ React.createElement(
-    "div",
-    {
-      role: "meter",
-      "aria-valuenow": value,
-      "aria-valuemin": 0,
-      "aria-valuemax": total,
-      "aria-label": `${label}: ${value} of ${total}`,
-      style: { flex: 1, height: 4, background: "rgba(255,255,255,.045)" }
-    },
-    /* @__PURE__ */ React.createElement("div", { style: { height: "100%", width: `${pct}%`, background: colour, boxShadow: `0 0 6px ${colour}` } })
-  ), /* @__PURE__ */ React.createElement("span", { style: { color: "var(--nx-fg-default)", width: 18, textAlign: "right", fontVariantNumeric: "tabular-nums" } }, value));
-}
-function CommandPalette({
-  open,
-  onClose,
-  items,
-  onSelect,
-  placeholder = "SEARCH",
-  emptyLabel = "NO MATCH",
-  hint = [["\u2191\u2193", "MOVE"], ["\u21B5", "SELECT"], ["ESC", "CLOSE"]],
-  renderMeta,
-  width = 520
-}) {
-  const [query, setQuery] = useState2("");
-  const [cursor, setCursor] = useState2(0);
-  const inputRef = useRef3(null);
-  const listRef = useRef3(null);
-  const trapRef = useFocusTrap(open, onClose);
-  const listId = useId2();
-  useEffect3(() => {
-    if (open) {
-      setQuery("");
-      setCursor(0);
-    }
-  }, [open]);
-  useEffect3(() => {
-    if (open) requestAnimationFrame(() => inputRef.current?.focus());
-  }, [open]);
-  useEffect3(() => {
-    setCursor(0);
-  }, [query]);
-  const hits = useMemo(() => rankItems(items, query), [items, query]);
-  useEffect3(() => {
-    const el = listRef.current?.children[cursor];
-    el?.scrollIntoView?.({ block: "nearest" });
-  }, [cursor]);
-  if (!open) return null;
-  const active = hits[cursor];
-  return /* @__PURE__ */ React.createElement(
-    "div",
-    {
-      onMouseDown: (e) => {
-        if (e.target === e.currentTarget) onClose();
-      },
-      style: {
-        position: "fixed",
-        inset: 0,
-        zIndex: 40,
-        background: "var(--nx-scrim)",
-        backdropFilter: "blur(2px)",
-        display: "flex",
-        justifyContent: "center",
-        paddingTop: "13vh"
-      }
-    },
-    /* @__PURE__ */ React.createElement(
-      "div",
-      {
-        ref: trapRef,
-        role: "dialog",
-        "aria-modal": "true",
-        "aria-label": placeholder,
-        tabIndex: -1,
-        style: { width, maxWidth: "92vw", height: "fit-content", maxHeight: "62vh" }
-      },
-      /* @__PURE__ */ React.createElement(Panel, { padded: false, raised: true, style: { display: "flex", flexDirection: "column", maxHeight: "62vh" } }, /* @__PURE__ */ React.createElement("div", { style: {
-        display: "flex",
-        alignItems: "center",
-        gap: "var(--nx-space-4)",
-        padding: "var(--nx-space-5)",
-        borderBottom: "var(--nx-hairline) solid var(--nx-border-default)"
-      } }, /* @__PURE__ */ React.createElement("span", { "aria-hidden": "true", style: {
-        color: "var(--nx-fg-accent)",
-        fontWeight: 700,
-        fontSize: "var(--nx-text-md)"
-      } }, ">"), /* @__PURE__ */ React.createElement(
-        "input",
-        {
-          ref: inputRef,
-          value: query,
-          onChange: (e) => setQuery(e.target.value),
-          placeholder,
-          role: "combobox",
-          "aria-expanded": true,
-          "aria-controls": listId,
-          "aria-autocomplete": "list",
-          "aria-activedescendant": active ? `${listId}-${cursor}` : void 0,
-          "aria-label": placeholder,
-          onKeyDown: (e) => {
-            if (e.key === "ArrowDown") {
-              e.preventDefault();
-              setCursor((c) => Math.min(hits.length - 1, c + 1));
-            } else if (e.key === "ArrowUp") {
-              e.preventDefault();
-              setCursor((c) => Math.max(0, c - 1));
-            } else if (e.key === "Home") {
-              e.preventDefault();
-              setCursor(0);
-            } else if (e.key === "End") {
-              e.preventDefault();
-              setCursor(hits.length - 1);
-            } else if (e.key === "Enter" && active) {
-              e.preventDefault();
-              onSelect(active);
-            }
-          },
-          style: {
-            flex: 1,
-            background: "transparent",
-            border: "none",
-            outline: "none",
-            color: "var(--nx-fg-default)",
-            fontFamily: "var(--nx-font-mono)",
-            fontSize: "var(--nx-text-md)",
-            fontWeight: 500,
-            letterSpacing: "var(--nx-track-wide)",
-            textTransform: "uppercase"
-          }
-        }
-      ), /* @__PURE__ */ React.createElement("span", { "aria-hidden": "true", style: { color: "var(--nx-fg-tertiary)", fontSize: "var(--nx-text-2xs)" } }, hits.length)), /* @__PURE__ */ React.createElement(HazardRule, { style: { flexShrink: 0 } }), /* @__PURE__ */ React.createElement("div", { className: "nx-sr", role: "status", "aria-live": "polite" }, hits.length, " result", hits.length === 1 ? "" : "s"), /* @__PURE__ */ React.createElement(
-        "ul",
-        {
-          ref: listRef,
-          id: listId,
-          role: "listbox",
-          "aria-label": "Results",
-          style: { listStyle: "none", margin: 0, padding: "var(--nx-space-2) 0", overflowY: "auto", minHeight: 0 }
-        },
-        hits.length === 0 && /* @__PURE__ */ React.createElement("li", { style: {
-          padding: "var(--nx-space-6) var(--nx-space-5)",
-          color: "var(--nx-fg-tertiary)",
-          letterSpacing: "var(--nx-track-wide)"
-        } }, emptyLabel),
-        hits.map((it, i) => /* @__PURE__ */ React.createElement(
-          "li",
-          {
-            key: it.id,
-            id: `${listId}-${i}`,
-            role: "option",
-            "aria-selected": i === cursor,
-            onMouseEnter: () => setCursor(i),
-            onMouseDown: (e) => {
-              e.preventDefault();
-              onSelect(it);
-            },
-            style: {
-              display: "flex",
-              alignItems: "center",
-              gap: "var(--nx-space-4)",
-              padding: "var(--nx-space-2) var(--nx-space-5)",
-              cursor: "pointer",
-              background: i === cursor ? "var(--nx-bg-hover)" : "transparent",
-              borderLeft: `2px solid ${i === cursor ? "var(--nx-fg-accent)" : "transparent"}`
-            }
-          },
-          it.shape && /* @__PURE__ */ React.createElement(Glyph, { shape: it.shape, colour: it.colour, size: 10 }),
-          /* @__PURE__ */ React.createElement("span", { style: {
-            flex: 1,
-            color: i === cursor ? "var(--nx-fg-default)" : "var(--nx-fg-subtle)",
-            letterSpacing: "var(--nx-track-normal)",
-            textTransform: "uppercase",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap"
-          } }, it.label),
-          it.code && /* @__PURE__ */ React.createElement("span", { style: {
-            color: it.colour,
-            fontSize: "var(--nx-text-2xs)",
-            letterSpacing: "var(--nx-track-wide)",
-            opacity: 0.8
-          } }, it.code),
-          renderMeta?.(it)
-        ))
-      ), /* @__PURE__ */ React.createElement("div", { "aria-hidden": "true", style: {
-        display: "flex",
-        gap: "var(--nx-space-6)",
-        padding: "var(--nx-space-3) var(--nx-space-5)",
-        borderTop: "var(--nx-hairline) solid var(--nx-border-default)",
-        color: "var(--nx-fg-tertiary)",
-        fontSize: "var(--nx-text-2xs)",
-        letterSpacing: "var(--nx-track-wider)",
-        flexShrink: 0
-      } }, hint.map(([k, v]) => /* @__PURE__ */ React.createElement("span", { key: k }, k, " ", v))))
-    )
-  );
-}
-function Legend({ groups, style }) {
-  return /* @__PURE__ */ React.createElement("div", { style }, groups.map((g, gi) => /* @__PURE__ */ React.createElement("fieldset", { key: g.title, style: { border: 0, margin: 0, padding: 0, marginTop: gi ? "var(--nx-space-4)" : 0 } }, /* @__PURE__ */ React.createElement("legend", { style: { padding: 0 } }, /* @__PURE__ */ React.createElement(SectionHeading, null, "/// ", g.title)), g.rows)));
 }
 export {
   BlinkCursor,
@@ -725,7 +658,9 @@ export {
   ToggleRow,
   Tooltip,
   Wordmark,
+  iconA11y,
   rankItems,
+  resolveColour,
   tone,
   useFocusTrap,
   useHotkey,
@@ -733,90 +668,142 @@ export {
 };
 
 const NX_CSS = `/* ============================================================================
-   @nexus/tokens — tokens.css
+   GENERATED FILE — do not edit.
+
+   Produced from src/tokens.json by packages/tokens/build-tokens.mjs.
+   Edit the token source and run \`npm run build:tokens\`.
+   ========================================================================== */
+
+/* Nexus Cyberdeck design tokens.
+
    Zero dependencies. Works with React, Vue, Svelte, plain HTML, or a Tailwind
-   preset generated from tokens.json.
+   preset generated from the same tokens.json.
 
    Usage:
      <html data-nx-theme="hud-aa">     default, WCAG AA
-     <html data-nx-theme="hud">        the original PoC aesthetic
+     <html data-nx-theme="hud">        Prototype
 
-   Every semantic name exists in both themes, so swapping never touches
-   component code.
+   Every semantic name exists in every theme, so swapping never touches
+   component code. */
+
+/* ============================================================================
+   PRIMITIVES
+   Never referenced from a component — use the semantic layer. Contrast figures
+   are computed against --nx-bg-surface (#0A0C0B) at build time, not typed in.
    ========================================================================== */
-
 :root {
-  /* ---------------------------------------------------------- primitives --
-     Never reference these directly from a component. Use the semantic layer.
-     Contrast figures are measured against --nx-bg-surface (#0A0C0B).        */
+  /* surfaces + signature palette */
   --nx-void:      #08090A;
   --nx-panel:     #0A0C0B;
   --nx-raised:    #11150F;
+  --nx-acid:      #C6F135;                               /* 14.98:1 */
+  --nx-data:      #17E2E5;                               /* 12.19:1 */
+  --nx-lime:      #7CFF4F;                               /* 15.20:1 */
+  --nx-sodium:    #FF8A1E;                               /* 8.32:1 */
+  --nx-violet:    #9D7BFF;                               /* 6.27:1 */
+  --nx-phosphor:  #DFF5C7;                               /* 16.84:1 */
 
-  --nx-acid:      #C6F135;   /* 14.98:1 */
-  --nx-data:      #17E2E5;   /* 12.19:1 */
-  --nx-lime:      #7CFF4F;   /* 15.20:1 */
-  --nx-sodium:    #FF8A1E;   /*  8.32:1 */
-  --nx-violet:    #9D7BFF;   /*  6.27:1 */
-  --nx-phosphor:  #DFF5C7;   /* 16.84:1 */
+  /* RESTRICTED. Reachable only through semantic.fg.critical. Spending this
+     on a button is what collapses the whole language — the magenta reads
+     as a warning precisely because nothing else uses it. */
+  --nx-alarm:  #FF2E63;                                  /* 5.44:1 */
 
-  /* RESTRICTED. Reachable only through --nx-fg-critical. Spending this on a
-     button is what collapses the whole language — the magenta reads as a
-     warning precisely because nothing else uses it. */
-  --nx-alarm:     #FF2E63;   /*  5.44:1 */
+  /* typography */
+  --nx-font-mono:     ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --nx-font-stencil:  Impact, Haettenschweiler, "Arial Narrow Bold", "Arial Narrow", sans-serif;
 
-  /* -------------------------------------------------------- typography -- */
-  --nx-font-mono:    ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --nx-font-stencil: Impact, Haettenschweiler, "Arial Narrow Bold", "Arial Narrow", sans-serif;
+  --nx-text-2xs:  calc(0.5625rem * var(--nx-font-scale));
+  --nx-text-xs:   calc(0.625rem * var(--nx-font-scale));
+  --nx-text-sm:   calc(0.6875rem * var(--nx-font-scale));
+  --nx-text-md:   calc(0.8125rem * var(--nx-font-scale));
+  --nx-text-lg:   calc(1rem * var(--nx-font-scale));
+  --nx-text-xl:   calc(1.3125rem * var(--nx-font-scale));
 
-  --nx-font-scale: 1.15;                       /* theme overrides this */
-  --nx-text-2xs: calc(0.5625rem * var(--nx-font-scale));
-  --nx-text-xs:  calc(0.625rem  * var(--nx-font-scale));
-  --nx-text-sm:  calc(0.6875rem * var(--nx-font-scale));
-  --nx-text-md:  calc(0.8125rem * var(--nx-font-scale));
-  --nx-text-lg:  calc(1rem      * var(--nx-font-scale));
-  --nx-text-xl:  calc(1.3125rem * var(--nx-font-scale));
+  --nx-track-tight:   0.06em;
+  --nx-track-normal:  0.09em;
+  --nx-track-wide:    0.14em;
+  --nx-track-wider:   0.2em;
 
-  --nx-track-tight:  0.06em;
-  --nx-track-normal: 0.09em;
-  --nx-track-wide:   0.14em;
-  --nx-track-wider:  0.2em;
+  --nx-weight-regular:  400;
+  --nx-weight-medium:   500;
+  --nx-weight-bold:     700;
 
-  --nx-weight-regular: 400;
-  --nx-weight-medium:  500;
-  --nx-weight-bold:    700;
+  --nx-leading-tight:  1;
+  --nx-leading-body:   1.5;
 
-  --nx-leading-tight: 1;
-  --nx-leading-body:  1.5;
+  /* layout */
+  --nx-space-0:  0;
+  --nx-space-1:  2px;
+  --nx-space-2:  4px;
+  --nx-space-3:  6px;
+  --nx-space-4:  8px;
+  --nx-space-5:  12px;
+  --nx-space-6:  16px;
+  --nx-space-7:  24px;
+  --nx-space-8:  32px;
 
-  /* ------------------------------------------------------------ layout -- */
-  --nx-space-0: 0;    --nx-space-1: 2px;  --nx-space-2: 4px;  --nx-space-3: 6px;
-  --nx-space-4: 8px;  --nx-space-5: 12px; --nx-space-6: 16px; --nx-space-7: 24px;
-  --nx-space-8: 32px;
+  --nx-hairline:  1px;
+  --nx-radius:    0;
+  --nx-tick:      9px;
 
-  --nx-hairline: 1px;
-  --nx-radius:   0;              /* zero everywhere, by design */
-  --nx-tick:     9px;            /* corner frame arm length */
+  /* motion */
+  --nx-dur-micro:  100ms;
+  --nx-dur-fade:   180ms;
+  --nx-dur-panel:  220ms;
+  --nx-ease:       cubic-bezier(0.2, 0.9, 0.3, 1);
+  --nx-blink:      1.06s;
 
-  /* ------------------------------------------------------------ motion -- */
-  --nx-dur-micro: 100ms;
-  --nx-dur-fade:  180ms;
-  --nx-dur-panel: 220ms;
-  --nx-ease:      cubic-bezier(0.2, 0.9, 0.3, 1);
-  --nx-blink:     1.06s;
+  /* elevation + scrim */
+  --nx-glow-inset:   inset 0 0 40px rgba(198, 241, 53, 0.035);
+  --nx-glow-raised:  0 0 60px rgba(198, 241, 53, 0.10);
+  --nx-scrim:        rgba(4, 5, 4, 0.62);
 
-  /* --------------------------------------------------------- elevation -- */
-  --nx-glow-inset:  inset 0 0 40px rgba(198, 241, 53, 0.035);
-  --nx-glow-raised: 0 0 60px rgba(198, 241, 53, 0.10);
+  /* CRT layer */
+  --nx-crt-r:             rgba(255, 46, 99, 0.4);
+  --nx-crt-b:             rgba(23, 226, 229, 0.4);
+  --nx-crt-scan-opacity:  0.5;
+  --nx-crt-scan-size:     3px;
+}
 
-  /* ------------------------------------------------------------- scrim -- */
-  --nx-scrim: rgba(4, 5, 4, 0.62);
+/* ============================================================================
+   SEMANTIC LAYER — the only names components may use.
 
-  /* ----------------------------------------------------- CRT primitives -- */
-  --nx-crt-r: rgba(255, 46, 99, 0.4);
-  --nx-crt-b: rgba(23, 226, 229, 0.4);
-  --nx-crt-scan-opacity: 0.5;
-  --nx-crt-scan-size: 3px;
+   A second :root block on purpose: primitives and semantics are separate
+   layers that happen to share a scope, and collapsing them into one block to
+   satisfy no-duplicate-selectors would erase the only visible boundary
+   between "raw value" and "role".
+   ========================================================================== */
+/* stylelint-disable-next-line no-duplicate-selectors */
+:root {
+  --nx-bg-canvas:   var(--nx-void);
+  --nx-bg-surface:  var(--nx-panel);
+  --nx-bg-raised:   var(--nx-raised);
+  --nx-bg-hover:    rgba(198, 241, 53, 0.10);
+  --nx-bg-active:   rgba(198, 241, 53, 0.16);
+  --nx-bg-track:    rgba(255, 255, 255, 0.045);          /* Unfilled ground of a meter/progress track */
+
+  --nx-fg-default:     var(--nx-phosphor);
+  --nx-fg-muted:       var(--nx-grey-600);
+  --nx-fg-subtle:      var(--nx-grey-500);
+  --nx-fg-tertiary:    var(--nx-grey-400);
+  --nx-fg-disabled:    var(--nx-grey-300);
+  --nx-fg-accent:      var(--nx-acid);
+  --nx-fg-info:        var(--nx-data);
+  --nx-fg-warning:     var(--nx-sodium);
+  --nx-fg-critical:    var(--nx-alarm);                  /* The only route to alarm */
+  --nx-fg-cat-lime:    var(--nx-lime);                   /* Categorical slot — carries no status meaning */
+  --nx-fg-cat-violet:  var(--nx-violet);                 /* Categorical slot */
+
+  --nx-border-default:  var(--nx-grey-100);
+  --nx-border-strong:   var(--nx-grey-200);
+  --nx-border-accent:   var(--nx-fg-accent);
+
+  --nx-split-r:  rgba(255, 46, 99, 0.33);
+  --nx-split-b:  rgba(23, 226, 229, 0.33);
+
+  --nx-focus-ring:    var(--nx-fg-accent);
+  --nx-focus-width:   2px;
+  --nx-focus-offset:  2px;
 }
 
 /* ============================================================================
@@ -825,59 +812,56 @@ const NX_CSS = `/* =============================================================
    ========================================================================== */
 :root,
 [data-nx-theme="hud-aa"] {
-  --nx-font-scale: 1.15;
+  --nx-grey-100:    #2F382B;                             /* 1.61:1  Decorative hairline only */
+  --nx-grey-200:    #53624B;                             /* 3.01:1  UI boundary — target 3.0 for WCAG 1.4.11 */
+  --nx-grey-300:    #6B7F61;                             /* 4.52:1  Disabled text — target 4.5 for WCAG 1.4.3 */
+  --nx-grey-400:    #788E6D;                             /* 5.50:1 */
+  --nx-grey-500:    #8DA084;                             /* 7.00:1  Target 7.0 — AAA body text */
+  --nx-grey-600:    #B0BDA9;                             /* 10.00:1  Target 10.0 */
+  --nx-font-scale:  1.15;
 
-  --nx-grey-100: #2F382B;   /*  1.61:1  decorative hairline only */
-  --nx-grey-200: #53624B;   /*  3.01:1  UI boundary — meets 1.4.11 */
-  --nx-grey-300: #6B7F61;   /*  4.52:1  disabled text — meets 1.4.3 */
-  --nx-grey-400: #788E6D;   /*  5.50:1 */
-  --nx-grey-500: #8DA084;   /*  7.00:1 */
-  --nx-grey-600: #B0BDA9;   /* 10.00:1 */
+  /* re-resolved here so the theme works on any element, not only :root */
+  --nx-text-2xs:        calc(0.5625rem * var(--nx-font-scale));
+  --nx-text-xs:         calc(0.625rem * var(--nx-font-scale));
+  --nx-text-sm:         calc(0.6875rem * var(--nx-font-scale));
+  --nx-text-md:         calc(0.8125rem * var(--nx-font-scale));
+  --nx-text-lg:         calc(1rem * var(--nx-font-scale));
+  --nx-text-xl:         calc(1.3125rem * var(--nx-font-scale));
+  --nx-fg-muted:        var(--nx-grey-600);
+  --nx-fg-subtle:       var(--nx-grey-500);
+  --nx-fg-tertiary:     var(--nx-grey-400);
+  --nx-fg-disabled:     var(--nx-grey-300);
+  --nx-border-default:  var(--nx-grey-100);
+  --nx-border-strong:   var(--nx-grey-200);
 }
 
 /* ============================================================================
-   THEME: hud — the PoC verbatim. Muted text fails AA (1.21–4.98:1). Ship this
-   only where the operator opts into an immersive surface.
+   THEME: hud — Prototype.
+   The PoC verbatim. Muted text fails AA. Ship only where the operator opts
+   into an immersive surface. Muted range 1.21–4.98:1.
    ========================================================================== */
 [data-nx-theme="hud"] {
-  --nx-font-scale: 1;
+  --nx-grey-100:    #1B2318;                             /* 1.21:1 */
+  --nx-grey-200:    #2C3729;                             /* 1.57:1 */
+  --nx-grey-300:    #3D4C39;                             /* 2.14:1 */
+  --nx-grey-400:    #4A5C46;                             /* 2.72:1 */
+  --nx-grey-500:    #5E7359;                             /* 3.80:1 */
+  --nx-grey-600:    #6E8768;                             /* 4.98:1 */
+  --nx-font-scale:  1;
 
-  --nx-grey-100: #1B2318;   /* 1.21:1 */
-  --nx-grey-200: #2C3729;   /* 1.57:1 */
-  --nx-grey-300: #3D4C39;   /* 2.14:1 */
-  --nx-grey-400: #4A5C46;   /* 2.72:1 */
-  --nx-grey-500: #5E7359;   /* 3.80:1 */
-  --nx-grey-600: #6E8768;   /* 4.98:1 */
-}
-
-/* ============================================================================
-   SEMANTIC LAYER — the only names components may use.
-   ========================================================================== */
-:root {
-  --nx-bg-canvas:  var(--nx-void);
-  --nx-bg-surface: var(--nx-panel);
-  --nx-bg-raised:  var(--nx-raised);
-  --nx-bg-hover:   rgba(198, 241, 53, 0.10);
-  --nx-bg-active:  rgba(198, 241, 53, 0.16);
-
-  --nx-fg-default:  var(--nx-phosphor);
-  --nx-fg-muted:    var(--nx-grey-600);
-  --nx-fg-subtle:   var(--nx-grey-500);
-  --nx-fg-tertiary: var(--nx-grey-400);
-  --nx-fg-disabled: var(--nx-grey-300);
-
-  --nx-fg-accent:   var(--nx-acid);
-  --nx-fg-info:     var(--nx-data);
-  --nx-fg-warning:  var(--nx-sodium);
-  --nx-fg-critical: var(--nx-alarm);       /* the only route to alarm */
-
-  --nx-border-default: var(--nx-grey-100);
-  --nx-border-strong:  var(--nx-grey-200);
-  --nx-border-accent:  var(--nx-fg-accent);
-
-  --nx-focus-ring:   var(--nx-fg-accent);
-  --nx-focus-width:  2px;
-  --nx-focus-offset: 2px;
+  /* re-resolved here so the theme works on any element, not only :root */
+  --nx-text-2xs:        calc(0.5625rem * var(--nx-font-scale));
+  --nx-text-xs:         calc(0.625rem * var(--nx-font-scale));
+  --nx-text-sm:         calc(0.6875rem * var(--nx-font-scale));
+  --nx-text-md:         calc(0.8125rem * var(--nx-font-scale));
+  --nx-text-lg:         calc(1rem * var(--nx-font-scale));
+  --nx-text-xl:         calc(1.3125rem * var(--nx-font-scale));
+  --nx-fg-muted:        var(--nx-grey-600);
+  --nx-fg-subtle:       var(--nx-grey-500);
+  --nx-fg-tertiary:     var(--nx-grey-400);
+  --nx-fg-disabled:     var(--nx-grey-300);
+  --nx-border-default:  var(--nx-grey-100);
+  --nx-border-strong:   var(--nx-grey-200);
 }
 
 /* ============================================================================
@@ -885,6 +869,15 @@ const NX_CSS = `/* =============================================================
    Focus was defined on a single button class in the PoC. Here it is global and
    non-removable — WCAG 2.4.7.
    ========================================================================== */
+/* The browser's default 8px body margin (and white UA background) shows
+   around a full-bleed \`.nx-root\` otherwise — a consumer sizing its shell to
+   100vh doesn't override either, since both live above \`.nx-root\` on \`html\`/
+   \`body\`, not on the tree this design system actually controls. */
+html, body {
+  margin: 0;
+  background: var(--nx-bg-canvas);
+}
+
 .nx-root {
   background: var(--nx-bg-canvas);
   color: var(--nx-fg-default);
@@ -902,7 +895,7 @@ const NX_CSS = `/* =============================================================
 
 .nx-sr {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
-  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -969,7 +962,7 @@ const NX_CSS = `/* =============================================================
     /* vertical RGB aperture grille */
     repeating-linear-gradient(
       to right,
-      rgba(255, 0, 0, calc(0.05 * var(--nx-crt-scan-opacity))) 0px 1px,
+      rgba(255, 0, 0, calc(0.05 * var(--nx-crt-scan-opacity))) 0 1px,
       rgba(0, 255, 0, calc(0.05 * var(--nx-crt-scan-opacity))) 1px 2px,
       rgba(0, 0, 255, calc(0.05 * var(--nx-crt-scan-opacity))) 2px 3px
     );
@@ -1058,14 +1051,442 @@ const NX_CSS = `/* =============================================================
 }
 
 /* ============================================================================
-   @nexus/react — styles.css
-   Pseudo-elements and pseudo-classes for the parts a component can't reach
-   through an inline \`style\` prop: corner ticks, hover/active states on
-   native elements, and the capped blink. Everything here reads its values
-   from @nexus/tokens custom properties — this file owns no colours itself.
+   GENERATED FILE — do not edit.
+
+   Assembled by packages/react/build-styles.mjs from each component's own
+   stylesheet (src/components/Panel/Panel.css and so on) plus src/styles.
+   Edit the component's stylesheet and run \`npm run build:styles\`.
+
+   Pseudo-elements and pseudo-classes for the parts a component cannot reach
+   through an inline \`style\` prop: corner ticks, hover and active states on
+   native elements, and the capped blink. Every value here reads from an
+   @nexus/tokens custom property — this file owns no colours itself.
    ========================================================================== */
 
-/* ------------------------------------------------------------------ Panel */
+/* --------------------------------------------------------------- BlinkCursor */
+/* 1.06s step-cursor ≈ 0.94Hz — under the WCAG 2.3.1 3Hz seizure threshold.
+   The prototype blinked at 9Hz; the cap lives on the --nx-blink token. */
+.nx-blink {
+  color: var(--nx-blink-fg, var(--nx-fg-accent));
+  animation: nx-blink var(--nx-blink) steps(1) infinite;
+}
+
+@keyframes nx-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nx-blink { animation: none; opacity: 1; }
+}
+
+/* -------------------------------------------------------------------- Button */
+/* States move the token, they do not restate the property. A consumer
+   retheming buttons sets one of these on any ancestor and every state follows,
+   because custom properties inherit and the states all read the same names. */
+.nx-btn {
+  font-family: var(--nx-font-mono);
+  font-size: var(--nx-text-2xs);
+  font-weight: var(--nx-weight-medium);
+  letter-spacing: var(--nx-track-wide);
+  text-transform: uppercase;
+  color: var(--nx-btn-fg, var(--nx-fg-muted));
+  background: var(--nx-btn-bg, transparent);
+  border: var(--nx-hairline) solid var(--nx-btn-border, var(--nx-border-default));
+  border-radius: var(--nx-radius);
+  padding: var(--nx-btn-padding, var(--nx-space-3) var(--nx-space-4));
+  cursor: pointer;
+  transition:
+    background var(--nx-dur-micro) var(--nx-ease),
+    color var(--nx-dur-micro) var(--nx-ease),
+    border-color var(--nx-dur-micro) var(--nx-ease);
+}
+
+.nx-btn:hover {
+  --nx-btn-fg: var(--nx-fg-accent);
+  --nx-btn-bg: var(--nx-bg-hover);
+  --nx-btn-border: var(--nx-border-accent);
+}
+
+/* Inverted, not tinted: the active state is the accent carrying the label
+   rather than the label sitting on a wash of it. */
+.nx-btn[data-active="1"] {
+  --nx-btn-fg: var(--nx-bg-canvas);
+  --nx-btn-bg: var(--nx-fg-accent);
+  --nx-btn-border: var(--nx-border-accent);
+}
+
+.nx-btn:disabled {
+  --nx-btn-fg: var(--nx-fg-disabled);
+
+  cursor: not-allowed;
+}
+
+.nx-btn:disabled:hover {
+  --nx-btn-bg: transparent;
+  --nx-btn-border: var(--nx-border-default);
+}
+
+/* ------------------------------------------------------------ CommandPalette */
+.nx-palette__scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: var(--nx-palette-scrim, var(--nx-scrim));
+  backdrop-filter: blur(2px);
+  display: flex;
+  justify-content: center;
+  padding-top: 13vh;
+}
+
+.nx-palette {
+  width: var(--nx-palette-width, 520px);
+  max-width: 92vw;
+  height: fit-content;
+  max-height: var(--nx-palette-max-height, 62vh);
+}
+
+.nx-palette__panel {
+  display: flex;
+  flex-direction: column;
+  max-height: var(--nx-palette-max-height, 62vh);
+}
+
+.nx-palette__field {
+  display: flex;
+  align-items: center;
+  gap: var(--nx-space-4);
+  padding: var(--nx-space-5);
+  border-bottom: var(--nx-hairline) solid var(--nx-palette-divider, var(--nx-border-default));
+}
+
+.nx-palette__prompt {
+  color: var(--nx-fg-accent);
+  font-weight: var(--nx-weight-bold);
+  font-size: var(--nx-text-md);
+}
+
+.nx-palette__input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--nx-fg-default);
+  font-family: var(--nx-font-mono);
+  font-size: var(--nx-text-md);
+  font-weight: var(--nx-weight-medium);
+  letter-spacing: var(--nx-track-wide);
+  text-transform: uppercase;
+}
+
+/* The one place in this system that suppresses the global focus ring, and it
+   needs \`:focus-visible\` to do it — at (0,1,0) a plain \`.nx-palette__input\`
+   rule loses to \`.nx-root :focus-visible\` at (0,2,0). It used to "work" as an
+   inline \`outline: none\`, which outranked the global rule silently; stating it
+   here at matching specificity is the same result written down where an audit
+   can see it.
+
+   The suppression is deliberate. The ARIA combobox pattern keeps focus on this
+   input for the entire life of the palette, so the ring would be permanently
+   lit and would distinguish nothing. The panel appearing is the indicator. */
+.nx-palette__input:focus-visible {
+  outline: none;
+}
+
+.nx-palette__count {
+  color: var(--nx-fg-tertiary);
+  font-size: var(--nx-text-2xs);
+}
+
+.nx-palette__rule {
+  flex-shrink: 0;
+}
+
+.nx-palette__empty {
+  padding: var(--nx-space-6) var(--nx-space-5);
+  color: var(--nx-fg-tertiary);
+  letter-spacing: var(--nx-track-wide);
+}
+
+.nx-palette__list {
+  list-style: none;
+  margin: 0;
+  padding: var(--nx-space-2) 0;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.nx-palette__option {
+  display: flex;
+  align-items: center;
+  gap: var(--nx-space-4);
+  padding: var(--nx-space-2) var(--nx-space-5);
+  cursor: pointer;
+  background: transparent;
+  /* Always present, transparent when inactive: a border that appears on
+     selection would shift the row by two pixels. */
+  border-left: 2px solid transparent;
+}
+
+/* Keyed off aria-selected rather than a parallel data attribute — the
+   accessibility state and the visible state cannot drift if they are the
+   same attribute. */
+.nx-palette__option[aria-selected="true"] {
+  background: var(--nx-palette-option-active-bg, var(--nx-bg-hover));
+  border-left-color: var(--nx-palette-option-marker, var(--nx-fg-accent));
+}
+
+.nx-palette__label {
+  flex: 1;
+  color: var(--nx-palette-option-fg, var(--nx-fg-subtle));
+  letter-spacing: var(--nx-track-normal);
+  text-transform: uppercase;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nx-palette__option[aria-selected="true"] .nx-palette__label {
+  color: var(--nx-palette-option-active-fg, var(--nx-fg-default));
+}
+
+.nx-palette__code {
+  color: var(--nx-palette-code-fg, var(--nx-fg-tertiary));
+  font-size: var(--nx-text-2xs);
+  letter-spacing: var(--nx-track-wide);
+  opacity: 0.8;
+}
+
+.nx-palette__hints {
+  display: flex;
+  gap: var(--nx-space-6);
+  padding: var(--nx-space-3) var(--nx-space-5);
+  border-top: var(--nx-hairline) solid var(--nx-palette-divider, var(--nx-border-default));
+  color: var(--nx-fg-tertiary);
+  font-size: var(--nx-text-2xs);
+  letter-spacing: var(--nx-track-wider);
+  flex-shrink: 0;
+}
+
+/* -------------------------------------------------------------------- Drawer */
+.nx-drawer {
+  position: fixed;
+  top: var(--nx-drawer-inset, var(--nx-space-5));
+  right: var(--nx-drawer-inset, var(--nx-space-5));
+  bottom: var(--nx-drawer-inset, var(--nx-space-5));
+  width: var(--nx-drawer-width, 296px);
+  display: flex;
+  flex-direction: column;
+  transition:
+    transform var(--nx-dur-panel) var(--nx-ease),
+    opacity var(--nx-dur-fade) linear;
+}
+
+/* Slides rather than mounting and unmounting, so the motion reads as one
+   object moving instead of two objects swapping. It travels its own width plus
+   the gutter, which is what clears the edge completely. */
+.nx-drawer[data-open="0"] {
+  transform: translateX(calc(var(--nx-drawer-width, 296px) + 28px));
+  opacity: 0;
+  pointer-events: none;
+}
+
+.nx-drawer[data-open="1"] {
+  transform: translateX(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.nx-drawer__panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.nx-drawer__header {
+  padding: var(--nx-space-5);
+  border-bottom: var(--nx-hairline) solid var(--nx-drawer-divider, var(--nx-border-default));
+  flex-shrink: 0;
+}
+
+.nx-drawer__head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--nx-space-3);
+}
+
+.nx-drawer__icon {
+  padding-top: 2px;
+}
+
+.nx-drawer__titles {
+  flex: 1;
+  min-width: 0;
+}
+
+.nx-drawer__title {
+  margin: 0;
+  color: var(--nx-drawer-accent, var(--nx-fg-info));
+  font-family: var(--nx-font-mono);
+  font-size: var(--nx-text-md);
+  font-weight: var(--nx-weight-bold);
+  line-height: 1.25;
+  letter-spacing: var(--nx-track-normal);
+  text-transform: uppercase;
+  /* Subjects are machine identifiers with no spaces to break on. */
+  word-break: break-all;
+}
+
+.nx-drawer__subtitle {
+  color: var(--nx-fg-tertiary);
+  margin-top: var(--nx-space-1);
+  letter-spacing: var(--nx-track-wide);
+}
+
+.nx-drawer__close {
+  padding: 3px 6px;
+  line-height: 1;
+}
+
+.nx-drawer__rule {
+  flex-shrink: 0;
+}
+
+.nx-drawer__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--nx-space-5);
+}
+
+.nx-drawer__footer {
+  display: flex;
+  gap: var(--nx-space-2);
+  padding: var(--nx-space-4) var(--nx-space-5);
+  border-top: var(--nx-hairline) solid var(--nx-drawer-divider, var(--nx-border-default));
+  flex-shrink: 0;
+}
+
+/* ---------------------------------------------------------------- HazardRule */
+.nx-hazard {
+  height: var(--nx-hazard-height, 5px);
+  opacity: var(--nx-hazard-opacity, 0.32);
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--nx-hazard-fg, var(--nx-fg-accent)) 0 4px,
+    transparent 4px 9px
+  );
+}
+
+/* ------------------------------------------------------------------ KeyValue */
+.nx-kv {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--nx-kv-gap, var(--nx-space-4));
+  min-width: 0;
+}
+
+.nx-kv__label,
+.nx-kv__value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nx-kv__label {
+  color: var(--nx-kv-label-fg, var(--nx-fg-tertiary));
+  letter-spacing: var(--nx-track-wide);
+}
+
+.nx-kv__value {
+  color: var(--nx-kv-value-fg, var(--nx-fg-default));
+  font-variant-numeric: tabular-nums;
+}
+
+/* -------------------------------------------------------------------- Legend */
+/* A fieldset carries the group name into the accessibility tree, but brings a
+   browser default border, margin and padding that have nothing to do with this
+   design. */
+.nx-legend__group {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+/* Gap between groups rather than a margin on the first — \`:not(:first-of-type)\`
+   keeps the first group flush against whatever sits above the legend. */
+.nx-legend__group:not(:first-of-type) {
+  margin-top: var(--nx-legend-group-gap, var(--nx-space-4));
+}
+
+.nx-legend__title {
+  padding: 0;
+}
+
+/* ------------------------------------------------------------------ MeterRow */
+.nx-meter {
+  display: flex;
+  align-items: center;
+  gap: var(--nx-space-3);
+  margin-bottom: var(--nx-space-1);
+}
+
+.nx-meter__label {
+  color: var(--nx-meter-fg, var(--nx-fg-info));
+  letter-spacing: var(--nx-track-wide);
+  width: var(--nx-meter-label-width, 66px);
+  flex-shrink: 0;
+}
+
+.nx-meter__track {
+  flex: 1;
+  height: var(--nx-meter-height, 4px);
+  background: var(--nx-meter-track, var(--nx-bg-track));
+}
+
+.nx-meter__fill {
+  height: 100%;
+  background: var(--nx-meter-fg, var(--nx-fg-info));
+  box-shadow: 0 0 6px var(--nx-meter-fg, var(--nx-fg-info));
+}
+
+.nx-meter__value {
+  color: var(--nx-meter-value-fg, var(--nx-fg-default));
+  width: 18px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --------------------------------------------------------------------- Panel */
+/* The surface itself. Every value is a component token defaulted from the
+   semantic layer, so a consumer can restyle panels — padding included — by
+   setting one variable on any ancestor. Previously all of this was an inline
+   style object, which no stylesheet could reach. */
+.nx-panel {
+  /* Corner-tick arms. Defaulted transparent here, at (0,1,0), so the
+     per-corner rules below at (0,2,0) can turn them on. */
+  --tl: transparent;
+  --tr: transparent;
+  --bl: transparent;
+  --br: transparent;
+
+  position: relative;
+  background: var(--nx-panel-bg, var(--nx-bg-surface));
+  border: var(--nx-hairline) solid var(--nx-panel-border, var(--nx-border-default));
+  border-radius: var(--nx-radius);
+  box-shadow: var(--nx-panel-shadow, var(--nx-glow-inset));
+  padding: var(--nx-panel-padding, var(--nx-space-5));
+  color: var(--nx-panel-fg, var(--nx-fg-subtle));
+  font-family: var(--nx-font-mono);
+  font-size: var(--nx-text-xs);
+}
+
+.nx-panel[data-nx-padded="0"] { --nx-panel-padding: 0; }
+
+.nx-panel[data-nx-raised="1"] {
+  --nx-panel-shadow: var(--nx-glow-raised), var(--nx-glow-inset);
+}
+
 /* Corner ticks read from the semantic --nx-border-accent token (a border
    element, not text) and sit flush over the panel's own hairline border via
    a -1px inset, matching how a real two-sided border corner would sit.
@@ -1074,18 +1495,31 @@ const NX_CSS = `/* =============================================================
    idea — one pseudo-element per pair of corners, each carrying two tiny
    gradients (a horizontal arm + a vertical arm) gated by \`--tl/--tr/--bl/--br\`
    through an attribute-substring selector against \`data-nx-corners\`. */
-.nx-panel[data-nx-corners]:not([data-nx-corners="none"]) {
-  --tl: transparent;
-  --tr: transparent;
-  --bl: transparent;
-  --br: transparent;
-}
-
+/* The defaults sit on the bare class, at (0,1,0). They used to sit on
+   \`.nx-panel[data-nx-corners]:not([data-nx-corners="none"])\`, which is
+   (0,3,0) — \`:not()\` contributes its argument's specificity — and therefore
+   outranked every \`[data-nx-corners*="tl"]\` rule below at (0,2,0), regardless
+   of source order. The result was that all four ticks resolved to
+   \`transparent\` on every panel: the signature detail of the system never
+   rendered at all. Keeping these lower than the per-corner rules is what makes
+   the cascade work; the "none" case is handled by suppressing the pseudo-
+   element instead of by out-specifying these. */
 .nx-panel[data-nx-corners*="tl"] { --tl: var(--nx-border-accent); }
 .nx-panel[data-nx-corners*="tr"] { --tr: var(--nx-border-accent); }
 .nx-panel[data-nx-corners*="bl"] { --bl: var(--nx-border-accent); }
 .nx-panel[data-nx-corners*="br"] { --br: var(--nx-border-accent); }
 
+.nx-panel[data-nx-corners="none"]::before { content: none; }
+
+/* :not() here is deliberate, and different from the removed-specificity bug
+   above: it makes the two ::before rules target mutually exclusive states
+   (none vs. not-none) instead of the same element at equal specificity, where
+   whichever is declared later wins regardless of intent. Without it, this
+   rule and the one above both matched a "none" panel at identical
+   specificity (0,2,1) — content: "" being declared second silently overrode
+   content: none, so the pseudo-element was generated anyway (invisible only
+   because --tl/--tr/--bl/--br still default to transparent). Scoping them to
+   disjoint selectors means neither can be reordered into fighting the other. */
 .nx-panel[data-nx-corners]:not([data-nx-corners="none"])::before {
   content: "";
   position: absolute;
@@ -1113,72 +1547,40 @@ const NX_CSS = `/* =============================================================
     bottom right, bottom right;
 }
 
-/* ----------------------------------------------------------------- Button */
-.nx-btn {
-  font-family: var(--nx-font-mono);
+/* ------------------------------------------------------------ SectionHeading */
+.nx-heading {
+  color: var(--nx-heading-fg, var(--nx-fg-accent));
+  font-size: var(--nx-heading-size, var(--nx-text-2xs));
+  letter-spacing: var(--nx-heading-tracking, var(--nx-track-wider));
+  text-transform: uppercase;
+  margin-bottom: var(--nx-space-2);
+  opacity: 0.85;
+}
+
+/* -------------------------------------------------------------------- Slider */
+.nx-slider-field {
+  margin-bottom: var(--nx-space-4);
+}
+
+.nx-slider-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--nx-space-1);
+}
+
+.nx-slider-label {
+  color: var(--nx-slider-label-fg, var(--nx-fg-tertiary));
   font-size: var(--nx-text-2xs);
-  font-weight: var(--nx-weight-medium);
   letter-spacing: var(--nx-track-wide);
   text-transform: uppercase;
-  color: var(--nx-fg-muted);
-  background: transparent;
-  border: var(--nx-hairline) solid var(--nx-border-default);
-  border-radius: var(--nx-radius);
-  padding: var(--nx-space-3) var(--nx-space-4);
-  cursor: pointer;
-  transition:
-    background var(--nx-dur-micro) var(--nx-ease),
-    color var(--nx-dur-micro) var(--nx-ease),
-    border-color var(--nx-dur-micro) var(--nx-ease);
 }
 
-.nx-btn:hover {
-  border-color: var(--nx-border-accent);
-  color: var(--nx-fg-accent);
-  background: var(--nx-bg-hover);
-}
-
-.nx-btn[data-active="1"] {
-  background: var(--nx-fg-accent);
-  border-color: var(--nx-border-accent);
-  color: var(--nx-bg-canvas);
-}
-
-.nx-btn:disabled {
-  color: var(--nx-fg-disabled);
-  cursor: not-allowed;
-}
-
-.nx-btn:disabled:hover {
-  border-color: var(--nx-border-default);
-  background: transparent;
-}
-
-/* --------------------------------------------------------------- TabStrip */
-.nx-tab {
-  flex: 1;
-  font-family: var(--nx-font-mono);
+.nx-slider-value {
+  color: var(--nx-slider-value-fg, var(--nx-fg-default));
   font-size: var(--nx-text-2xs);
-  font-weight: var(--nx-weight-medium);
-  letter-spacing: var(--nx-track-wider);
-  text-transform: uppercase;
-  color: var(--nx-fg-subtle);
-  background: transparent;
-  border: 0;
-  padding: var(--nx-space-3) 0;
-  cursor: pointer;
-  transition: color var(--nx-dur-micro), background var(--nx-dur-micro);
+  font-variant-numeric: tabular-nums;
 }
 
-.nx-tab:hover { color: var(--nx-fg-accent); }
-
-/* Same invert-to-accent language as Button's active state, not a tint. */
-.nx-tab[data-active="1"] {
-  background: var(--nx-fg-accent);
-  color: var(--nx-bg-canvas);
-}
-
-/* ----------------------------------------------------------------- Slider */
 /* The track uses --nx-border-strong (3:1), not the decorative hairline —
    a slider track is a UI component boundary under WCAG 1.4.11. */
 .nx-slider {
@@ -1186,7 +1588,7 @@ const NX_CSS = `/* =============================================================
   appearance: none;
   width: 100%;
   height: 2px;
-  background: var(--nx-border-strong);
+  background: var(--nx-slider-track, var(--nx-border-strong));
   outline: none;
   border-radius: var(--nx-radius);
   cursor: pointer;
@@ -1194,26 +1596,26 @@ const NX_CSS = `/* =============================================================
 
 .nx-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 8px;
-  height: 14px;
-  background: var(--nx-fg-accent);
+  width: var(--nx-slider-thumb-width, 8px);
+  height: var(--nx-slider-thumb-height, 14px);
+  background: var(--nx-slider-thumb, var(--nx-fg-accent));
   border-radius: var(--nx-radius);
   cursor: pointer;
-  box-shadow: 0 0 8px var(--nx-fg-accent);
+  box-shadow: 0 0 8px var(--nx-slider-thumb, var(--nx-fg-accent));
 }
 
 .nx-slider::-moz-range-thumb {
-  width: 8px;
-  height: 14px;
-  background: var(--nx-fg-accent);
+  width: var(--nx-slider-thumb-width, 8px);
+  height: var(--nx-slider-thumb-height, 14px);
+  background: var(--nx-slider-thumb, var(--nx-fg-accent));
   border: 0;
   border-radius: var(--nx-radius);
   cursor: pointer;
-  box-shadow: 0 0 8px var(--nx-fg-accent);
+  box-shadow: 0 0 8px var(--nx-slider-thumb, var(--nx-fg-accent));
 }
 
 .nx-slider::-moz-range-track {
-  background: var(--nx-border-strong);
+  background: var(--nx-slider-track, var(--nx-border-strong));
   height: 2px;
 }
 
@@ -1227,7 +1629,53 @@ const NX_CSS = `/* =============================================================
   outline-offset: var(--nx-focus-offset);
 }
 
-/* -------------------------------------------------------------- ToggleRow */
+/* ---------------------------------------------------------------------- Stat */
+.nx-stat__label {
+  color: var(--nx-stat-label-fg, var(--nx-fg-tertiary));
+  font-size: var(--nx-text-2xs);
+  letter-spacing: var(--nx-track-wide);
+  margin-bottom: var(--nx-space-1);
+  text-transform: uppercase;
+}
+
+.nx-stat__value {
+  color: var(--nx-stat-value-fg, var(--nx-fg-default));
+  font-size: var(--nx-text-xs);
+  letter-spacing: var(--nx-track-normal);
+}
+
+/* ------------------------------------------------------------------ TabStrip */
+.nx-tabstrip {
+  display: flex;
+  border: var(--nx-hairline) solid var(--nx-tabstrip-border, var(--nx-border-default));
+}
+
+.nx-tab {
+  flex: 1;
+  font-family: var(--nx-font-mono);
+  font-size: var(--nx-text-2xs);
+  font-weight: var(--nx-weight-medium);
+  letter-spacing: var(--nx-track-wider);
+  text-transform: uppercase;
+  color: var(--nx-tab-fg, var(--nx-fg-subtle));
+  background: var(--nx-tab-bg, transparent);
+  border: 0;
+  padding: var(--nx-space-3) 0;
+  cursor: pointer;
+  transition: color var(--nx-dur-micro), background var(--nx-dur-micro);
+}
+
+.nx-tab:hover {
+  --nx-tab-fg: var(--nx-fg-accent);
+}
+
+/* Same invert-to-accent language as Button's active state, not a tint. */
+.nx-tab[data-active="1"] {
+  --nx-tab-fg: var(--nx-bg-canvas);
+  --nx-tab-bg: var(--nx-fg-accent);
+}
+
+/* ----------------------------------------------------------------- ToggleRow */
 .nx-row {
   display: flex;
   align-items: center;
@@ -1235,11 +1683,31 @@ const NX_CSS = `/* =============================================================
   padding: var(--nx-space-1) var(--nx-space-2);
   cursor: pointer;
   user-select: none;
-  min-height: 24px;
+  min-height: var(--nx-row-height, 24px);
   transition: background var(--nx-dur-micro);
 }
 
-.nx-row:hover { background: var(--nx-bg-hover); }
+.nx-row:hover { background: var(--nx-row-hover-bg, var(--nx-bg-hover)); }
+
+.nx-row__label {
+  flex: 1;
+  color: var(--nx-row-label-fg-off, var(--nx-fg-disabled));
+  letter-spacing: var(--nx-track-normal);
+}
+
+/* Checked/unchecked moves the token, the same "state moves the token, not the
+   property" rule every other stateful component (Button, TabStrip) follows —
+   not a JS ternary resolving a colour string, which was the one place this
+   pattern hadn't been applied and had no CSS handle for a consumer to
+   override. */
+.nx-row[data-checked="1"] .nx-row__label {
+  color: var(--nx-row-label-fg-on, var(--nx-fg-default));
+}
+
+.nx-row__meta {
+  color: var(--nx-row-meta-fg, var(--nx-fg-tertiary));
+  font-size: var(--nx-text-2xs);
+}
 
 /* Negative offset keeps the ring inside the row instead of bleeding into
    the next one in a tightly stacked list. */
@@ -1248,23 +1716,38 @@ const NX_CSS = `/* =============================================================
   outline-offset: calc(var(--nx-focus-offset) * -1);
 }
 
-/* ------------------------------------------------------------- BlinkCursor */
-/* 1.06s step-cursor ≈ 0.94Hz — under the WCAG 2.3.1 3Hz seizure threshold.
-   The prototype blinked at 9Hz; the cap lives on the --nx-blink token. */
-.nx-blink {
-  animation: nx-blink var(--nx-blink) steps(1) infinite;
+/* ------------------------------------------------------------------- Tooltip */
+.nx-tooltip {
+  position: absolute;
+  z-index: 30;
+  max-width: var(--nx-tooltip-max-width, 270px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+  background: var(--nx-tooltip-bg, var(--nx-bg-surface));
+  border: var(--nx-hairline) solid var(--nx-tooltip-border, var(--nx-border-default));
+  border-left: 2px solid var(--nx-tooltip-accent, var(--nx-fg-info));
+  padding: var(--nx-space-2) var(--nx-space-3);
+  font-family: var(--nx-font-mono);
+  font-size: var(--nx-text-2xs);
+  letter-spacing: var(--nx-track-normal);
+  text-transform: uppercase;
 }
 
-@keyframes nx-blink {
-  0%, 49% { opacity: 1; }
-  50%, 100% { opacity: 0; }
+/* ------------------------------------------------------------------ Wordmark */
+.nx-wordmark {
+  display: inline-block;
+  font-family: var(--nx-font-stencil);
+  font-size: var(--nx-wordmark-size, var(--nx-text-xl));
+  line-height: 0.8;
+  color: var(--nx-wordmark-fg, var(--nx-fg-default));
+  letter-spacing: -0.02em;
+  transform: skewX(var(--nx-wordmark-skew, -9deg));
+  text-shadow: 2px 0 var(--nx-split-r), -2px 0 var(--nx-split-b);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .nx-blink { animation: none; opacity: 1; }
-}
-
-/* ---------------------------------------------------------------- Skip link */
+/* ----------------------------------------------------------------- utilities */
 .nx-skip {
   position: absolute;
   left: -9999px;
@@ -1440,7 +1923,7 @@ function PrimitivesPage() {
           ))}
         </div>
       </Spec>
-      <Spec name="Glyph" note="Six distinct silhouettes. This is what satisfies WCAG 1.4.1 — category is never communicated by colour alone, which is the criterion most dark-neon systems fail." code={'<Glyph shape="hexagon" colour={tone("accent")} title="Atlas" />'}>
+      <Spec name="Glyph" note="Six distinct silhouettes. This is what satisfies WCAG 1.4.1 — category is never communicated by colour alone, which is the criterion most dark-neon systems fail." code={'<Glyph shape="hexagon" tone="accent" title="Atlas" />'}>
         <Row gap="var(--nx-space-6)">
           {GLYPH_SHAPES.map((s, i) => (
             <div key={s} style={{ textAlign: "center", width: 62 }}>
@@ -1477,7 +1960,7 @@ function PrimitivesPage() {
       </Spec>
       <Spec name="Tooltip" note="Absolutely positioned, pointer-events none, accent bar keyed to the subject's class.">
         <div style={{ position: "relative", height: 54 }}>
-          <Tooltip x={0} y={8} accent="var(--nx-fg-info)">
+          <Tooltip x={0} y={8} tone="info">
             <span style={{ color: "var(--nx-fg-info)" }}>tidal_aperture</span>
             <span style={{ color: "var(--nx-fg-tertiary)" }}> · NDE · 7</span>
           </Tooltip>
@@ -1519,17 +2002,17 @@ function OverlaysPage() {
       <Spec name="MeterRow" note="A proportional bar with a real role=meter, not a decorative div." a11y="aria-valuenow / valuemin / valuemax with a composed label, so the value is announced as '5 of 7' rather than read as an unlabelled graphic." code={'<MeterRow label="LINK" value={5} total={7} colour="#3AC6D4" />'}>
         <div style={{ maxWidth: 320 }}>
           <MeterRow label="LINK" value={5} total={7} colour="#3AC6D4" />
-          <MeterRow label="CITE" value={2} total={7} colour="var(--nx-fg-warning)" />
-          <MeterRow label="CONFLICT" value={1} total={7} colour="var(--nx-fg-critical)" />
+          <MeterRow label="CITE" value={2} total={7} tone="warning" />
+          <MeterRow label="CONFLICT" value={1} total={7} tone="critical" />
         </div>
       </Spec>
       <Drawer open={drawer} onClose={() => setDrawer(false)} title={picked.label}
-        subtitle={`0x${hex} · ${picked.code}`} accent={picked.colour}
+        subtitle={`0x${hex} · ${picked.code}`} colour={picked.colour}
         icon={<Glyph shape={picked.shape} colour={picked.colour} />}
         footer={<><Button style={{ flex: 1 }}>Focus</Button><Button style={{ flex: 1 }} active>Isolate</Button></>}>
         <SectionHeading>/// relation profile</SectionHeading>
         <MeterRow label="LINK" value={5} total={7} colour="#3AC6D4" />
-        <MeterRow label="CITE" value={2} total={7} colour="var(--nx-fg-warning)" />
+        <MeterRow label="CITE" value={2} total={7} tone="warning" />
         <div style={{ height: "var(--nx-space-5)" }} />
         <SectionHeading>/// adjacency [7]</SectionHeading>
         {ITEMS.slice(3, 10).map((it) => (
@@ -1613,7 +2096,7 @@ function Shell() {
           <div style={{ display: "flex", alignItems: "baseline", gap: "var(--nx-space-3)" }}>
             <Wordmark size="var(--nx-text-lg)">NEXUS</Wordmark>
             <span style={{ color: "var(--nx-fg-tertiary)", fontSize: "var(--nx-text-2xs)",
-              letterSpacing: "var(--nx-track-wider)" }}>DS v1.0 <BlinkCursor /></span>
+              letterSpacing: "var(--nx-track-wider)" }}>DS v2.0 <BlinkCursor /></span>
           </div>
           <nav aria-label="Sections" style={{ display: "flex", gap: "var(--nx-space-2)", flex: 1 }}>
             {ROUTES.map((r) => (
@@ -1641,7 +2124,7 @@ function Shell() {
       <footer style={{ padding: "var(--nx-space-6)", color: "var(--nx-fg-tertiary)",
         fontSize: "var(--nx-text-2xs)", letterSpacing: "var(--nx-track-wider)", textTransform: "uppercase",
         borderTop: "var(--nx-hairline) solid var(--nx-border-default)" }}>
-        Zero runtime dependencies · 78 tokens · 16 components · ⌘K opens the palette anywhere
+        Zero runtime dependencies · 83 tokens · 19 components · ⌘K opens the palette anywhere
       </footer>
     </div>
   );

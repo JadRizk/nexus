@@ -1,0 +1,29 @@
+.nx-tabstrip {
+  display: flex;
+  border: var(--nx-hairline) solid var(--nx-tabstrip-border, var(--nx-border-default));
+}
+
+.nx-tab {
+  flex: 1;
+  font-family: var(--nx-font-mono);
+  font-size: var(--nx-text-2xs);
+  font-weight: var(--nx-weight-medium);
+  letter-spacing: var(--nx-track-wider);
+  text-transform: uppercase;
+  color: var(--nx-tab-fg, var(--nx-fg-subtle));
+  background: var(--nx-tab-bg, transparent);
+  border: 0;
+  padding: var(--nx-space-3) 0;
+  cursor: pointer;
+  transition: color var(--nx-dur-micro), background var(--nx-dur-micro);
+}
+
+.nx-tab:hover {
+  --nx-tab-fg: var(--nx-fg-accent);
+}
+
+/* Same invert-to-accent language as Button's active state, not a tint. */
+.nx-tab[data-active="1"] {
+  --nx-tab-fg: var(--nx-bg-canvas);
+  --nx-tab-bg: var(--nx-fg-accent);
+}
