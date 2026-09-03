@@ -1,4 +1,5 @@
 import type { CSSProperties, HTMLAttributes, ReactNode } from "react";
+import { mergeClassName } from "../../className.js";
 
 export interface WordmarkProps extends HTMLAttributes<HTMLSpanElement> {
   children: ReactNode;
@@ -13,7 +14,7 @@ export function Wordmark({
 }: WordmarkProps) {
   return (
     <span
-      className={`nx-wordmark ${className}`.trim()}
+      className={mergeClassName("nx-wordmark", className)}
       // Both are per-instance: a wordmark is set at whatever size the layout
       // around it needs, and the shear is turned off for small renderings.
       style={{ "--nx-wordmark-size": size, "--nx-wordmark-skew": `${skew}deg`, ...style } as CSSProperties}

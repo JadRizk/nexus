@@ -15,6 +15,7 @@
 /* 1.06s step-cursor ≈ 0.94Hz — under the WCAG 2.3.1 3Hz seizure threshold.
    The prototype blinked at 9Hz; the cap lives on the --nx-blink token. */
 .nx-blink {
+  color: var(--nx-blink-fg, var(--nx-fg-accent));
   animation: nx-blink var(--nx-blink) steps(1) infinite;
 }
 
@@ -458,7 +459,16 @@
 
 .nx-panel[data-nx-corners="none"]::before { content: none; }
 
-.nx-panel[data-nx-corners]::before {
+/* :not() here is deliberate, and different from the removed-specificity bug
+   above: it makes the two ::before rules target mutually exclusive states
+   (none vs. not-none) instead of the same element at equal specificity, where
+   whichever is declared later wins regardless of intent. Without it, this
+   rule and the one above both matched a "none" panel at identical
+   specificity (0,2,1) — content: "" being declared second silently overrode
+   content: none, so the pseudo-element was generated anyway (invisible only
+   because --tl/--tr/--bl/--br still default to transparent). Scoping them to
+   disjoint selectors means neither can be reordered into fighting the other. */
+.nx-panel[data-nx-corners]:not([data-nx-corners="none"])::before {
   content: "";
   position: absolute;
   inset: -1px;
@@ -496,6 +506,29 @@
 }
 
 /* -------------------------------------------------------------------- Slider */
+.nx-slider-field {
+  margin-bottom: var(--nx-space-4);
+}
+
+.nx-slider-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--nx-space-1);
+}
+
+.nx-slider-label {
+  color: var(--nx-slider-label-fg, var(--nx-fg-tertiary));
+  font-size: var(--nx-text-2xs);
+  letter-spacing: var(--nx-track-wide);
+  text-transform: uppercase;
+}
+
+.nx-slider-value {
+  color: var(--nx-slider-value-fg, var(--nx-fg-default));
+  font-size: var(--nx-text-2xs);
+  font-variant-numeric: tabular-nums;
+}
+
 /* The track uses --nx-border-strong (3:1), not the decorative hairline —
    a slider track is a UI component boundary under WCAG 1.4.11. */
 .nx-slider {
@@ -603,6 +636,26 @@
 }
 
 .nx-row:hover { background: var(--nx-row-hover-bg, var(--nx-bg-hover)); }
+
+.nx-row__label {
+  flex: 1;
+  color: var(--nx-row-label-fg-off, var(--nx-fg-disabled));
+  letter-spacing: var(--nx-track-normal);
+}
+
+/* Checked/unchecked moves the token, the same "state moves the token, not the
+   property" rule every other stateful component (Button, TabStrip) follows —
+   not a JS ternary resolving a colour string, which was the one place this
+   pattern hadn't been applied and had no CSS handle for a consumer to
+   override. */
+.nx-row[data-checked="1"] .nx-row__label {
+  color: var(--nx-row-label-fg-on, var(--nx-fg-default));
+}
+
+.nx-row__meta {
+  color: var(--nx-row-meta-fg, var(--nx-fg-tertiary));
+  font-size: var(--nx-text-2xs);
+}
 
 /* Negative offset keeps the ring inside the row instead of bleeding into
    the next one in a tightly stacked list. */

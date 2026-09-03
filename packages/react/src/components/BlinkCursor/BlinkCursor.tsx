@@ -6,7 +6,7 @@ import type { CSSProperties } from "react";
  */
 export function BlinkCursor({ char = "█", style }: { char?: string; style?: CSSProperties }) {
   return (
-    <span aria-hidden="true" className="nx-blink" style={{ color: "var(--nx-fg-accent)", ...style }}>
+    <span aria-hidden="true" className="nx-blink" style={style}>
       {char}
     </span>
   );

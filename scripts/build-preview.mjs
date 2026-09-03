@@ -11,6 +11,7 @@ import { build } from "esbuild";
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { esbuildAlias } from "../workspace-alias.mjs";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const previewPath = join(root, "reference/preview.jsx");
@@ -39,6 +40,14 @@ async function main() {
     // discovery for this one build so the classic transform actually applies.
     tsconfigRaw: { compilerOptions: { jsx: "react" } },
     external: ["react"],
+    // Without this, "@nexus/tokens" resolves through packages/tokens'
+    // package.json `exports`, which points at dist/ — so this script would
+    // depend on packages/tokens having been rebuilt first, and would
+    // silently bundle stale dist/ output otherwise. That is exactly the
+    // scenario CI's own drift-check error message invites: it tells a
+    // developer to run `npm run build:preview` after editing source, with no
+    // mention of rebuilding tokens first.
+    alias: esbuildAlias,
     target: "es2020",
     legalComments: "none",
   });

@@ -85,14 +85,32 @@ jobs:
         if: github.event_name == 'pull_request'
         run: node scripts/check-changeset.mjs
 
+  # A job's `container:` image has to be a static value resolved before any
+  # step in that job runs, so it cannot itself read package-lock.json at
+  # container-start time — but a separate job's *output* can feed it. This is
+  # what stops the image tag from being a second, independently-maintained
+  # copy of the version scripts/browser-tests.mjs already derives: both read
+  # the same lockfile field, so a version bump can only go stale in one place.
+  playwright-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.read.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: read
+        run: |
+          v=$(node -p "require('./package-lock.json').packages['node_modules/@playwright/test'].version")
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
   # Pixel baselines are only comparable when the renderer is, so this runs in
   # the same pinned image `npm run test:visual` uses locally. Anything else —
   # ubuntu-latest with its own font packages, or a developer's laptop — renders
   # differently enough to fail on antialiasing and teach everyone to ignore it.
   browser:
+    needs: playwright-version
     runs-on: ubuntu-latest
     container:
-      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      image: mcr.microsoft.com/playwright:v${{ needs.playwright-version.outputs.version }}-noble
       # Chromium needs more than the default 64MB of shared memory.
       options: --ipc=host
 

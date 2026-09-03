@@ -1,4 +1,5 @@
 import type { HTMLAttributes, ReactNode } from "react";
+import { mergeClassName } from "../../className.js";
 
 export interface SectionHeadingProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
@@ -11,7 +12,7 @@ export interface SectionHeadingProps extends HTMLAttributes<HTMLDivElement> {
  */
 export function SectionHeading({ children, className = "", ...rest }: SectionHeadingProps) {
   return (
-    <div className={`nx-heading ${className}`.trim()} {...rest}>
+    <div className={mergeClassName("nx-heading", className)} {...rest}>
       {children}
     </div>
   );

@@ -22,15 +22,10 @@ export function Slider({ label, value, min, max, step = 1, onChange, format, sty
   const id = useId();
   const shown = format ? format(value) : String(value);
   return (
-    <div style={{ marginBottom: "var(--nx-space-4)", ...style }}>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "var(--nx-space-1)" }}>
-        <label htmlFor={id} style={{
-          color: "var(--nx-fg-tertiary)", fontSize: "var(--nx-text-2xs)",
-          letterSpacing: "var(--nx-track-wide)", textTransform: "uppercase",
-        }}>{label}</label>
-        <span aria-hidden="true" style={{
-          color: "var(--nx-fg-default)", fontSize: "var(--nx-text-2xs)", fontVariantNumeric: "tabular-nums",
-        }}>{shown}</span>
+    <div className="nx-slider-field" style={style}>
+      <div className="nx-slider-row">
+        <label htmlFor={id} className="nx-slider-label">{label}</label>
+        <span aria-hidden="true" className="nx-slider-value">{shown}</span>
       </div>
       <input
         id={id} className="nx-slider" type="range"

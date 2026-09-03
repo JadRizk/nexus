@@ -24,3 +24,22 @@ export const workspaceAlias = [
   { find: /^@nexus\/react\/(.*)$/, replacement: src("react", "$1") },
   { find: /^@nexus\/graph$/, replacement: src("graph", "index.ts") },
 ];
+
+/**
+ * The same mapping, shaped for esbuild's `alias` build option (an exact-match
+ * package-name → path object, not Vite's regex/replacement pairs).
+ *
+ * scripts/build-preview.mjs bundles packages/react/src/index.ts with esbuild,
+ * which re-exports from the bare specifier "@nexus/tokens" — left to plain
+ * package resolution, that goes through packages/tokens/package.json's
+ * `exports` field, which (correctly, for a real consumer) points at dist/.
+ * Local tooling has to bypass that the same way Vite and Vitest already do
+ * above, or the preview generator ends up depending on packages/tokens
+ * having been built first, and silently bundling whatever dist/ happened to
+ * contain rather than the source that was just edited.
+ */
+export const esbuildAlias = {
+  "@nexus/tokens": src("tokens", "index.ts"),
+  "@nexus/react": src("react", "index.ts"),
+  "@nexus/graph": src("graph", "index.ts"),
+};

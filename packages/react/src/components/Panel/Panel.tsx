@@ -1,4 +1,5 @@
 import type { HTMLAttributes } from "react";
+import { mergeClassName } from "../../className.js";
 import type { Corner } from "../../types.js";
 
 export interface PanelProps extends HTMLAttributes<HTMLDivElement> {
@@ -13,7 +14,7 @@ export function Panel({
 }: PanelProps) {
   return (
     <div
-      className={`nx-panel ${className}`.trim()}
+      className={mergeClassName("nx-panel", className)}
       data-nx-corners={corners === "none" ? "none" : corners.join(" ")}
       data-nx-padded={padded ? "1" : "0"}
       data-nx-raised={raised ? "1" : "0"}

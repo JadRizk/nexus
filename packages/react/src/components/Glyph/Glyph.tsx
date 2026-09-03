@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { GlyphShape } from "../../types.js";
-import { resolveColour } from "../../colour.js";
+import { iconA11y, resolveColour } from "../../colour.js";
 import type { ToneProps } from "../../colour.js";
 
 export const GLYPH_SHAPES: readonly GlyphShape[] =
@@ -16,7 +16,6 @@ const PATHS: Record<Exclude<GlyphShape, "ring">, ReactNode> = {
 
 export interface GlyphProps extends ToneProps {
   shape?: GlyphShape;
-  muted?: boolean;
   size?: number;
   /** Supply when the glyph carries meaning; omit when it is decorative. */
   title?: string;
@@ -27,15 +26,11 @@ export interface GlyphProps extends ToneProps {
  * never communicated by colour alone.
  */
 export function Glyph({ shape = "circle", tone, colour, muted = false, size = 13, title }: GlyphProps) {
-  const c = muted
-    ? "var(--nx-fg-disabled)"
-    : resolveColour({ tone, colour }, "var(--nx-fg-info)");
+  const c = resolveColour({ tone, colour, muted }, "var(--nx-fg-info)");
   return (
     <svg
       width={size} height={size} viewBox="0 0 14 14"
-      role={title ? "img" : undefined}
-      aria-label={title}
-      aria-hidden={title ? undefined : true}
+      {...iconA11y(title)}
       style={{ flexShrink: 0, filter: muted ? "none" : `drop-shadow(0 0 4px ${c})` }}
     >
       {shape === "ring"

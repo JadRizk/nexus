@@ -1,3 +1,26 @@
+.nx-slider-field {
+  margin-bottom: var(--nx-space-4);
+}
+
+.nx-slider-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--nx-space-1);
+}
+
+.nx-slider-label {
+  color: var(--nx-slider-label-fg, var(--nx-fg-tertiary));
+  font-size: var(--nx-text-2xs);
+  letter-spacing: var(--nx-track-wide);
+  text-transform: uppercase;
+}
+
+.nx-slider-value {
+  color: var(--nx-slider-value-fg, var(--nx-fg-default));
+  font-size: var(--nx-text-2xs);
+  font-variant-numeric: tabular-nums;
+}
+
 /* The track uses --nx-border-strong (3:1), not the decorative hairline —
    a slider track is a UI component boundary under WCAG 1.4.11. */
 .nx-slider {

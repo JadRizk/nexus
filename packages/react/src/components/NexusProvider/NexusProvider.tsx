@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import type { HTMLAttributes, ReactNode } from "react";
 import type { NexusTheme } from "@nexus/tokens";
+import { mergeClassName } from "../../className.js";
 
 export interface NexusContextValue {
   theme: NexusTheme;
@@ -32,7 +33,7 @@ export function NexusProvider({
 
   return (
     <Ctx.Provider value={{ theme: t, crt: c, setTheme, setCrt }}>
-      <div className={`nx-root ${className}`} data-nx-theme={t} data-nx-crt={c ? "on" : "off"} {...rest}>
+      <div className={mergeClassName("nx-root", className)} data-nx-theme={t} data-nx-crt={c ? "on" : "off"} {...rest}>
         {children}
       </div>
     </Ctx.Provider>

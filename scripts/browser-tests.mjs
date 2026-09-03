@@ -20,11 +20,24 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
-const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
 
-const version = (pkg.devDependencies["@playwright/test"] ?? "").replace(/^[^\d]*/, "");
+// Read from the lockfile, not package.json's devDependencies range. The range
+// (e.g. "^1.62.1") only names what package.json asked for; the lockfile names
+// what actually got installed. A routine `npm install`/`npm update` can
+// resolve a newer compatible patch without anyone touching package.json, and
+// Playwright's test runner requires the installed @playwright/test package
+// and the browser/server baked into this image to match exactly — reading
+// the range would silently drift from that the moment it happened.
+//
+// .github/workflows/ci.yml reads this exact same field via its own
+// playwright-version job, so there is one source of truth for the tag rather
+// than two hardcoded strings that could independently go stale.
+const lock = JSON.parse(readFileSync(join(root, "package-lock.json"), "utf8"));
+const version = lock.packages?.["node_modules/@playwright/test"]?.version;
 if (!version) {
-  console.error("@playwright/test is not in devDependencies — cannot pin a container version.");
+  console.error(
+    "Could not find node_modules/@playwright/test in package-lock.json — run `npm install`.",
+  );
   process.exit(1);
 }
 const IMAGE = `mcr.microsoft.com/playwright:v${version}-noble`;

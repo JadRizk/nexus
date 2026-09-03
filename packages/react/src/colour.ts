@@ -26,13 +26,35 @@ export interface ToneProps {
    * Ignored when `tone` is also set.
    */
   colour?: Colour;
+  /**
+   * Overrides both, routing to the disabled tone regardless of what was
+   * asked for — a category can be temporarily de-emphasised (a hidden
+   * legend entry, a filtered-out node class) without losing its `tone`/
+   * `colour` for when it's switched back on.
+   */
+  muted?: boolean;
 }
 
-/** `tone` wins over `colour`; `fallback` applies when neither is given. */
+/** `muted` wins over `tone`, which wins over `colour`; `fallback` applies when none apply. */
 export function resolveColour(
-  { tone, colour }: ToneProps,
+  { tone, colour, muted }: ToneProps,
   fallback: string,
 ): string {
+  if (muted) return toneVar("disabled");
   if (tone) return toneVar(tone);
   return colour ?? fallback;
+}
+
+/**
+ * `role`/`aria-label`/`aria-hidden` for an icon `<svg>`: announced as an
+ * image when it carries meaning, hidden from assistive tech when it's
+ * decorative. Shared because `Glyph` and `LinkGlyph` both need exactly this
+ * and nothing else — the icon's `title` prop is the only input.
+ */
+export function iconA11y(title?: string): {
+  role?: "img";
+  "aria-label"?: string;
+  "aria-hidden"?: true;
+} {
+  return title ? { role: "img", "aria-label": title } : { "aria-hidden": true };
 }

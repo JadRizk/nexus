@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { mergeClassName } from "../../className.js";
 
 export interface HazardRuleProps {
   height?: number;
@@ -12,7 +13,7 @@ export function HazardRule({ height, opacity, className = "", style }: HazardRul
   return (
     <div
       aria-hidden="true"
-      className={`nx-hazard ${className}`.trim()}
+      className={mergeClassName("nx-hazard", className)}
       style={{
         ...(height != null ? { "--nx-hazard-height": `${height}px` } : null),
         ...(opacity != null ? { "--nx-hazard-opacity": String(opacity) } : null),

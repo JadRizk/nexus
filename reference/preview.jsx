@@ -15,7 +15,7 @@
 
 // packages/react/src/components/BlinkCursor/BlinkCursor.tsx
 function BlinkCursor({ char = "\u2588", style }) {
-  return /* @__PURE__ */ React.createElement("span", { "aria-hidden": "true", className: "nx-blink", style: { color: "var(--nx-fg-accent)", ...style } }, char);
+  return /* @__PURE__ */ React.createElement("span", { "aria-hidden": "true", className: "nx-blink", style }, char);
 }
 
 // packages/react/src/components/Button/Button.tsx
@@ -25,6 +25,11 @@ function Button({ active = false, children, ...rest }) {
 
 // packages/react/src/components/CommandPalette/CommandPalette.tsx
 import { useEffect as useEffect3, useId, useMemo, useRef as useRef3, useState } from "react";
+
+// packages/react/src/className.ts
+function mergeClassName(base, className) {
+  return className ? `${base} ${className}`.trim() : base;
+}
 
 // packages/react/src/components/Panel/Panel.tsx
 function Panel({
@@ -38,7 +43,7 @@ function Panel({
   return /* @__PURE__ */ React.createElement(
     "div",
     {
-      className: `nx-panel ${className}`.trim(),
+      className: mergeClassName("nx-panel", className),
       "data-nx-corners": corners === "none" ? "none" : corners.join(" "),
       "data-nx-padded": padded ? "1" : "0",
       "data-nx-raised": raised ? "1" : "0",
@@ -54,7 +59,7 @@ function HazardRule({ height, opacity, className = "", style }) {
     "div",
     {
       "aria-hidden": "true",
-      className: `nx-hazard ${className}`.trim(),
+      className: mergeClassName("nx-hazard", className),
       style: {
         ...height != null ? { "--nx-hazard-height": `${height}px` } : null,
         ...opacity != null ? { "--nx-hazard-opacity": String(opacity) } : null,
@@ -64,13 +69,17 @@ function HazardRule({ height, opacity, className = "", style }) {
   );
 }
 
-// packages/tokens/dist/index.js
+// packages/tokens/src/index.ts
 var tone = (t) => `var(--nx-fg-${t})`;
 
 // packages/react/src/colour.ts
-function resolveColour({ tone: tone2, colour }, fallback) {
+function resolveColour({ tone: tone2, colour, muted }, fallback) {
+  if (muted) return tone("disabled");
   if (tone2) return tone(tone2);
   return colour ?? fallback;
+}
+function iconA11y(title) {
+  return title ? { role: "img", "aria-label": title } : { "aria-hidden": true };
 }
 
 // packages/react/src/components/Glyph/Glyph.tsx
@@ -83,16 +92,14 @@ var PATHS = {
   triangle: /* @__PURE__ */ React.createElement("polygon", { points: "7,2.3 11.6,10.6 2.4,10.6" })
 };
 function Glyph({ shape = "circle", tone: tone2, colour, muted = false, size = 13, title }) {
-  const c = muted ? "var(--nx-fg-disabled)" : resolveColour({ tone: tone2, colour }, "var(--nx-fg-info)");
+  const c = resolveColour({ tone: tone2, colour, muted }, "var(--nx-fg-info)");
   return /* @__PURE__ */ React.createElement(
     "svg",
     {
       width: size,
       height: size,
       viewBox: "0 0 14 14",
-      role: title ? "img" : void 0,
-      "aria-label": title,
-      "aria-hidden": title ? void 0 : true,
+      ...iconA11y(title),
       style: { flexShrink: 0, filter: muted ? "none" : `drop-shadow(0 0 4px ${c})` }
     },
     shape === "ring" ? /* @__PURE__ */ React.createElement("circle", { cx: "7", cy: "7", r: "4.1", fill: "none", strokeWidth: "2.1", stroke: c }) : /* @__PURE__ */ React.createElement("g", { fill: c }, PATHS[shape])
@@ -228,6 +235,9 @@ function CommandPalette({
   }, [query]);
   const hits = useMemo(() => rankItems(items, query), [items, query]);
   useEffect3(() => {
+    setCursor((c) => Math.min(c, Math.max(0, hits.length - 1)));
+  }, [hits.length]);
+  useEffect3(() => {
     const el = listRef.current?.children[cursor];
     el?.scrollIntoView?.({ block: "nearest" });
   }, [cursor]);
@@ -278,7 +288,7 @@ function CommandPalette({
               setCursor(0);
             } else if (e.key === "End") {
               e.preventDefault();
-              setCursor(hits.length - 1);
+              setCursor(Math.max(0, hits.length - 1));
             } else if (e.key === "Enter" && active) {
               e.preventDefault();
               onSelect(active);
@@ -383,7 +393,7 @@ function KeyValue({ label, value, style }) {
 
 // packages/react/src/components/SectionHeading/SectionHeading.tsx
 function SectionHeading({ children, className = "", ...rest }) {
-  return /* @__PURE__ */ React.createElement("div", { className: `nx-heading ${className}`.trim(), ...rest }, children);
+  return /* @__PURE__ */ React.createElement("div", { className: mergeClassName("nx-heading", className), ...rest }, children);
 }
 
 // packages/react/src/components/Legend/Legend.tsx
@@ -402,16 +412,14 @@ function LinkGlyph({
   size = 13,
   title
 }) {
-  const c = muted ? "var(--nx-fg-disabled)" : resolveColour({ tone: tone2, colour }, "var(--nx-fg-info)");
+  const c = resolveColour({ tone: tone2, colour, muted }, "var(--nx-fg-info)");
   return /* @__PURE__ */ React.createElement(
     "svg",
     {
       width: size,
       height: size,
       viewBox: "0 0 14 14",
-      role: title ? "img" : void 0,
-      "aria-label": title,
-      "aria-hidden": title ? void 0 : true,
+      ...iconA11y(title),
       style: { flexShrink: 0 }
     },
     /* @__PURE__ */ React.createElement(
@@ -480,7 +488,7 @@ function NexusProvider({
   const [c, setCrt] = useState2(crt);
   useEffect4(() => setTheme(theme), [theme]);
   useEffect4(() => setCrt(crt), [crt]);
-  return /* @__PURE__ */ React.createElement(Ctx.Provider, { value: { theme: t, crt: c, setTheme, setCrt } }, /* @__PURE__ */ React.createElement("div", { className: `nx-root ${className}`, "data-nx-theme": t, "data-nx-crt": c ? "on" : "off", ...rest }, children));
+  return /* @__PURE__ */ React.createElement(Ctx.Provider, { value: { theme: t, crt: c, setTheme, setCrt } }, /* @__PURE__ */ React.createElement("div", { className: mergeClassName("nx-root", className), "data-nx-theme": t, "data-nx-crt": c ? "on" : "off", ...rest }, children));
 }
 
 // packages/react/src/components/Slider/Slider.tsx
@@ -488,16 +496,7 @@ import { useId as useId3 } from "react";
 function Slider({ label, value, min, max, step = 1, onChange, format, style }) {
   const id = useId3();
   const shown = format ? format(value) : String(value);
-  return /* @__PURE__ */ React.createElement("div", { style: { marginBottom: "var(--nx-space-4)", ...style } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", marginBottom: "var(--nx-space-1)" } }, /* @__PURE__ */ React.createElement("label", { htmlFor: id, style: {
-    color: "var(--nx-fg-tertiary)",
-    fontSize: "var(--nx-text-2xs)",
-    letterSpacing: "var(--nx-track-wide)",
-    textTransform: "uppercase"
-  } }, label), /* @__PURE__ */ React.createElement("span", { "aria-hidden": "true", style: {
-    color: "var(--nx-fg-default)",
-    fontSize: "var(--nx-text-2xs)",
-    fontVariantNumeric: "tabular-nums"
-  } }, shown)), /* @__PURE__ */ React.createElement(
+  return /* @__PURE__ */ React.createElement("div", { className: "nx-slider-field", style }, /* @__PURE__ */ React.createElement("div", { className: "nx-slider-row" }, /* @__PURE__ */ React.createElement("label", { htmlFor: id, className: "nx-slider-label" }, label), /* @__PURE__ */ React.createElement("span", { "aria-hidden": "true", className: "nx-slider-value" }, shown)), /* @__PURE__ */ React.createElement(
     "input",
     {
       id,
@@ -598,11 +597,7 @@ function TabStrip({
 
 // packages/react/src/components/ToggleRow/ToggleRow.tsx
 function ToggleRow({ checked, onChange, icon, label, meta, style }) {
-  return /* @__PURE__ */ React.createElement("label", { className: "nx-row", style }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", className: "nx-sr", checked, onChange: (e) => onChange(e.target.checked) }), icon, /* @__PURE__ */ React.createElement("span", { style: {
-    flex: 1,
-    color: checked ? "var(--nx-fg-default)" : "var(--nx-fg-disabled)",
-    letterSpacing: "var(--nx-track-normal)"
-  } }, label), meta != null && /* @__PURE__ */ React.createElement("span", { style: { color: "var(--nx-fg-tertiary)", fontSize: "var(--nx-text-2xs)" } }, meta));
+  return /* @__PURE__ */ React.createElement("label", { className: "nx-row", "data-checked": checked ? "1" : "0", style }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", className: "nx-sr", checked, onChange: (e) => onChange(e.target.checked) }), icon, /* @__PURE__ */ React.createElement("span", { className: "nx-row__label" }, label), meta != null && /* @__PURE__ */ React.createElement("span", { className: "nx-row__meta" }, meta));
 }
 
 // packages/react/src/components/Tooltip/Tooltip.tsx
@@ -635,7 +630,7 @@ function Wordmark({
   return /* @__PURE__ */ React.createElement(
     "span",
     {
-      className: `nx-wordmark ${className}`.trim(),
+      className: mergeClassName("nx-wordmark", className),
       style: { "--nx-wordmark-size": size, "--nx-wordmark-skew": `${skew}deg`, ...style },
       ...rest
     },
@@ -663,6 +658,7 @@ export {
   ToggleRow,
   Tooltip,
   Wordmark,
+  iconA11y,
   rankItems,
   resolveColour,
   tone,
@@ -1071,6 +1067,7 @@ html, body {
 /* 1.06s step-cursor ≈ 0.94Hz — under the WCAG 2.3.1 3Hz seizure threshold.
    The prototype blinked at 9Hz; the cap lives on the --nx-blink token. */
 .nx-blink {
+  color: var(--nx-blink-fg, var(--nx-fg-accent));
   animation: nx-blink var(--nx-blink) steps(1) infinite;
 }
 
@@ -1514,7 +1511,16 @@ html, body {
 
 .nx-panel[data-nx-corners="none"]::before { content: none; }
 
-.nx-panel[data-nx-corners]::before {
+/* :not() here is deliberate, and different from the removed-specificity bug
+   above: it makes the two ::before rules target mutually exclusive states
+   (none vs. not-none) instead of the same element at equal specificity, where
+   whichever is declared later wins regardless of intent. Without it, this
+   rule and the one above both matched a "none" panel at identical
+   specificity (0,2,1) — content: "" being declared second silently overrode
+   content: none, so the pseudo-element was generated anyway (invisible only
+   because --tl/--tr/--bl/--br still default to transparent). Scoping them to
+   disjoint selectors means neither can be reordered into fighting the other. */
+.nx-panel[data-nx-corners]:not([data-nx-corners="none"])::before {
   content: "";
   position: absolute;
   inset: -1px;
@@ -1552,6 +1558,29 @@ html, body {
 }
 
 /* -------------------------------------------------------------------- Slider */
+.nx-slider-field {
+  margin-bottom: var(--nx-space-4);
+}
+
+.nx-slider-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--nx-space-1);
+}
+
+.nx-slider-label {
+  color: var(--nx-slider-label-fg, var(--nx-fg-tertiary));
+  font-size: var(--nx-text-2xs);
+  letter-spacing: var(--nx-track-wide);
+  text-transform: uppercase;
+}
+
+.nx-slider-value {
+  color: var(--nx-slider-value-fg, var(--nx-fg-default));
+  font-size: var(--nx-text-2xs);
+  font-variant-numeric: tabular-nums;
+}
+
 /* The track uses --nx-border-strong (3:1), not the decorative hairline —
    a slider track is a UI component boundary under WCAG 1.4.11. */
 .nx-slider {
@@ -1659,6 +1688,26 @@ html, body {
 }
 
 .nx-row:hover { background: var(--nx-row-hover-bg, var(--nx-bg-hover)); }
+
+.nx-row__label {
+  flex: 1;
+  color: var(--nx-row-label-fg-off, var(--nx-fg-disabled));
+  letter-spacing: var(--nx-track-normal);
+}
+
+/* Checked/unchecked moves the token, the same "state moves the token, not the
+   property" rule every other stateful component (Button, TabStrip) follows —
+   not a JS ternary resolving a colour string, which was the one place this
+   pattern hadn't been applied and had no CSS handle for a consumer to
+   override. */
+.nx-row[data-checked="1"] .nx-row__label {
+  color: var(--nx-row-label-fg-on, var(--nx-fg-default));
+}
+
+.nx-row__meta {
+  color: var(--nx-row-meta-fg, var(--nx-fg-tertiary));
+  font-size: var(--nx-text-2xs);
+}
 
 /* Negative offset keeps the ring inside the row instead of bleeding into
    the next one in a tightly stacked list. */

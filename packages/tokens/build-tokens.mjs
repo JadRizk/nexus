@@ -150,7 +150,16 @@ function isThemeSensitive(path) {
   const scaleBy = node.$extensions?.["nexus.scaleBy"];
   if (scaleBy) {
     const target = [...byPath.keys()].find((p) => cssName(p) === `--nx-${scaleBy}`);
-    if (target && isThemed(target)) return true;
+    // Recursive, not isThemed: isThemed only recognises a *primitive* whose
+    // literal value differs by theme, and every semantic.* token is by
+    // definition an alias rather than a primitive — so a scaleBy target that
+    // pointed at a themed primitive through a semantic alias would read as
+    // theme-insensitive under the non-recursive check, and silently stop
+    // being re-declared per theme block. Using the same traversal as the
+    // alias branch below keeps this one general rule instead of one that
+    // only happens to hold for font-scale, the one scaleBy target that
+    // exists today.
+    if (target && isThemeSensitive(target)) return true;
   }
   const alias = String(node.$value).match(ALIAS);
   return alias ? isThemeSensitive(alias[1]) : false;

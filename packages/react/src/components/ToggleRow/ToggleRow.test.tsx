@@ -12,6 +12,13 @@ describe("ToggleRow", () => {
     expect(box).toHaveClass("nx-sr");
   });
 
+  it("projects checked as a data attribute the stylesheet keys off", () => {
+    const { rerender } = render(<ToggleRow checked={false} onChange={() => {}} label="ATLAS" />);
+    expect(screen.getByRole("checkbox").closest("label")).toHaveAttribute("data-checked", "0");
+    rerender(<ToggleRow checked onChange={() => {}} label="ATLAS" />);
+    expect(screen.getByRole("checkbox").closest("label")).toHaveAttribute("data-checked", "1");
+  });
+
   it("reports the new state, not the old one", () => {
     const onChange = vi.fn();
     render(<ToggleRow checked={false} onChange={onChange} label="ATLAS" />);

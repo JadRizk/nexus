@@ -46,6 +46,16 @@ export function CommandPalette<T extends PaletteItem = PaletteItem>({
 
   const hits = useMemo(() => rankItems(items, query), [items, query]);
 
+  // Re-clamps whenever the result set itself changes size, not only when the
+  // query does. `items` is a plain prop with no contract that it stay stable
+  // while the palette is open — a consumer streaming in async results can
+  // shrink or grow `hits` for the same query — and without this, a cursor
+  // set by an earlier keystroke could point past the new end of the list, so
+  // `active` silently goes undefined and Enter stops doing anything.
+  useEffect(() => {
+    setCursor((c) => Math.min(c, Math.max(0, hits.length - 1)));
+  }, [hits.length]);
+
   // keep the active option in view without moving focus off the input
   useEffect(() => {
     const el = listRef.current?.children[cursor] as HTMLElement | undefined;
@@ -95,7 +105,12 @@ export function CommandPalette<T extends PaletteItem = PaletteItem>({
                 if (e.key === "ArrowDown") { e.preventDefault(); setCursor((c) => Math.min(hits.length - 1, c + 1)); }
                 else if (e.key === "ArrowUp") { e.preventDefault(); setCursor((c) => Math.max(0, c - 1)); }
                 else if (e.key === "Home") { e.preventDefault(); setCursor(0); }
-                else if (e.key === "End") { e.preventDefault(); setCursor(hits.length - 1); }
+                // Clamped to 0, not hits.length - 1, when hits is empty: an
+                // unclamped -1 would stick if results later populate for the
+                // same query (items updating async doesn't reset cursor, only
+                // a query change does), leaving Enter silently inert until an
+                // arrow key was pressed to pull cursor back into range.
+                else if (e.key === "End") { e.preventDefault(); setCursor(Math.max(0, hits.length - 1)); }
                 else if (e.key === "Enter" && active) { e.preventDefault(); onSelect(active); }
               }}
             />

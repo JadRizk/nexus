@@ -16,17 +16,11 @@ export interface ToggleRowProps {
  */
 export function ToggleRow({ checked, onChange, icon, label, meta, style }: ToggleRowProps) {
   return (
-    <label className="nx-row" style={style}>
+    <label className="nx-row" data-checked={checked ? "1" : "0"} style={style}>
       <input type="checkbox" className="nx-sr" checked={checked} onChange={(e) => onChange(e.target.checked)} />
       {icon}
-      <span style={{
-        flex: 1,
-        color: checked ? "var(--nx-fg-default)" : "var(--nx-fg-disabled)",
-        letterSpacing: "var(--nx-track-normal)",
-      }}>{label}</span>
-      {meta != null && (
-        <span style={{ color: "var(--nx-fg-tertiary)", fontSize: "var(--nx-text-2xs)" }}>{meta}</span>
-      )}
+      <span className="nx-row__label">{label}</span>
+      {meta != null && <span className="nx-row__meta">{meta}</span>}
     </label>
   );
 }

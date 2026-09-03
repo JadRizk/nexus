@@ -51,7 +51,16 @@
 
 .nx-panel[data-nx-corners="none"]::before { content: none; }
 
-.nx-panel[data-nx-corners]::before {
+/* :not() here is deliberate, and different from the removed-specificity bug
+   above: it makes the two ::before rules target mutually exclusive states
+   (none vs. not-none) instead of the same element at equal specificity, where
+   whichever is declared later wins regardless of intent. Without it, this
+   rule and the one above both matched a "none" panel at identical
+   specificity (0,2,1) — content: "" being declared second silently overrode
+   content: none, so the pseudo-element was generated anyway (invisible only
+   because --tl/--tr/--bl/--br still default to transparent). Scoping them to
+   disjoint selectors means neither can be reordered into fighting the other. */
+.nx-panel[data-nx-corners]:not([data-nx-corners="none"])::before {
   content: "";
   position: absolute;
   inset: -1px;
