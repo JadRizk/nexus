@@ -1,5 +1,94 @@
 # @nexus/react
 
+## 3.0.0
+
+### Major Changes
+
+- c9d88b5: Components are styled from CSS with a component token layer, replacing the
+  inline `style` objects most of them used.
+
+  Every component now defines its own custom properties on its own class,
+  defaulted from the semantic layer, and styles itself from those. States move
+  the token rather than restating the property, so a state cannot drift from the
+  base rule — and a consumer retheming a component sets one variable on any
+  ancestor:
+
+  ```css
+  .marketing-site {
+    --nx-btn-border: var(--nx-fg-info);
+  }
+  ```
+
+  That works because custom properties inherit: no specificity fight, no
+  `!important`, no fork. Previously an inline `style` outranked every stylesheet
+  a consumer could write, so `Panel`'s padding was not adjustable from CSS at
+  all. This is the third layer the documentation always claimed
+  (`primitive → semantic → component`) and did not have.
+
+  The rule is written down in `packages/react/STYLING.md`: static styling lives
+  in CSS, and the `style` prop carries only values that cannot be known before
+  render — a caller's colour, a computed position, a percentage width.
+
+  **Breaking for anyone reaching into the rendered markup.** No component API
+  changed and nothing looks different — the visual suite verified every baseline
+  byte-identical through the conversion — but the DOM now carries classes where
+  it previously carried inline styles, so a selector written against an inline
+  `style` attribute will no longer match.
+
+### Patch Changes
+
+- c9d88b5: Two overlay fixes, both of which made a documented accessibility guarantee
+  untrue in practice.
+
+  `useHotkey` applied its "don't hijack the user's typing" guard to every combo,
+  not just unmodified ones. That made `mod+k` unreachable from any focused
+  input, textarea, select or contenteditable — and fatally so for the case it
+  exists for, because `CommandPalette` keeps focus in its own input for as long
+  as it is open (the ARIA combobox pattern), so the shortcut that opened the
+  palette could never close it again. The guard now applies only when no
+  modifier is wanted. Shift alone still counts as unmodified, because
+  Shift+letter is exactly what typing a capital letter is.
+
+  `Drawer` passed `inert=""` to both supported React majors. React 18 needs that
+  string idiom, but React 19 classifies `inert` as a boolean attribute, reads
+  `""` as false, drops the attribute and warns on every render — so a closed
+  Drawer on React 19 was `aria-hidden="true"` with its close and footer buttons
+  still in the tab order. A keyboard user tabbed into offscreen content a screen
+  reader had been told did not exist, which is the precise defect `inert` is
+  there to prevent. The value is now chosen from `React.version`: `""` on React
+  18, and the standards-correct boolean everywhere else, so a future major
+  inherits the right behaviour rather than the legacy shim.
+
+- c9d88b5: Ten fixes from an independent review of the tokens/testing/packaging/styling
+  work, each confirmed by a second verification pass before landing:
+
+  - **`CommandPalette`**: pressing `End` on an empty result list left `cursor`
+    at -1 with nothing to re-clamp it if results later populated for the same
+    query, so `Enter` would silently do nothing until an arrow key was pressed.
+  - **`Panel`**: `corners="none"` no longer actually suppressed the corner-tick
+    pseudo-element — a specificity tie with the generic rule meant source
+    order, not intent, decided the winner, and the generic rule silently won.
+    Invisible only because the corner-tick colour variables default to
+    transparent regardless.
+  - **`Slider`, `ToggleRow`, `BlinkCursor`**: still carried static values
+    through the `style` prop, unreachable from a consumer stylesheet — the
+    three components the STYLING.md conversion missed.
+  - **`Glyph`/`LinkGlyph`**: deduplicated identical muted-colour resolution and
+    decorative-icon aria logic into `resolveColour`'s new `muted` option and a
+    shared `iconA11y()` helper.
+  - Five components' hand-rolled `className` merge (one of which had already
+    silently diverged from the other four) factored into `mergeClassName()`.
+
+  Also fixes two footguns in the tooling, invisible to a consumer but worth
+  knowing about if you build this repo yourself: `build-tokens.mjs`'s
+  theme-sensitivity detection had an asymmetric traversal that could have
+  silently reintroduced the theme-switch bug for a token shape that doesn't
+  exist yet; and `scripts/build-preview.mjs` could silently bundle a stale
+  `packages/tokens/dist` build when run on its own.
+
+- Updated dependencies [c9d88b5]
+  - @nexus/tokens@3.0.0
+
 ## 2.0.0
 
 ### Major Changes
