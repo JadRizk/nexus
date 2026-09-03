@@ -14,6 +14,26 @@ const ITEMS = [
    ========================================================================== */
 
 describe("CommandPalette", () => {
+  it("clamps cursor to a valid index if results repopulate for the same query", () => {
+    // The specific regression this guards: End on an empty result list used
+    // to leave cursor at -1 with nothing to re-clamp it, so if `items`
+    // changed to a non-empty set for the same query (an async results
+    // update), Enter would silently do nothing until an arrow key was
+    // pressed. `hits` becomes empty here not through the query — the effect
+    // under test only fires on `hits.length` changing, not on `query`
+    // changing (that path is already covered elsewhere).
+    const onSelect = vi.fn();
+    const { rerender } = render(
+      <CommandPalette open onClose={() => {}} items={[]} onSelect={onSelect} />,
+    );
+    const input = screen.getByRole("combobox");
+    fireEvent.keyDown(input, { key: "End" });
+
+    rerender(<CommandPalette open onClose={() => {}} items={ITEMS} onSelect={onSelect} />);
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(onSelect).toHaveBeenCalledWith(ITEMS[0]);
+  });
+
   it("wires the input to the listbox and announces the result count", () => {
     render(<CommandPalette open onClose={() => {}} items={ITEMS} onSelect={() => {}} />);
     const input = screen.getByRole("combobox");

@@ -38,6 +38,11 @@ const flag = (name) => {
 };
 const SOURCE = flag("--source") ?? src("tokens.json");
 const DRY_RUN = argv.includes("--dry-run");
+// Writes the generated tokens.css to this path instead of stdout's one-line
+// summary, without touching src/tokens.css. Exists so build-tokens.test.mjs
+// can inspect the generated CSS for a synthetic token tree — --dry-run alone
+// prints nothing about the actual output, only whether the build succeeded.
+const PRINT_CSS_TO = flag("--print-css-to");
 
 const tokens = JSON.parse(readFileSync(SOURCE, "utf8"));
 
@@ -501,6 +506,7 @@ if (!DRY_RUN) {
   writeFileSync(src("tokens.css"), css);
   writeFileSync(src("contrast.gen.ts"), ts);
 }
+if (PRINT_CSS_TO) writeFileSync(PRINT_CSS_TO, css);
 
 const colours = Object.keys(table[DEFAULT_THEME]).length;
 console.log(

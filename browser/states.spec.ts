@@ -215,3 +215,32 @@ test.describe("component tokens", () => {
     expect(semantic).not.toBe("rgb(255, 0, 0)");
   });
 });
+
+test.describe("Panel corners=\"none\" suppression", () => {
+  // Not a screenshot: the corner-tick variables default to transparent, so a
+  // panel with the pseudo-element wrongly generated and one with it actually
+  // suppressed render pixel-identical — a diff cannot tell them apart. That
+  // is exactly how this bug shipped invisibly the first time. Only the
+  // computed `content` value of the pseudo-element itself distinguishes
+  // "generated, painting nothing" from "never generated", and jsdom does not
+  // support pseudo-element computed styles at all, so this has to run here.
+  test("no ::before pseudo-element is generated for a none-corners panel", async ({ page }) => {
+    await gotoPage(page, "primitives");
+    const header = banner(page);
+    await expect(header).toHaveAttribute("data-nx-corners", "none");
+    const content = await header.evaluate(
+      (el) => getComputedStyle(el, "::before").content,
+    );
+    expect(content).toBe("none");
+  });
+
+  test("a corners panel does generate the pseudo-element", async ({ page }) => {
+    // The contrasting case, so the assertion above is known to be
+    // discriminating rather than trivially true for every element.
+    await gotoPage(page, "primitives");
+    const panel = spec(page, "Panel").locator(".nx-panel").first();
+    await expect(panel).toHaveAttribute("data-nx-corners", "tl br");
+    const content = await panel.evaluate((el) => getComputedStyle(el, "::before").content);
+    expect(content).toBe('""');
+  });
+});

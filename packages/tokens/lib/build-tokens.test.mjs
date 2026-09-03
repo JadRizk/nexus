@@ -35,6 +35,27 @@ function build(mutate) {
   }
 }
 
+/**
+ * Like build(), but returns the generated CSS text instead of the dry-run
+ * summary line — --dry-run alone never writes anywhere, including the print
+ * destination, so this passes --print-css-to on top of it to capture the
+ * output without touching src/tokens.css.
+ */
+function buildCss(mutate) {
+  const dir = mkdtempSync(join(tmpdir(), "nexus-tokens-"));
+  const sourceFile = join(dir, "tokens.json");
+  const cssFile = join(dir, "tokens.css");
+  const tokens = structuredClone(source);
+  mutate(tokens);
+  writeFileSync(sourceFile, JSON.stringify(tokens));
+  execFileSync(
+    "node",
+    [script, "--source", sourceFile, "--dry-run", "--print-css-to", cssFile],
+    { stdio: ["ignore", "ignore", "inherit"] },
+  );
+  return readFileSync(cssFile, "utf8");
+}
+
 describe("the accessibility guard", () => {
   it("passes on the palette as it ships", () => {
     const r = build(() => {});
@@ -158,5 +179,35 @@ describe("generated output", () => {
     // 21:1 is white on the panel surface — proof the number is computed from
     // the token rather than carried over from the old hand-typed table.
     expect(r.output).toMatch(/13 contrast ratios computed/);
+  });
+});
+
+describe("theme-sensitivity through an aliased scaleBy target", () => {
+  // isThemeSensitive's alias branch recurses; its scaleBy branch used to call
+  // the non-recursive isThemed on the scale target instead. isThemed's very
+  // first check is `path.startsWith("primitive.")`, which every semantic.*
+  // token fails by definition (a semantic token IS an alias to a primitive) —
+  // so a scaleBy target reached through a semantic alias was misclassified as
+  // theme-insensitive and silently dropped from the per-theme re-declaration
+  // this whole generator exists to do. font-scale, the one real scaleBy
+  // target, happens to be a bare primitive and never exercised this branch;
+  // this constructs the case that would have.
+  it("re-declares a scaled token per theme when its scaleBy target is a semantic alias to a themed primitive", () => {
+    const css = buildCss((t) => {
+      // semantic.fg.disabled resolves through primitive.ramp.grey-300, which
+      // differs by theme — cssName("semantic.fg.disabled") is "--nx-fg-disabled",
+      // so this is what the scaleBy lookup has to find and correctly recurse
+      // into. Not a real-world scaleBy target, just the shape that isolates
+      // the bug: a scaleBy pointing at something themed only through an
+      // alias, rather than directly.
+      t.primitive.text["2xs"].$extensions["nexus.scaleBy"] = "fg-disabled";
+    });
+
+    for (const block of ['[data-nx-theme="hud-aa"]', '[data-nx-theme="hud"]']) {
+      const start = css.indexOf(block + " {");
+      expect(start, `expected a ${block} block`).toBeGreaterThan(-1);
+      const body = css.slice(start, css.indexOf("\n}", start));
+      expect(body, `${block} should re-declare --nx-text-2xs`).toContain("--nx-text-2xs:");
+    }
   });
 });
