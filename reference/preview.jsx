@@ -159,13 +159,15 @@ function useHotkey(combo, handler) {
     const wantMod = parts.includes("mod");
     const wantShift = parts.includes("shift");
     const on = (e) => {
-      const t = e.target;
-      const typing = !!t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable);
       const mod = e.metaKey || e.ctrlKey;
       if (wantMod !== mod) return;
       if (wantShift !== e.shiftKey) return;
-      if (typing) return;
       if (e.key.toLowerCase() !== key) return;
+      if (!wantMod) {
+        const t = e.target;
+        const typing = !!t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable);
+        if (typing) return;
+      }
       e.preventDefault();
       handlerRef.current(e);
     };
@@ -314,8 +316,16 @@ function CommandPalette({
 }
 
 // packages/react/src/components/Drawer/Drawer.tsx
-import { useId as useId2 } from "react";
-var inertWhenClosed = (open) => open ? {} : { inert: "" };
+import { useId as useId2, version as reactVersion } from "react";
+
+// packages/react/src/components/Drawer/inert.ts
+function inertAttr(reactVersion2) {
+  return /^18\./.test(reactVersion2) ? "" : true;
+}
+
+// packages/react/src/components/Drawer/Drawer.tsx
+var INERT_VALUE = inertAttr(reactVersion);
+var inertWhenClosed = (open) => open ? {} : { inert: INERT_VALUE };
 function Drawer({
   open,
   onClose,

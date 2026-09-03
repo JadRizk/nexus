@@ -1,22 +1,23 @@
-import { useId } from "react";
+import { useId, version as reactVersion } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { Panel } from "../Panel/index.js";
 import { HazardRule } from "../HazardRule/index.js";
 import { useFocusTrap } from "../../hooks/index.js";
 import { resolveColour } from "../../colour.js";
 import type { ToneProps } from "../../colour.js";
+import { inertAttr } from "./inert.js";
 
-// `inert` is a standard DOM boolean attribute, but React 18's runtime doesn't
-// recognize the name as boolean-valued (that's React 19) and warns if given a
-// JS boolean — so it's passed as a plain string, the same "" idiom HTML itself
-// uses for boolean attributes, which React 18 renders as-is.
-//
-// The cast is deliberately local. Declaring `inert` into React's global
-// HTMLAttributes would have merged into the types of every app that imports
-// this package — including React 19 apps, where `inert` is already typed as
-// boolean and widening it to string is simply wrong for their whole codebase.
-const inertWhenClosed = (open: boolean): Record<string, string> =>
-  (open ? {} : { inert: "" });
+// Resolved once: React cannot change major mid-session. See ./inert.ts for
+// why the two supported majors need different spellings.
+const INERT_VALUE = inertAttr(reactVersion);
+
+// The loose record type is deliberately local. Declaring `inert` into React's
+// global HTMLAttributes would have merged into the types of every app that
+// imports this package — including React 19 apps, where `inert` is already
+// typed as boolean and widening it to string is simply wrong for their whole
+// codebase.
+const inertWhenClosed = (open: boolean): Record<string, boolean | string> =>
+  (open ? {} : { inert: INERT_VALUE });
 
 /* ============================================================================
    @nexus/react — overlays
