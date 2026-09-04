@@ -49,10 +49,18 @@ jobs:
       # versions and tags but pushes nothing to the registry. Removing
       # `private` from a package is the only change needed to start
       # publishing it; nothing here has to be edited.
+      #
+      # `version:packages` is `changeset version` plus `build:preview`, not
+      # `changeset version` alone. reference/preview.jsx is a committed
+      # artefact that quotes the package version, and CI fails any pull
+      # request where it has drifted — so a version bump that did not
+      # regenerate it would open a release pull request that cannot go green
+      # without a hand-pushed commit. Regenerating derived files is what the
+      # version script is for.
       - name: Version or publish
         uses: changesets/action@v1
         with:
-          version: npx changeset version
+          version: npm run version:packages
           publish: npx changeset publish
           commit: "chore: version packages"
           title: "chore: version packages"

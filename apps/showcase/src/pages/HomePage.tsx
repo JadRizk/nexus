@@ -57,7 +57,7 @@ export function HomePage() {
               marginTop: "var(--nx-space-2)", color: "var(--nx-fg-tertiary)",
               fontSize: "var(--nx-text-2xs)", letterSpacing: "var(--nx-track-wider)",
             }}>
-              DESIGN SYSTEM v{__NX_VERSION__} <BlinkCursor />
+              DESIGN SYSTEM v<span data-nx-version>{__NX_VERSION__}</span> <BlinkCursor />
             </div>
           </div>
 

@@ -52,7 +52,7 @@ function Shell() {
             <span style={{
               color: "var(--nx-fg-tertiary)", fontSize: "var(--nx-text-2xs)",
               letterSpacing: "var(--nx-track-wider)",
-            }}>DS v{__NX_VERSION__} <BlinkCursor /></span>
+            }}>DS v<span data-nx-version>{__NX_VERSION__}</span> <BlinkCursor /></span>
           </div>
 
           <nav aria-label="Sections" style={{ display: "flex", gap: "var(--nx-space-2)", flex: 1 }}>
