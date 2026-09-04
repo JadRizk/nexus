@@ -7,7 +7,7 @@ a force-directed WebGL graph canvas that speaks the same language.
 
 ![The Nexus Cyberdeck showcase: a docked console panel, an entity legend, a theme switcher and an open detail drawer, all acid green on near-black](docs/assets/hero.png)
 
-Nineteen components, two hooks, a search ranker, 83 tokens, two themes. Dark
+19 components, two hooks, a search ranker, 83 tokens, two themes. Dark
 only and desktop first, built for consoles, dashboards and visualisations
 rather than marketing pages. React 18.3 or 19.
 
