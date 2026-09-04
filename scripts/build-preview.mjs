@@ -20,11 +20,25 @@ const BOUNDARY = "PAGES — mirrors apps/showcase/src/pages";
 
 async function main() {
   const existing = readFileSync(previewPath, "utf8");
-  const boundaryLineStart = existing.lastIndexOf("/* ====", existing.indexOf(BOUNDARY));
-  if (boundaryLineStart < 0) {
+  // Checked before the lastIndexOf below rather than after it: String
+  // .lastIndexOf clamps a negative fromIndex to 0, and this file opens with a
+  // "/* ====" banner, so a missing boundary would have produced 0 — a valid
+  // looking offset — instead of the -1 the old guard was testing for. The
+  // whole file would then have become the "tail", and the script would have
+  // written a preview with two headers and two NX_CSS declarations, doubling
+  // again on every subsequent run.
+  const boundaryIndex = existing.indexOf(BOUNDARY);
+  if (boundaryIndex < 0) {
     throw new Error(
       "Could not find the PAGES boundary comment in reference/preview.jsx — " +
       "has the hand-authored section been renamed or removed?",
+    );
+  }
+  const boundaryLineStart = existing.lastIndexOf("/* ====", boundaryIndex);
+  if (boundaryLineStart < 0) {
+    throw new Error(
+      "Found the PAGES boundary comment in reference/preview.jsx but not the " +
+      "banner that opens it — has the comment style changed?",
     );
   }
   // The tail is hand-authored, but the figures it quotes are not: they are
