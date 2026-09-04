@@ -31,7 +31,7 @@ if (!IN_CONTAINER && !process.env.PW_ALLOW_HOST) {
   throw new Error(
     "Visual tests must run in the pinned Playwright container so baselines stay " +
       "comparable.\n\n  npm run test:visual           run the suite\n" +
-      "  npm run test:visual:update    re-record baselines after an intended change\n\n" +
+      "  npm run test:browser:update   re-record baselines after an intended change\n\n" +
       "Set PW_ALLOW_HOST=1 only to debug locally; never commit baselines produced that way.",
   );
 }

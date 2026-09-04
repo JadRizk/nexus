@@ -54,8 +54,12 @@ every component renders unstyled.
 | **Hooks**    | `useFocusTrap`, `useHotkey`                                        |
 | **Search**   | `rankItems`                                                        |
 
-Every component extends the native element's props, so `className`, `style`,
-`aria-*` and event handlers pass straight through.
+`NexusProvider`, `Panel`, `Button`, `SectionHeading` and `Wordmark` extend
+their underlying element's props, so `className`, `style`, `aria-*` and event
+handlers pass straight through. The rest declare closed prop interfaces —
+`Stat` takes `label` and `value`, `Glyph` takes `shape` and a colour, and
+neither accepts `className`. Restyle those through their component tokens
+(below) rather than through a class.
 
 ### Colour
 

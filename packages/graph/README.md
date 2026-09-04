@@ -147,7 +147,7 @@ state.
 | `hiddenNodeCategories`, `hiddenLinkCategories` | category ids to hide                                                                                                                    |
 | `isolateId`                                    | show only this node and its neighbours                                                                                                  |
 | `selectedId`                                   | the selected node; update it from `onSelect`                                                                                            |
-| `running`                                      | pause the solver (dragging still works)                                                                                                 |
+| `running`                                      | run the physics solver; `false` pauses it (dragging still works). Default `true`                                                        |
 | `onSelect`, `onStats`, `onFatal`               | selection, per-frame stats, WebGL setup failure                                                                                         |
 
 ### Controller
