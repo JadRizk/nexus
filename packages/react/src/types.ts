@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 /* ============================================================================
-   @nexus/react — shared types
+   @nexus-cyberdeck/react — shared types
 
    Types only. The hooks that used to live here are in ./hooks.ts and the
    search ranker is in ./search.ts.

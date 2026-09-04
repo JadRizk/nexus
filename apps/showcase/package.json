@@ -2,6 +2,7 @@
   "name": "showcase",
   "private": true,
   "version": "1.0.0",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,9 +12,9 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@nexus/graph": "*",
-    "@nexus/react": "*",
-    "@nexus/tokens": "*",
+    "@nexus-cyberdeck/graph": "*",
+    "@nexus-cyberdeck/react": "*",
+    "@nexus-cyberdeck/tokens": "*",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "three": "^0.185.1"

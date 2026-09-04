@@ -1,4 +1,4 @@
-import { LinkGlyph } from "@nexus/react";
+import { LinkGlyph } from "@nexus-cyberdeck/react";
 
 const RELATIONS = [
   { key: "link", label: "Link", colour: "#3AC6D4", dashed: false, arrow: false, width: 1.2 },

@@ -1,9 +1,9 @@
-import { tone as toneVar } from "@nexus/tokens";
-import type { Tone } from "@nexus/tokens";
+import { tone as toneVar } from "@nexus-cyberdeck/tokens";
+import type { Tone } from "@nexus-cyberdeck/tokens";
 import type { Colour } from "./types.js";
 
 /* ============================================================================
-   @nexus/react — colour resolution
+   @nexus-cyberdeck/react — colour resolution
 
    Every component that carries a colour takes the same pair of props, so
    "what colour is this" has one spelling across the whole API rather than the

@@ -1,4 +1,4 @@
-import { Stat } from "@nexus/react";
+import { Stat } from "@nexus-cyberdeck/react";
 
 export function Tones() {
   return (

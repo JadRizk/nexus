@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Glyph, ToggleRow } from "@nexus/react";
+import { Glyph, ToggleRow } from "@nexus-cyberdeck/react";
 
 const CLASSES = [
   { key: "atlas", label: "Atlas", code: "ATL", shape: "hexagon" as const, colour: "var(--nx-fg-accent)" },

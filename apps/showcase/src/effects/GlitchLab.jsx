@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Panel, Button, TabStrip, Slider, ToggleRow, SectionHeading, HazardRule, Wordmark,
-} from "@nexus/react";
+} from "@nexus-cyberdeck/react";
 
 /* ============================================================================
    GLITCH LAB
@@ -25,7 +25,7 @@ import {
    shaders, physics of the event bus and the audio synth are untouched. Only
    the surrounding UI changed, from a second hand-rolled copy of the design
    system (its own `C` palette and `gl-*` CSS classes) to the real
-   @nexus/react components and @nexus/tokens custom properties, so this page
+   @nexus-cyberdeck/react components and @nexus-cyberdeck/tokens custom properties, so this page
    can't drift from the rest of the system the way the original standalone
    file would have.
    ========================================================================== */
@@ -969,7 +969,7 @@ function makeRT(gl, w, h) {
    base layer (font, colour, focus ring, scrollbars, reduced-motion) for
    free, and the real components already exist. Only the WebGL host div,
    the event-trigger cards and the keyframe chart below have no equivalent
-   in @nexus/react and stay bespoke — styled from tokens, not hex.
+   in @nexus-cyberdeck/react and stay bespoke — styled from tokens, not hex.
    ================================================================== */
 
 const SOURCES = ["GRAPH", "BARS", "HUD"];

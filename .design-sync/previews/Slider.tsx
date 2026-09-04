@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Slider } from "@nexus/react";
+import { Slider } from "@nexus-cyberdeck/react";
 
 export function Default() {
   const [scan, setScan] = useState(0.55);

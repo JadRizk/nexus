@@ -1,4 +1,4 @@
-# @nexus/react
+# @nexus-cyberdeck/react
 
 ## 3.0.0
 

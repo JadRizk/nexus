@@ -110,7 +110,7 @@ export default tseslint.config(
     rules: { "no-restricted-syntax": "off" },
   },
 
-  // @nexus/graph binds colours to the GPU (Three.js parses real hex, not
+  // @nexus-cyberdeck/graph binds colours to the GPU (Three.js parses real hex, not
   // custom properties), so it holds documented fallback literals by necessity.
   {
     files: ["packages/graph/src/**"],

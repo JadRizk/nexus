@@ -1,4 +1,4 @@
-import { HazardRule, KeyValue, Panel, Stat } from "@nexus/react";
+import { HazardRule, KeyValue, Panel, Stat } from "@nexus-cyberdeck/react";
 
 export function Default() {
   return (

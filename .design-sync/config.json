@@ -1,5 +1,5 @@
 {
-  "pkg": "@nexus/react",
+  "pkg": "@nexus-cyberdeck/react",
   "globalName": "NexusReact",
   "projectId": "8749f66b-3b06-4391-9ae6-412ca39cb4bf",
   "shape": "package",

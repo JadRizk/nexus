@@ -1,4 +1,4 @@
-import { Button } from "@nexus/react";
+import { Button } from "@nexus-cyberdeck/react";
 
 export function States() {
   return (

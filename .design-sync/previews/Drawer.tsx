@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { Button, Drawer, Glyph, MeterRow, SectionHeading } from "@nexus/react";
+import { Button, Drawer, Glyph, MeterRow, SectionHeading } from "@nexus-cyberdeck/react";
 
 const ADJACENT = [
   { id: 1, label: "cold_relay", code: "NDE", colour: "var(--nx-fg-info)", shape: "circle" as const },

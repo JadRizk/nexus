@@ -102,6 +102,29 @@ export async function focusVisible(target: Locator) {
   ).toHaveCSS("outline-style", "solid");
 }
 
+/**
+ * The rendered package version, masked out of every screenshot that contains
+ * the site chrome.
+ *
+ * The version is derived from packages/react/package.json at build time, so
+ * without this a `changeset version` bump would change the pixels in five
+ * baselines while nothing about the design moved — and re-recording needs
+ * Docker, on a pull request opened by a bot. Masking keeps the release path
+ * clear without weakening the zero-pixel threshold anywhere it is measuring
+ * the design. Everything else the chrome advertises (the token and component
+ * counts) stays compared: those move only when the code moves, and the pull
+ * request that moves them re-records the baselines anyway.
+ *
+ * The mask covers the rendered digits, not the space they take: a version
+ * whose width changes — 3.9 to 3.10, or 9.x to 10.x — widens the masked box
+ * and shifts the blink cursor and nav beside it, so those baselines need
+ * re-recording once. Every bump that keeps the same width, which is all of
+ * them in between, moves nothing.
+ */
+export function versionMask(page: Page): Locator[] {
+  return [page.locator("[data-nx-version]")];
+}
+
 /** One named example from a showcase page. */
 export function spec(page: Page, name: string): Locator {
   return page.locator(`[data-spec="${name}"]`);

@@ -1,4 +1,4 @@
-import { MeterRow } from "@nexus/react";
+import { MeterRow } from "@nexus-cyberdeck/react";
 
 export function RelationDistribution() {
   return (

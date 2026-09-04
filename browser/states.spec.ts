@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
-import { banner, focusVisible, gotoPage, setTheme, spec, settle } from "./harness.js";
+import { banner, focusVisible, gotoPage, setTheme, spec, settle, versionMask } from "./harness.js";
 
 /* ============================================================================
    Interaction states, the CRT layer, and the theme swap.
@@ -75,6 +75,9 @@ test.describe("focus rings", () => {
     const onscreen = await skip.evaluate((el) => el.getBoundingClientRect().x);
     expect(onscreen).toBeGreaterThanOrEqual(0);
 
+    // No version mask here, unlike the console shots: the focused skip link
+    // sits on top of the version and hides it, so masking would paint over
+    // the skip link itself — the one thing this baseline exists to show.
     await expect(page).toHaveScreenshot("focus-skip-link.png", {
       clip: { x: 0, y: 0, width: 420, height: 120 },
     });
@@ -104,7 +107,7 @@ test.describe("CRT layer", () => {
 
   test("off", async ({ page }) => {
     await gotoPage(page, "home");
-    await expect(page).toHaveScreenshot("crt-off.png", { fullPage: false });
+    await expect(page).toHaveScreenshot("crt-off.png", { fullPage: false, mask: versionMask(page) });
   });
 
   test("on", async ({ page }) => {
@@ -116,7 +119,7 @@ test.describe("CRT layer", () => {
       "true",
     );
     await settle(page);
-    await expect(page).toHaveScreenshot("crt-on.png", { fullPage: false });
+    await expect(page).toHaveScreenshot("crt-on.png", { fullPage: false, mask: versionMask(page) });
   });
 });
 
@@ -128,14 +131,14 @@ test.describe("theme swap", () => {
 
   test("the console in the AA theme", async ({ page }) => {
     await gotoPage(page, "home", "hud-aa");
-    await expect(page).toHaveScreenshot("console-hud-aa.png");
+    await expect(page).toHaveScreenshot("console-hud-aa.png", { mask: versionMask(page) });
   });
 
   test("the console in the prototype theme", async ({ page }) => {
     // The theme is set before navigating rather than switched here: on Home
     // the docked drawer covers the header controls (see harness).
     await gotoPage(page, "home", "hud");
-    await expect(page).toHaveScreenshot("console-hud.png");
+    await expect(page).toHaveScreenshot("console-hud.png", { mask: versionMask(page) });
   });
 
   test("switching theme changes the muted ramp on screen, not just in the DOM", async ({

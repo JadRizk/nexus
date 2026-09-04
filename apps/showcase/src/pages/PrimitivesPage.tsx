@@ -2,7 +2,7 @@ import { useState } from "react";
 import {
   Panel, HazardRule, SectionHeading, Wordmark, BlinkCursor, KeyValue, Stat,
   Button, TabStrip, Slider, ToggleRow, Glyph, LinkGlyph, GLYPH_SHAPES, Tooltip,
-} from "@nexus/react";
+} from "@nexus-cyberdeck/react";
 import { PageHeader, Spec, Row } from "../components/Spec.js";
 import { CLASSES, RELATIONS } from "../data.js";
 

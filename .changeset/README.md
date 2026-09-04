@@ -14,14 +14,14 @@ transparent in every theme" is not.
 
 ## What this repository's configuration does
 
-**`fixed: [["@nexus/tokens", "@nexus/react"]]`** — these two always carry the
-same version. `@nexus/react` depends on an exact `@nexus/tokens` version rather
+**`fixed: [["@nexus-cyberdeck/tokens", "@nexus-cyberdeck/react"]]`** — these two always carry the
+same version. `@nexus-cyberdeck/react` depends on an exact `@nexus-cyberdeck/tokens` version rather
 than a range, because the two communicate through CSS custom property names at
 runtime: a component asking for `--nx-fg-tertiary` from a tokens build that no
 longer defines it does not fail to compile, it renders the wrong colour. Exact
 pinning plus lockstep versioning is what makes that mismatch unreachable.
 
-**`@nexus/graph` is versioned independently.** The README is explicit that the
+**`@nexus-cyberdeck/graph` is versioned independently.** The README is explicit that the
 graph is a product built *with* the design system rather than part of it, so it
 should not be dragged through a major version because a token was renamed.
 

@@ -18,19 +18,19 @@
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
-      "@nexus/tokens": [
+      "@nexus-cyberdeck/tokens": [
         "./packages/tokens/src/index.ts"
       ],
-      "@nexus/tokens/*": [
+      "@nexus-cyberdeck/tokens/*": [
         "./packages/tokens/src/*"
       ],
-      "@nexus/react": [
+      "@nexus-cyberdeck/react": [
         "./packages/react/src/index.ts"
       ],
-      "@nexus/react/*": [
+      "@nexus-cyberdeck/react/*": [
         "./packages/react/src/*"
       ],
-      "@nexus/graph": [
+      "@nexus-cyberdeck/graph": [
         "./packages/graph/src/index.ts"
       ]
     }

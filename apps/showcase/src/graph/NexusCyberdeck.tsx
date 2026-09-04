@@ -1,19 +1,19 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import { GraphCanvas, TIER_ZOOM } from "@nexus/graph";
-import type { GraphController, GraphNodeSnapshot, GraphStats, OpticsConfig, PhysicsConfig } from "@nexus/graph";
+import { GraphCanvas, TIER_ZOOM } from "@nexus-cyberdeck/graph";
+import type { GraphController, GraphNodeSnapshot, GraphStats, OpticsConfig, PhysicsConfig } from "@nexus-cyberdeck/graph";
 import {
   Panel, Button, TabStrip, Slider, ToggleRow, SectionHeading, HazardRule, Wordmark, BlinkCursor,
   KeyValue, Stat, MeterRow, Glyph, LinkGlyph, GLYPH_SHAPES, useFocusTrap,
-} from "@nexus/react";
+} from "@nexus-cyberdeck/react";
 import { generateSampleGraph, LINK_CATEGORIES, LINK_CATEGORY_IDS, NODE_CATEGORIES, NODE_CATEGORY_IDS } from "./sampleData.js";
 
 /* ============================================================================
    NEXUS // CYBERDECK  —  typed knowledge graph on a CRT
 
-   The console chrome here is unchanged from the earlier @nexus/react
+   The console chrome here is unchanged from the earlier @nexus-cyberdeck/react
    migration. What changed in this pass: the physics/shaders/render loop —
    previously ~700 lines inline in this file's own mount effect — now live
-   in @nexus/graph's <GraphCanvas>, generic over any node/edge taxonomy. This
+   in @nexus-cyberdeck/graph's <GraphCanvas>, generic over any node/edge taxonomy. This
    file owns exactly what a consumer of that package is expected to own: the
    ATLAS/TAG/etc. sample data (sampleData.ts), the physics/optics slider
    state, and the chrome around the canvas.

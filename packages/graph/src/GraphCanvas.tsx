@@ -26,7 +26,7 @@ import type {
    for `cfg`/`running`/`labelMode`.
    ========================================================================== */
 
-// Deliberately not sourced from @nexus/tokens — this package has no
+// Deliberately not sourced from @nexus-cyberdeck/tokens — this package has no
 // dependency on the rest of Nexus, so its one self-contained failure state
 // can't assume `var(--nx-*)` custom properties exist.
 const FALLBACK_BG = "#08090A";

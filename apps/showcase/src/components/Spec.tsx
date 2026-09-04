@@ -1,11 +1,11 @@
 import type { CSSProperties, ReactNode } from "react";
-import { HazardRule, Panel, SectionHeading } from "@nexus/react";
+import { HazardRule, Panel, SectionHeading } from "@nexus-cyberdeck/react";
 
 /* ============================================================================
    showcase — Spec, Row, PageHeader
    Small layout helpers the showcase pages use to present one primitive at a
    time: a live example, a rationale note, an a11y callout, and a code sample.
-   These are showcase-only scaffolding, not part of @nexus/react.
+   These are showcase-only scaffolding, not part of @nexus-cyberdeck/react.
    ========================================================================== */
 
 export function PageHeader({ title, lede }: { title: string; lede: string }) {

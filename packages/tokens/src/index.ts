@@ -1,5 +1,5 @@
 /* ============================================================================
-   @nexus/tokens
+   @nexus-cyberdeck/tokens
 
    tokens.json is the source of truth. Both tokens.css and contrast.gen.ts are
    generated from it — see packages/tokens/build-tokens.mjs.

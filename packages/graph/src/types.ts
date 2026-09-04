@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 
 /* ============================================================================
-   Public types for @nexus/graph.
+   Public types for @nexus-cyberdeck/graph.
 
    The original NexusCyberdeck.jsx hardcoded one taxonomy (ATLAS/TAG/UNRSLV/
    SOURCE/AGENT/NODE, refs/cites/tagged/mentions/contradicts) directly into
@@ -13,7 +13,7 @@ import type { CSSProperties } from "react";
    built from these types, not part of the package.
    ========================================================================== */
 
-/** Index into the six SDF node shapes the shader supports — same order @nexus/react's `GLYPH_SHAPES` uses (circle, hexagon, diamond, ring, square, triangle). */
+/** Index into the six SDF node shapes the shader supports — same order @nexus-cyberdeck/react's `GLYPH_SHAPES` uses (circle, hexagon, diamond, ring, square, triangle). */
 export type GlyphShapeIndex = 0 | 1 | 2 | 3 | 4 | 5;
 
 /** 0=DORMANT · 1=STABLE · 2=HOT (breathing/flicker in the node shader) · 3=ORPHAN (dimmed). */

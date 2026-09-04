@@ -12,6 +12,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { esbuildAlias } from "../workspace-alias.mjs";
+import { componentCount, shortVersion, tokenCount } from "./ds-figures.mjs";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const previewPath = join(root, "reference/preview.jsx");
@@ -19,14 +20,34 @@ const BOUNDARY = "PAGES — mirrors apps/showcase/src/pages";
 
 async function main() {
   const existing = readFileSync(previewPath, "utf8");
-  const boundaryLineStart = existing.lastIndexOf("/* ====", existing.indexOf(BOUNDARY));
-  if (boundaryLineStart < 0) {
+  // Checked before the lastIndexOf below rather than after it: String
+  // .lastIndexOf clamps a negative fromIndex to 0, and this file opens with a
+  // "/* ====" banner, so a missing boundary would have produced 0 — a valid
+  // looking offset — instead of the -1 the old guard was testing for. The
+  // whole file would then have become the "tail", and the script would have
+  // written a preview with two headers and two NX_CSS declarations, doubling
+  // again on every subsequent run.
+  const boundaryIndex = existing.indexOf(BOUNDARY);
+  if (boundaryIndex < 0) {
     throw new Error(
       "Could not find the PAGES boundary comment in reference/preview.jsx — " +
       "has the hand-authored section been renamed or removed?",
     );
   }
-  const tail = existing.slice(boundaryLineStart);
+  const boundaryLineStart = existing.lastIndexOf("/* ====", boundaryIndex);
+  if (boundaryLineStart < 0) {
+    throw new Error(
+      "Found the PAGES boundary comment in reference/preview.jsx but not the " +
+      "banner that opens it — has the comment style changed?",
+    );
+  }
+  // The tail is hand-authored, but the figures it quotes are not: they are
+  // stamped from the code on every build, the same way the showcase's Vite
+  // config injects them, so a version bump cannot leave preview.jsx stale.
+  const tail = existing
+    .slice(boundaryLineStart)
+    .replace(/DS v\d+\.\d+/g, `DS v${shortVersion}`)
+    .replace(/\d+ tokens · \d+ components/g, `${tokenCount} tokens · ${componentCount} components`);
 
   const result = await build({
     entryPoints: [join(root, "packages/react/src/index.ts")],
@@ -40,7 +61,7 @@ async function main() {
     // discovery for this one build so the classic transform actually applies.
     tsconfigRaw: { compilerOptions: { jsx: "react" } },
     external: ["react"],
-    // Without this, "@nexus/tokens" resolves through packages/tokens'
+    // Without this, "@nexus-cyberdeck/tokens" resolves through packages/tokens'
     // package.json `exports`, which points at dist/ — so this script would
     // depend on packages/tokens having been rebuilt first, and would
     // silently bundle stale dist/ output otherwise. That is exactly the
@@ -66,7 +87,7 @@ async function main() {
   const header = `/* ============================================================================
    Nexus Cyberdeck — single-file preview of the design system.
 
-   The library code below is the REAL @nexus/react source, bundled by esbuild
+   The library code below is the REAL @nexus-cyberdeck/react source, bundled by esbuild
    straight from packages/react/src with types stripped. The CSS is the real
    tokens.css + crt.css + styles.css concatenated. Nothing here is a
    re-implementation, so this preview cannot drift from the packages — this
@@ -74,8 +95,8 @@ async function main() {
    not hand-edited. CI re-runs it and fails on any diff.
 
    In a real install you would instead:
-     import "@nexus/tokens/tokens.css";
-     import { Panel, Drawer } from "@nexus/react";
+     import "@nexus-cyberdeck/tokens/tokens.css";
+     import { Panel, Drawer } from "@nexus-cyberdeck/react";
    ========================================================================== */
 
 ${libraryJs}

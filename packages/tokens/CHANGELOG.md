@@ -1,4 +1,4 @@
-# @nexus/tokens
+# @nexus-cyberdeck/tokens
 
 ## 3.0.0
 

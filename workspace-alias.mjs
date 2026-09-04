@@ -18,11 +18,11 @@ const root = dirname(fileURLToPath(import.meta.url));
 const src = (pkg, file) => join(root, "packages", pkg, "src", file);
 
 export const workspaceAlias = [
-  { find: /^@nexus\/tokens$/, replacement: src("tokens", "index.ts") },
-  { find: /^@nexus\/tokens\/(.*)$/, replacement: src("tokens", "$1") },
-  { find: /^@nexus\/react$/, replacement: src("react", "index.ts") },
-  { find: /^@nexus\/react\/(.*)$/, replacement: src("react", "$1") },
-  { find: /^@nexus\/graph$/, replacement: src("graph", "index.ts") },
+  { find: /^@nexus-cyberdeck\/tokens$/, replacement: src("tokens", "index.ts") },
+  { find: /^@nexus-cyberdeck\/tokens\/(.*)$/, replacement: src("tokens", "$1") },
+  { find: /^@nexus-cyberdeck\/react$/, replacement: src("react", "index.ts") },
+  { find: /^@nexus-cyberdeck\/react\/(.*)$/, replacement: src("react", "$1") },
+  { find: /^@nexus-cyberdeck\/graph$/, replacement: src("graph", "index.ts") },
 ];
 
 /**
@@ -30,7 +30,7 @@ export const workspaceAlias = [
  * package-name → path object, not Vite's regex/replacement pairs).
  *
  * scripts/build-preview.mjs bundles packages/react/src/index.ts with esbuild,
- * which re-exports from the bare specifier "@nexus/tokens" — left to plain
+ * which re-exports from the bare specifier "@nexus-cyberdeck/tokens" — left to plain
  * package resolution, that goes through packages/tokens/package.json's
  * `exports` field, which (correctly, for a real consumer) points at dist/.
  * Local tooling has to bypass that the same way Vite and Vitest already do
@@ -39,7 +39,7 @@ export const workspaceAlias = [
  * contain rather than the source that was just edited.
  */
 export const esbuildAlias = {
-  "@nexus/tokens": src("tokens", "index.ts"),
-  "@nexus/react": src("react", "index.ts"),
-  "@nexus/graph": src("graph", "index.ts"),
+  "@nexus-cyberdeck/tokens": src("tokens", "index.ts"),
+  "@nexus-cyberdeck/react": src("react", "index.ts"),
+  "@nexus-cyberdeck/graph": src("graph", "index.ts"),
 };

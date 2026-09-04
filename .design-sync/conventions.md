@@ -6,7 +6,7 @@ app root in `NexusProvider`**, or every component renders unstyled (browser
 default colours, no dark canvas):
 
 ```tsx
-import { NexusProvider } from "@nexus/react";
+import { NexusProvider } from "@nexus-cyberdeck/react";
 
 <NexusProvider theme="hud-aa" crt={false}>
   {/* your screen */}
@@ -18,17 +18,40 @@ import { NexusProvider } from "@nexus/react";
   else needs to change when switching.
 - `crt`: only flips a `data-nx-crt` attribute for components that read it via
   `useNexus()` — it does **not** itself apply the CRT scanline effect. To get
-  scanlines, add the `nx-crt` class (from `@nexus/tokens/crt.css`) to a
+  scanlines, add the `nx-crt` class (from `@nexus-cyberdeck/tokens/crt.css`) to a
   specific container yourself; treat it as a deliberate, occasional accent,
   not a default.
 
 ## Styling idiom: CSS custom properties, not utility classes or style props
 
 This is not a Tailwind-style class system and not a prop-based theme (no
-`color="accent"` props). Components style themselves inline from `var(--nx-*)`
-custom properties defined by `@nexus/tokens`; compose new layout the same way,
-via `style`, not by inventing class names. Real tokens (there is no `-100`/
-`-900` numeric scale — semantic names only):
+`color="accent"` props). Every value in the system is a CSS custom property
+defined by `@nexus-cyberdeck/tokens`.
+
+**Components style themselves from their own stylesheet**, not from inline
+`style` objects. Each one reads a `--nx-<component>-<part>` property *with the
+semantic token as the fallback in the usage*:
+
+```css
+.nx-stat__label { color: var(--nx-stat-label-fg, var(--nx-fg-tertiary)); }
+```
+
+The fallback is never a declaration on the same class. That is the whole
+mechanism: a custom property declared on an element beats the same property
+inherited from an ancestor whatever the specificity, so declaring the default
+on `.nx-stat__label` would make a consumer's override on a wrapper unreachable.
+Retheming is therefore one property on any ancestor — `--nx-stat-label-fg:
+var(--nx-fg-info)` — with no specificity fight. See STYLING.md for the trap in
+full.
+
+Most components do accept a `style` prop, but reach for the component token
+first: an inline value outranks every stylesheet, including the consumer's
+own.
+
+**Compose new layout with `style` and `var(--nx-*)`.** That is the one place
+the `style` prop belongs in consumer code: your own wrappers, spacing and
+grids, built from the tokens below rather than from raw values. Real tokens
+(there is no `-100`/`-900` numeric scale — semantic names only):
 
 | Purpose | Tokens |
 |---|---|
@@ -43,10 +66,12 @@ via `style`, not by inventing class names. Real tokens (there is no `-100`/
 | Effects | `--nx-glow-raised`, `--nx-glow-inset`, `--nx-hairline`, `--nx-radius`, `--nx-scrim` |
 | Focus | `--nx-focus-ring`, `--nx-focus-width`, `--nx-focus-offset` (never remove — WCAG 2.4.7) |
 
-`@nexus/react` re-exports one helper, `tone(t: Tone)`, which returns
-`var(--nx-fg-${t})` for the five semantic tones (`default | accent | info |
-warning | critical`) — prefer `tone("accent")` over hand-writing the
-`var(...)` string when picking a foreground colour dynamically.
+`@nexus-cyberdeck/react` re-exports one helper, `tone(t: Tone)`, which returns
+`var(--nx-fg-${t})` for the nine semantic tones (`default | muted | subtle |
+tertiary | disabled | accent | info | warning | critical`) — prefer
+`tone("accent")` over hand-writing the `var(...)` string when picking a
+foreground colour dynamically. Components that carry a colour take `tone` and
+`colour` props directly; `tone` wins when both are given.
 
 ## Where the truth lives
 
@@ -60,7 +85,7 @@ warning | critical`) — prefer `tone("accent")` over hand-writing the
 ## Build snippet
 
 ```tsx
-import { NexusProvider, Panel, SectionHeading, Stat, Button } from "@nexus/react";
+import { NexusProvider, Panel, SectionHeading, Stat, Button } from "@nexus-cyberdeck/react";
 
 <NexusProvider theme="hud-aa">
   <Panel corners={["tl", "br"]} raised style={{ width: 280 }}>

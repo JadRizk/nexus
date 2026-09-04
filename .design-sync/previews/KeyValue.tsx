@@ -1,4 +1,4 @@
-import { KeyValue } from "@nexus/react";
+import { KeyValue } from "@nexus-cyberdeck/react";
 
 export function Rows() {
   return (

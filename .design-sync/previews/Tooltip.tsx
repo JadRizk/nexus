@@ -1,4 +1,4 @@
-import { Tooltip } from "@nexus/react";
+import { Tooltip } from "@nexus-cyberdeck/react";
 
 export function Default() {
   return (

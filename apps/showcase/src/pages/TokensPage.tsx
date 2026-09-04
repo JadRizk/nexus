@@ -1,5 +1,5 @@
-import { useNexus } from "@nexus/react";
-import { contrast, themeMeetsAA, WCAG } from "@nexus/tokens";
+import { useNexus } from "@nexus-cyberdeck/react";
+import { contrast, themeMeetsAA, WCAG } from "@nexus-cyberdeck/tokens";
 import { PageHeader, Row, Spec } from "../components/Spec.js";
 
 const SIGNATURE = [
@@ -25,7 +25,7 @@ export function TokensPage() {
         title="Tokens"
         lede={`Three layers — primitive, semantic, component. Components may reference only the
               semantic layer, so switching theme (currently "${theme}") never touches component
-              code. Every figure below is read live from @nexus/tokens, not hand-copied.`}
+              code. Every figure below is read live from @nexus-cyberdeck/tokens, not hand-copied.`}
       />
 
       <Spec
@@ -33,7 +33,7 @@ export function TokensPage() {
         note="Identical in both themes — acid, data, lime, sodium, violet, alarm and phosphor
               all already clear AA, which is why the accessible theme needed no redesign. Only
               the muted ramp had to move."
-        code={`import { contrast } from "@nexus/tokens";\ncontrast["${theme}"].acid // ${c.acid}`}
+        code={`import { contrast } from "@nexus-cyberdeck/tokens";\ncontrast["${theme}"].acid // ${c.acid}`}
       >
         <Row gap="var(--nx-space-6)">
           {SIGNATURE.map(([key, alias]) => (
@@ -81,7 +81,7 @@ export function TokensPage() {
       <Spec
         name="AA compliance"
         note={`themeMeetsAA() checks disabled text against ${WCAG.AA_TEXT}:1 and UI boundaries against ${WCAG.AA_NON_TEXT}:1.`}
-        code={`import { themeMeetsAA } from "@nexus/tokens";\nthemeMeetsAA("${theme}") // ${meetsAA}`}
+        code={`import { themeMeetsAA } from "@nexus-cyberdeck/tokens";\nthemeMeetsAA("${theme}") // ${meetsAA}`}
       >
         <div style={{ color: meetsAA ? "var(--nx-fg-accent)" : "var(--nx-fg-critical)" }}>
           "{theme}" {meetsAA ? "meets" : "does not meet"} AA body contrast.

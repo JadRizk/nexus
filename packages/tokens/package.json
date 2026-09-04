@@ -1,6 +1,33 @@
 {
-  "name": "@nexus/tokens",
+  "name": "@nexus-cyberdeck/tokens",
   "version": "3.0.0",
+  "license": "MIT",
+  "description": "Design tokens for the Nexus Cyberdeck HUD design system: CSS custom properties for two themes (WCAG AA and the original HUD), typed accessors, and build-time contrast checks. W3C DTCG source.",
+  "keywords": [
+    "design-tokens",
+    "design-system",
+    "css-custom-properties",
+    "dtcg",
+    "wcag",
+    "accessibility",
+    "dark-theme",
+    "hud",
+    "cyberpunk",
+    "nexus-cyberdeck"
+  ],
+  "homepage": "https://github.com/JadRizk/nexus#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JadRizk/nexus.git",
+    "directory": "packages/tokens"
+  },
+  "bugs": {
+    "url": "https://github.com/JadRizk/nexus/issues"
+  },
+  "author": "Jad Rizk",
+  "engines": {
+    "node": ">=18"
+  },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -12,7 +39,8 @@
     },
     "./tokens.css": "./dist/tokens.css",
     "./crt.css": "./dist/crt.css",
-    "./tokens.json": "./dist/tokens.json"
+    "./tokens.json": "./dist/tokens.json",
+    "./package.json": "./package.json"
   },
   "files": [
     "dist"

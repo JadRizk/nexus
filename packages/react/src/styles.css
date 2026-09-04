@@ -8,7 +8,7 @@
    Pseudo-elements and pseudo-classes for the parts a component cannot reach
    through an inline `style` prop: corner ticks, hover and active states on
    native elements, and the capped blink. Every value here reads from an
-   @nexus/tokens custom property — this file owns no colours itself.
+   @nexus-cyberdeck/tokens custom property — this file owns no colours itself.
    ========================================================================== */
 
 /* --------------------------------------------------------------- BlinkCursor */

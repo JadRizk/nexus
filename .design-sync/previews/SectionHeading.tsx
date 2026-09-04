@@ -1,4 +1,4 @@
-import { SectionHeading } from "@nexus/react";
+import { SectionHeading } from "@nexus-cyberdeck/react";
 
 export function Default() {
   return <SectionHeading>/// section heading</SectionHeading>;
