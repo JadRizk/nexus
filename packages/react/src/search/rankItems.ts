@@ -1,5 +1,5 @@
 /* ============================================================================
-   @nexus/react — search
+   @nexus-cyberdeck/react — search
 
    The ranking policy CommandPalette applies to its items. It lives here
    rather than inside the component so it can be tested, reasoned about and

@@ -1,7 +1,7 @@
 /* ============================================================================
    Nexus Cyberdeck — single-file preview of the design system.
 
-   The library code below is the REAL @nexus/react source, bundled by esbuild
+   The library code below is the REAL @nexus-cyberdeck/react source, bundled by esbuild
    straight from packages/react/src with types stripped. The CSS is the real
    tokens.css + crt.css + styles.css concatenated. Nothing here is a
    re-implementation, so this preview cannot drift from the packages — this
@@ -9,8 +9,8 @@
    not hand-edited. CI re-runs it and fails on any diff.
 
    In a real install you would instead:
-     import "@nexus/tokens/tokens.css";
-     import { Panel, Drawer } from "@nexus/react";
+     import "@nexus-cyberdeck/tokens/tokens.css";
+     import { Panel, Drawer } from "@nexus-cyberdeck/react";
    ========================================================================== */
 
 // packages/react/src/components/BlinkCursor/BlinkCursor.tsx
@@ -910,7 +910,7 @@ html, body {
 .nx-root ::-webkit-scrollbar-thumb { background: var(--nx-border-strong); }
 
 /* ============================================================================
-   @nexus/tokens — crt.css
+   @nexus-cyberdeck/tokens — crt.css
    A CSS-only approximation of the PoC's four-pass shader pipeline.
 
    The real thing renders to a texture, bright-passes, blurs twice, then
@@ -1060,7 +1060,7 @@ html, body {
    Pseudo-elements and pseudo-classes for the parts a component cannot reach
    through an inline \`style\` prop: corner ticks, hover and active states on
    native elements, and the capped blink. Every value here reads from an
-   @nexus/tokens custom property — this file owns no colours itself.
+   @nexus-cyberdeck/tokens custom property — this file owns no colours itself.
    ========================================================================== */
 
 /* --------------------------------------------------------------- BlinkCursor */

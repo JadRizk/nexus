@@ -1,5 +1,5 @@
 {
-  "name": "@nexus/tokens",
+  "name": "@nexus-cyberdeck/tokens",
   "version": "3.0.0",
   "license": "MIT",
   "main": "./dist/index.cjs",

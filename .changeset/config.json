@@ -5,7 +5,7 @@
   "access": "public",
   "baseBranch": "main",
 
-  "fixed": [["@nexus/tokens", "@nexus/react"]],
+  "fixed": [["@nexus-cyberdeck/tokens", "@nexus-cyberdeck/react"]],
   "linked": [],
 
   "updateInternalDependencies": "patch",

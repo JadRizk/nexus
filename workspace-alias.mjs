@@ -30,7 +30,7 @@ export const workspaceAlias = [
  * package-name → path object, not Vite's regex/replacement pairs).
  *
  * scripts/build-preview.mjs bundles packages/react/src/index.ts with esbuild,
- * which re-exports from the bare specifier "@nexus/tokens" — left to plain
+ * which re-exports from the bare specifier "@nexus-cyberdeck/tokens" — left to plain
  * package resolution, that goes through packages/tokens/package.json's
  * `exports` field, which (correctly, for a real consumer) points at dist/.
  * Local tooling has to bypass that the same way Vite and Vitest already do
@@ -39,7 +39,7 @@ export const workspaceAlias = [
  * contain rather than the source that was just edited.
  */
 export const esbuildAlias = {
-  "@nexus/tokens": src("tokens", "index.ts"),
-  "@nexus/react": src("react", "index.ts"),
-  "@nexus/graph": src("graph", "index.ts"),
+  "@nexus-cyberdeck/tokens": src("tokens", "index.ts"),
+  "@nexus-cyberdeck/react": src("react", "index.ts"),
+  "@nexus-cyberdeck/graph": src("graph", "index.ts"),
 };

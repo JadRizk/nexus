@@ -1,4 +1,4 @@
-import { Panel } from "@nexus/react";
+import { Panel } from "@nexus-cyberdeck/react";
 
 export function Corners() {
   return (

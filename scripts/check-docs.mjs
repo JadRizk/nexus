@@ -42,7 +42,7 @@ const shortVersion = version.split(".").slice(0, 2).join(".");
 for (const file of ["apps/showcase/src/App.tsx", "reference/preview.jsx"]) {
   const claim = read(file).match(/DS v(\d+\.\d+)/);
   if (claim && claim[1] !== shortVersion) {
-    problems.push(`${file} advertises "DS v${claim[1]}" — @nexus/react is ${version}`);
+    problems.push(`${file} advertises "DS v${claim[1]}" — @nexus-cyberdeck/react is ${version}`);
   }
 }
 

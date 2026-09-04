@@ -20,7 +20,7 @@ const inertWhenClosed = (open: boolean): Record<string, boolean | string> =>
   (open ? {} : { inert: INERT_VALUE });
 
 /* ============================================================================
-   @nexus/react — overlays
+   @nexus-cyberdeck/react — overlays
    Drawer and CommandPalette are where design systems fail accessibility
    audits, so they share one focus-trap implementation and carry full ARIA.
    ========================================================================== */

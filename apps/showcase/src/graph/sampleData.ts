@@ -1,10 +1,10 @@
-import type { GraphEdge, GraphNode, LinkCategory, NodeCategory } from "@nexus/graph";
+import type { GraphEdge, GraphNode, LinkCategory, NodeCategory } from "@nexus-cyberdeck/graph";
 
 /* ============================================================================
    Sample data for the Graph page — the ATLAS/TAG/UNRSLV/SOURCE/AGENT/NODE
    taxonomy and the random corpus generator used to live inside
    NexusCyberdeck.jsx itself (as `NODE_TYPES`/`LINK_TYPES`/`generateGraph`).
-   Moved here because @nexus/graph is domain-agnostic — this is one demo's
+   Moved here because @nexus-cyberdeck/graph is domain-agnostic — this is one demo's
    sample data, same status as apps/showcase/src/data.ts and home-data.ts.
    ========================================================================== */
 

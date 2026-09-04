@@ -1,4 +1,4 @@
-import { Glyph, GLYPH_SHAPES } from "@nexus/react";
+import { Glyph, GLYPH_SHAPES } from "@nexus-cyberdeck/react";
 
 const COLOURS = ["var(--nx-fg-accent)", "var(--nx-fg-info)", "var(--nx-fg-warning)", "var(--nx-fg-default)"];
 

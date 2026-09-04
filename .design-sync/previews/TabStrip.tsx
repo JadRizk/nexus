@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { TabStrip } from "@nexus/react";
+import { TabStrip } from "@nexus-cyberdeck/react";
 
 export function TwoTabs() {
   const [tab, setTab] = useState<"optics" | "solver">("optics");

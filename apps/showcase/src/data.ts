@@ -1,4 +1,4 @@
-import type { GlyphShape, PaletteItem } from "@nexus/react";
+import type { GlyphShape, PaletteItem } from "@nexus-cyberdeck/react";
 
 /* ============================================================================
    showcase — sample data

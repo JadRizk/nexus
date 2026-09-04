@@ -1,4 +1,4 @@
-import { NexusProvider, Panel, Wordmark } from "@nexus/react";
+import { NexusProvider, Panel, Wordmark } from "@nexus-cyberdeck/react";
 
 /** The root wrapper — owns theme state and paints the dark canvas + phosphor
  *  foreground every other component's styling assumes via the `.nx-root` class. */

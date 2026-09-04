@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import type { HTMLAttributes, ReactNode } from "react";
-import type { NexusTheme } from "@nexus/tokens";
+import type { NexusTheme } from "@nexus-cyberdeck/tokens";
 import { mergeClassName } from "../../className.js";
 
 export interface NexusContextValue {

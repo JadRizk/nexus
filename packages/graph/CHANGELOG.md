@@ -1,4 +1,4 @@
-# @nexus/graph
+# @nexus-cyberdeck/graph
 
 ## 1.1.0
 

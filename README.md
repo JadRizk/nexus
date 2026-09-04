@@ -7,7 +7,7 @@ everything — with a WCAG AA mode that keeps the language intact.
 ```
 nexus-ds/
 ├── packages/
-│   ├── tokens/          @nexus/tokens   CSS custom properties + typed handles
+│   ├── tokens/          @nexus-cyberdeck/tokens   CSS custom properties + typed handles
 │   │   ├── build-tokens.mjs             the generator
 │   │   ├── lib/wcag.mjs                 contrast maths, dependency-free
 │   │   └── src/
@@ -17,7 +17,7 @@ nexus-ds/
 │   │       ├── base.css                 hand-authored base + focus rules
 │   │       ├── crt.css                  CSS-only CRT layer
 │   │       └── index.ts                 typed accessors
-│   ├── react/           @nexus/react    19 components, no runtime deps
+│   ├── react/           @nexus-cyberdeck/react    19 components, no runtime deps
 │   │   ├── build-styles.mjs             assembles the shipped stylesheet
 │   │   └── src/
 │   │       ├── components/<Name>/       one folder per component:
@@ -27,7 +27,7 @@ nexus-ds/
 │   │       ├── colour.ts                the tone/colour resolver
 │   │       ├── types.ts                 shared types only
 │   │       └── styles.css               generated · concatenated components
-│   └── graph/           @nexus/graph   force-directed WebGL canvas
+│   └── graph/           @nexus-cyberdeck/graph   force-directed WebGL canvas
 └── apps/
     └── showcase/        Primitives · Overlays · Tokens
 ```
@@ -74,11 +74,11 @@ npx changeset      # pick packages, pick the bump, describe the change
 CI asks for one on any pull request that touches `packages/*/src`. The entry
 you write becomes the changelog verbatim, so write it for someone upgrading.
 
-`@nexus/tokens` and `@nexus/react` are versioned in **lockstep**, and `react`
+`@nexus-cyberdeck/tokens` and `@nexus-cyberdeck/react` are versioned in **lockstep**, and `react`
 depends on an exact `tokens` version rather than a range. The two communicate
 through CSS custom property names at runtime — a component asking for a token
 a newer build no longer defines does not fail to compile, it renders the wrong
-colour. Pinning is what makes that mismatch unreachable. `@nexus/graph`
+colour. Pinning is what makes that mismatch unreachable. `@nexus-cyberdeck/graph`
 versions independently: the README is explicit that the graph is a product
 built *with* the system rather than part of it.
 
@@ -116,11 +116,11 @@ roughly 120 pixels in total, so deleting the entire corner-tick system passed.
 ## Usage
 
 ```tsx
-import "@nexus/tokens/tokens.css";
-import "@nexus/tokens/crt.css";        // optional
-import "@nexus/react/styles.css";
+import "@nexus-cyberdeck/tokens/tokens.css";
+import "@nexus-cyberdeck/tokens/crt.css";        // optional
+import "@nexus-cyberdeck/react/styles.css";
 
-import { NexusProvider, Panel, Button, CommandPalette } from "@nexus/react";
+import { NexusProvider, Panel, Button, CommandPalette } from "@nexus-cyberdeck/react";
 
 export default function App() {
   return (
@@ -133,7 +133,7 @@ export default function App() {
 }
 ```
 
-Not using React? `@nexus/tokens` has zero dependencies and ships plain CSS.
+Not using React? `@nexus-cyberdeck/tokens` has zero dependencies and ships plain CSS.
 Set `data-nx-theme` on any element and the custom properties cascade.
 
 ## Token architecture

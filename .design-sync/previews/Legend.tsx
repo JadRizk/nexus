@@ -1,4 +1,4 @@
-import { Glyph, LinkGlyph, Legend } from "@nexus/react";
+import { Glyph, LinkGlyph, Legend } from "@nexus-cyberdeck/react";
 
 const CLASSES = [
   { key: "atlas", label: "Atlas", shape: "hexagon" as const, colour: "var(--nx-fg-accent)" },

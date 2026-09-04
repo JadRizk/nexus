@@ -1,8 +1,8 @@
 import { useState } from "react";
 import {
   Button, CommandPalette, Drawer, Glyph, MeterRow, SectionHeading, useHotkey,
-} from "@nexus/react";
-import type { PaletteItem } from "@nexus/react";
+} from "@nexus-cyberdeck/react";
+import type { PaletteItem } from "@nexus-cyberdeck/react";
 import { PageHeader, Spec, Row } from "../components/Spec.js";
 import { ITEMS } from "../data.js";
 

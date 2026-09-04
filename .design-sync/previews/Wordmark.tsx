@@ -1,4 +1,4 @@
-import { Wordmark } from "@nexus/react";
+import { Wordmark } from "@nexus-cyberdeck/react";
 
 export function Default() {
   return <Wordmark>NEXUS</Wordmark>;

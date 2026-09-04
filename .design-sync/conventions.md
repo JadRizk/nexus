@@ -6,7 +6,7 @@ app root in `NexusProvider`**, or every component renders unstyled (browser
 default colours, no dark canvas):
 
 ```tsx
-import { NexusProvider } from "@nexus/react";
+import { NexusProvider } from "@nexus-cyberdeck/react";
 
 <NexusProvider theme="hud-aa" crt={false}>
   {/* your screen */}
@@ -18,7 +18,7 @@ import { NexusProvider } from "@nexus/react";
   else needs to change when switching.
 - `crt`: only flips a `data-nx-crt` attribute for components that read it via
   `useNexus()` — it does **not** itself apply the CRT scanline effect. To get
-  scanlines, add the `nx-crt` class (from `@nexus/tokens/crt.css`) to a
+  scanlines, add the `nx-crt` class (from `@nexus-cyberdeck/tokens/crt.css`) to a
   specific container yourself; treat it as a deliberate, occasional accent,
   not a default.
 
@@ -26,7 +26,7 @@ import { NexusProvider } from "@nexus/react";
 
 This is not a Tailwind-style class system and not a prop-based theme (no
 `color="accent"` props). Components style themselves inline from `var(--nx-*)`
-custom properties defined by `@nexus/tokens`; compose new layout the same way,
+custom properties defined by `@nexus-cyberdeck/tokens`; compose new layout the same way,
 via `style`, not by inventing class names. Real tokens (there is no `-100`/
 `-900` numeric scale — semantic names only):
 
@@ -43,7 +43,7 @@ via `style`, not by inventing class names. Real tokens (there is no `-100`/
 | Effects | `--nx-glow-raised`, `--nx-glow-inset`, `--nx-hairline`, `--nx-radius`, `--nx-scrim` |
 | Focus | `--nx-focus-ring`, `--nx-focus-width`, `--nx-focus-offset` (never remove — WCAG 2.4.7) |
 
-`@nexus/react` re-exports one helper, `tone(t: Tone)`, which returns
+`@nexus-cyberdeck/react` re-exports one helper, `tone(t: Tone)`, which returns
 `var(--nx-fg-${t})` for the five semantic tones (`default | accent | info |
 warning | critical`) — prefer `tone("accent")` over hand-writing the
 `var(...)` string when picking a foreground colour dynamically.
@@ -60,7 +60,7 @@ warning | critical`) — prefer `tone("accent")` over hand-writing the
 ## Build snippet
 
 ```tsx
-import { NexusProvider, Panel, SectionHeading, Stat, Button } from "@nexus/react";
+import { NexusProvider, Panel, SectionHeading, Stat, Button } from "@nexus-cyberdeck/react";
 
 <NexusProvider theme="hud-aa">
   <Panel corners={["tl", "br"]} raised style={{ width: 280 }}>

@@ -1,4 +1,4 @@
-import { BlinkCursor } from "@nexus/react";
+import { BlinkCursor } from "@nexus-cyberdeck/react";
 
 export function InlineWithText() {
   return (

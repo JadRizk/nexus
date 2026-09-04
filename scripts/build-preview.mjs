@@ -40,7 +40,7 @@ async function main() {
     // discovery for this one build so the classic transform actually applies.
     tsconfigRaw: { compilerOptions: { jsx: "react" } },
     external: ["react"],
-    // Without this, "@nexus/tokens" resolves through packages/tokens'
+    // Without this, "@nexus-cyberdeck/tokens" resolves through packages/tokens'
     // package.json `exports`, which points at dist/ — so this script would
     // depend on packages/tokens having been rebuilt first, and would
     // silently bundle stale dist/ output otherwise. That is exactly the
@@ -66,7 +66,7 @@ async function main() {
   const header = `/* ============================================================================
    Nexus Cyberdeck — single-file preview of the design system.
 
-   The library code below is the REAL @nexus/react source, bundled by esbuild
+   The library code below is the REAL @nexus-cyberdeck/react source, bundled by esbuild
    straight from packages/react/src with types stripped. The CSS is the real
    tokens.css + crt.css + styles.css concatenated. Nothing here is a
    re-implementation, so this preview cannot drift from the packages — this
@@ -74,8 +74,8 @@ async function main() {
    not hand-edited. CI re-runs it and fails on any diff.
 
    In a real install you would instead:
-     import "@nexus/tokens/tokens.css";
-     import { Panel, Drawer } from "@nexus/react";
+     import "@nexus-cyberdeck/tokens/tokens.css";
+     import { Panel, Drawer } from "@nexus-cyberdeck/react";
    ========================================================================== */
 
 ${libraryJs}

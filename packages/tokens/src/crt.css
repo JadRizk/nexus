@@ -1,5 +1,5 @@
 /* ============================================================================
-   @nexus/tokens — crt.css
+   @nexus-cyberdeck/tokens — crt.css
    A CSS-only approximation of the PoC's four-pass shader pipeline.
 
    The real thing renders to a texture, bright-passes, blurs twice, then

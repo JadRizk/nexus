@@ -3,8 +3,8 @@ import {
   Button, CommandPalette, Drawer, Glyph, HazardRule, KeyValue, LinkGlyph, MeterRow,
   Panel, SectionHeading, Slider, TabStrip, ToggleRow, Wordmark, BlinkCursor,
   useHotkey, useNexus,
-} from "@nexus/react";
-import type { NexusTheme, PaletteItem } from "@nexus/react";
+} from "@nexus-cyberdeck/react";
+import type { NexusTheme, PaletteItem } from "@nexus-cyberdeck/react";
 import { CLASSES, ITEMS, RELATIONS } from "../home-data.js";
 
 /* ============================================================================

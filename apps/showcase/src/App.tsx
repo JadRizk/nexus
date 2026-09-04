@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { NexusProvider, Panel, Button, HazardRule, Wordmark, BlinkCursor, useNexus } from "@nexus/react";
-import type { NexusTheme } from "@nexus/react";
+import { NexusProvider, Panel, Button, HazardRule, Wordmark, BlinkCursor, useNexus } from "@nexus-cyberdeck/react";
+import type { NexusTheme } from "@nexus-cyberdeck/react";
 import { HomePage } from "./pages/HomePage.js";
 import { PrimitivesPage } from "./pages/PrimitivesPage.js";
 import { OverlaysPage } from "./pages/OverlaysPage.js";

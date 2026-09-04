@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
-import { CommandPalette } from "@nexus/react";
-import type { PaletteItem } from "@nexus/react";
+import { CommandPalette } from "@nexus-cyberdeck/react";
+import type { PaletteItem } from "@nexus-cyberdeck/react";
 
 // See Drawer.tsx: the single-card wrapper has no intrinsic height, so a
 // `position:fixed` overlay needs its own sized, transformed containing

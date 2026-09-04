@@ -1,4 +1,4 @@
-# design-sync notes — @nexus/react
+# design-sync notes — @nexus-cyberdeck/react
 
 ## Repo-specific setup
 
@@ -57,7 +57,7 @@ collapsed one.
 
 **Re-sync risk**: this is a preview-authoring workaround for a harness
 interaction, not a library fix — any *new* overlay/portal component added to
-`@nexus/react` with `position: fixed` will hit the same collapse and needs
+`@nexus-cyberdeck/react` with `position: fixed` will hit the same collapse and needs
 the same wrapper in its own preview. Grep future `[RENDER_BLANK]` /
 `[RENDER_THIN]` on a `cardMode: single` component against this note before
 assuming it's a real component bug.
@@ -74,6 +74,6 @@ assuming it's a real component bug.
   overlay components, spot-checked via DOM/computed-style inspection (see
   above). A future re-sync with Playwright available should run the full
   automated render-check + capture at least once to cross-check these grades.
-- `@nexus/graph` (Three.js graph canvas) is intentionally out of scope for
+- `@nexus-cyberdeck/graph` (Three.js graph canvas) is intentionally out of scope for
   this sync — uncommitted, no build output yet at sync time. Re-scope in a
   future sync once it's built and stable.

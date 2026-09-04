@@ -1,5 +1,5 @@
 /* ============================================================================
-   @nexus/react — the `inert` spelling, per React major
+   @nexus-cyberdeck/react — the `inert` spelling, per React major
 
    Internal: not re-exported from Drawer/index.ts, so it is not public API.
    It is its own module purely so both branches can be tested — only one of

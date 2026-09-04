@@ -1,5 +1,5 @@
 /* ============================================================================
-   @nexus/react — component barrel
+   @nexus-cyberdeck/react — component barrel
 
    One folder per component, each holding its implementation, its own CSS
    where it needs any, and its tests. Components import each other by path
