@@ -80,7 +80,10 @@ for (const { file, pattern, expected, what } of CHECKS) {
   for (const match of found) {
     if (match[1] !== String(expected)) {
       problems.push(
-        `${file} advertises "${match[0].trim()}" — the code has ${expected} for ${what}`,
+        `${file} advertises "${match[0].trim()}" — the code has ${expected} for ${what}. ` +
+          `If that figure is deliberately about a subset rather than the whole library, spell ` +
+          `the number as a word ("three overlay components") so it does not read as a claim ` +
+          `about the total.`,
       );
     }
   }

@@ -114,6 +114,12 @@ export async function focusVisible(target: Locator) {
  * the design. Everything else the chrome advertises (the token and component
  * counts) stays compared: those move only when the code moves, and the pull
  * request that moves them re-records the baselines anyway.
+ *
+ * The mask covers the rendered digits, not the space they take: a version
+ * whose width changes — 3.9 to 3.10, or 9.x to 10.x — widens the masked box
+ * and shifts the blink cursor and nav beside it, so those baselines need
+ * re-recording once. Every bump that keeps the same width, which is all of
+ * them in between, moves nothing.
  */
 export function versionMask(page: Page): Locator[] {
   return [page.locator("[data-nx-version]")];

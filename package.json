@@ -16,7 +16,7 @@
     "build": "npm run build -w packages/tokens -w packages/react -w packages/graph && npm run build:preview",
     "build:tokens": "npm run build:tokens -w packages/tokens",
     "build:preview": "node scripts/build-preview.mjs",
-    "version:packages": "changeset version && npm run build:preview",
+    "version:packages": "changeset version && npm install --package-lock-only && npm run build:preview",
     "dev": "npm run dev --workspace apps/showcase",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "eslint . && stylelint \"packages/**/src/**/*.css\"",

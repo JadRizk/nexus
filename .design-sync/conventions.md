@@ -29,11 +29,24 @@ This is not a Tailwind-style class system and not a prop-based theme (no
 defined by `@nexus-cyberdeck/tokens`.
 
 **Components style themselves from their own stylesheet**, not from inline
-`style` objects: each one declares `--nx-<component>-<part>` properties on its
-own class, defaulted from the semantic layer, and a consumer retheming a
-component sets that property on any ancestor. Do not try to restyle a
-component by passing `style`; most do not accept it, and an inline value
-outranks every stylesheet anyway.
+`style` objects. Each one reads a `--nx-<component>-<part>` property *with the
+semantic token as the fallback in the usage*:
+
+```css
+.nx-stat__label { color: var(--nx-stat-label-fg, var(--nx-fg-tertiary)); }
+```
+
+The fallback is never a declaration on the same class. That is the whole
+mechanism: a custom property declared on an element beats the same property
+inherited from an ancestor whatever the specificity, so declaring the default
+on `.nx-stat__label` would make a consumer's override on a wrapper unreachable.
+Retheming is therefore one property on any ancestor — `--nx-stat-label-fg:
+var(--nx-fg-info)` — with no specificity fight. See STYLING.md for the trap in
+full.
+
+Most components do accept a `style` prop, but reach for the component token
+first: an inline value outranks every stylesheet, including the consumer's
+own.
 
 **Compose new layout with `style` and `var(--nx-*)`.** That is the one place
 the `style` prop belongs in consumer code: your own wrappers, spacing and

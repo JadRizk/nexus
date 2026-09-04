@@ -35,9 +35,32 @@ if (!floor) {
   process.exit(1);
 }
 
-const react = JSON.parse(
-  readFileSync(join(root, "packages/graph/package.json"), "utf8"),
-).devDependencies;
+// Pinned from the lockfile, not from the caret ranges in package.json. This
+// installs into a scratch directory with no lockfile of its own, so a caret
+// would resolve the newest match on every run — and a new TypeScript release
+// could turn every open pull request red with a diagnostic about code the
+// pull request never touched. scripts/browser-tests.mjs reads the lockfile
+// for exactly the same reason.
+const lock = JSON.parse(readFileSync(join(root, "package-lock.json"), "utf8")).packages;
+const pinned = (name) => {
+  const version = lock[`node_modules/${name}`]?.version;
+  if (!version) {
+    console.error(`${name} is not in package-lock.json — run npm install.`);
+    process.exit(1);
+  }
+  return `${name}@${version}`;
+};
+
+// Derived from the repository's own compiler settings rather than a second
+// copy of them: a fork silently keeps compiling under the old flags after
+// someone tightens the real ones. baseUrl and paths are dropped because they
+// point back into the workspace, which is the one thing this must not use.
+const compilerOptions = JSON.parse(
+  readFileSync(join(root, "tsconfig.base.json"), "utf8"),
+).compilerOptions;
+delete compilerOptions.baseUrl;
+delete compilerOptions.paths;
+
 const dir = mkdtempSync(join(tmpdir(), "nx-peer-floor-"));
 
 try {
@@ -51,18 +74,7 @@ try {
     JSON.stringify(
       {
         extends: undefined,
-        compilerOptions: {
-          target: "ES2020",
-          lib: ["ES2020", "DOM", "DOM.Iterable"],
-          module: "ESNext",
-          moduleResolution: "bundler",
-          jsx: "react-jsx",
-          strict: true,
-          esModuleInterop: true,
-          skipLibCheck: true,
-          noEmit: true,
-          isolatedModules: true,
-        },
+        compilerOptions,
         include: ["src"],
         // The unit tests import vitest, which a consumer never installs; the
         // point here is the published surface, not the suite.
@@ -85,9 +97,9 @@ try {
       "--no-fund",
       `three@${floor}`,
       `@types/three@${floor}`,
-      `typescript@${react.typescript}`,
-      `react@${react.react}`,
-      `@types/react@${react["@types/react"]}`,
+      pinned("typescript"),
+      pinned("react"),
+      pinned("@types/react"),
     ],
     { cwd: dir, stdio: ["ignore", "ignore", "inherit"] },
   );
