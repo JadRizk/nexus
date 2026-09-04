@@ -25,10 +25,20 @@ import { NexusProvider } from "@nexus-cyberdeck/react";
 ## Styling idiom: CSS custom properties, not utility classes or style props
 
 This is not a Tailwind-style class system and not a prop-based theme (no
-`color="accent"` props). Components style themselves inline from `var(--nx-*)`
-custom properties defined by `@nexus-cyberdeck/tokens`; compose new layout the same way,
-via `style`, not by inventing class names. Real tokens (there is no `-100`/
-`-900` numeric scale — semantic names only):
+`color="accent"` props). Every value in the system is a CSS custom property
+defined by `@nexus-cyberdeck/tokens`.
+
+**Components style themselves from their own stylesheet**, not from inline
+`style` objects: each one declares `--nx-<component>-<part>` properties on its
+own class, defaulted from the semantic layer, and a consumer retheming a
+component sets that property on any ancestor. Do not try to restyle a
+component by passing `style`; most do not accept it, and an inline value
+outranks every stylesheet anyway.
+
+**Compose new layout with `style` and `var(--nx-*)`.** That is the one place
+the `style` prop belongs in consumer code: your own wrappers, spacing and
+grids, built from the tokens below rather than from raw values. Real tokens
+(there is no `-100`/`-900` numeric scale — semantic names only):
 
 | Purpose | Tokens |
 |---|---|
@@ -44,9 +54,11 @@ via `style`, not by inventing class names. Real tokens (there is no `-100`/
 | Focus | `--nx-focus-ring`, `--nx-focus-width`, `--nx-focus-offset` (never remove — WCAG 2.4.7) |
 
 `@nexus-cyberdeck/react` re-exports one helper, `tone(t: Tone)`, which returns
-`var(--nx-fg-${t})` for the five semantic tones (`default | accent | info |
-warning | critical`) — prefer `tone("accent")` over hand-writing the
-`var(...)` string when picking a foreground colour dynamically.
+`var(--nx-fg-${t})` for the nine semantic tones (`default | muted | subtle |
+tertiary | disabled | accent | info | warning | critical`) — prefer
+`tone("accent")` over hand-writing the `var(...)` string when picking a
+foreground colour dynamically. Components that carry a colour take `tone` and
+`colour` props directly; `tone` wins when both are given.
 
 ## Where the truth lives
 
