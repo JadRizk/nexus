@@ -17,6 +17,14 @@ npm install @nexus-cyberdeck/graph three
 
 React 18.3 or 19 and Three.js 0.170 or later are peer dependencies.
 
+The floor is checked: CI compiles this package against three@0.170.0 on every
+pull request. The upper bound is optimistic — three ships breaking changes in
+minor releases, and this package is developed against 0.185, so a much newer
+release may need a fix here. It is left open deliberately, because a narrow
+upper bound turns into an install-time `ERESOLVE` failure for everyone on a
+newer three rather than a warning. If a release does break the canvas, please
+open an issue.
+
 ## Use
 
 ```tsx

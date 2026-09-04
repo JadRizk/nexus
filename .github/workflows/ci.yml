@@ -77,6 +77,14 @@ jobs:
       - name: Documented figures match the code
         run: node scripts/check-docs.mjs
 
+      # The three peer range is a promise about versions this repository does
+      # not otherwise install: every job here uses the devDependency. This
+      # compiles the graph package against the floor it advertises, so the
+      # lower bound is checked rather than inherited from whatever was current
+      # when someone typed it.
+      - name: Graph compiles against its declared three floor
+        run: node scripts/check-peer-floor.mjs
+
       # A changeset is how a consumer finds out what changed. Asking for one on
       # the pull request is the only moment anybody remembers the reasoning; a
       # changelog reconstructed from commit messages at release time is written
