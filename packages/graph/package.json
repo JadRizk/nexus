@@ -2,6 +2,32 @@
   "name": "@nexus-cyberdeck/graph",
   "version": "1.1.0",
   "license": "MIT",
+  "description": "Force-directed WebGL graph canvas for React, built on Three.js, with SDF glyph nodes, curved links, and an optional CRT post-process. Companion to the Nexus Cyberdeck design system.",
+  "keywords": [
+    "react",
+    "graph",
+    "force-directed",
+    "webgl",
+    "three",
+    "threejs",
+    "visualization",
+    "network-graph",
+    "shaders",
+    "nexus-cyberdeck"
+  ],
+  "homepage": "https://github.com/JadRizk/nexus#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JadRizk/nexus.git",
+    "directory": "packages/graph"
+  },
+  "bugs": {
+    "url": "https://github.com/JadRizk/nexus/issues"
+  },
+  "author": "Jad Rizk",
+  "engines": {
+    "node": ">=18"
+  },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -10,7 +36,8 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "files": [
     "dist"

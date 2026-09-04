@@ -3,6 +3,11 @@
   "private": true,
   "version": "1.0.0",
   "license": "MIT",
+  "description": "Nexus Cyberdeck design system monorepo: tokens, React components, WebGL graph canvas, and the showcase.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JadRizk/nexus.git"
+  },
   "workspaces": [
     "packages/*",
     "apps/*"

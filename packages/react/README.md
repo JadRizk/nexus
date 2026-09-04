@@ -1,0 +1,109 @@
+# @nexus-cyberdeck/react
+
+React components for the [Nexus Cyberdeck](https://github.com/JadRizk/nexus#readme)
+HUD design system: acid green on near-black, hairline borders, zero corner
+radius, corner ticks, monospace everything, and a WCAG AA theme that keeps the
+language intact.
+
+19 components, two hooks, one search ranker. No runtime dependencies beyond
+React and `@nexus-cyberdeck/tokens`. Dark only, desktop first, built for
+consoles and visualisations rather than marketing pages.
+
+## Install
+
+```bash
+npm install @nexus-cyberdeck/react @nexus-cyberdeck/tokens
+```
+
+React 18.3 or 19 is a peer dependency.
+
+## Use
+
+```tsx
+import "@nexus-cyberdeck/tokens/tokens.css";
+import "@nexus-cyberdeck/react/styles.css";
+
+import { NexusProvider, Panel, Button, SectionHeading, Stat } from "@nexus-cyberdeck/react";
+
+export function App() {
+  return (
+    <NexusProvider theme="hud-aa">
+      <Panel corners={["tl", "br"]} raised style={{ width: 280 }}>
+        <SectionHeading>/// subject</SectionHeading>
+        <Stat label="Class" value="NODE" tone="info" />
+        <Button active>Isolate</Button>
+      </Panel>
+    </NexusProvider>
+  );
+}
+```
+
+`NexusProvider` must wrap the tree. It applies `.nx-root`, which is where the
+custom properties, the dark canvas and the global focus ring live; without it
+every component renders unstyled.
+
+## Components
+
+|              |                                                                    |
+| ------------ | ------------------------------------------------------------------ |
+| **Surfaces** | `Panel`, `HazardRule`, `SectionHeading`, `Wordmark`, `BlinkCursor` |
+| **Data**     | `Stat`, `KeyValue`, `MeterRow`, `Legend`, `Glyph`, `LinkGlyph`     |
+| **Controls** | `Button`, `TabStrip`, `Slider`, `ToggleRow`                        |
+| **Overlays** | `Drawer`, `CommandPalette`, `Tooltip`                              |
+| **Root**     | `NexusProvider`, `useNexus()`                                      |
+| **Hooks**    | `useFocusTrap`, `useHotkey`                                        |
+| **Search**   | `rankItems`                                                        |
+
+Every component extends the native element's props, so `className`, `style`,
+`aria-*` and event handlers pass straight through.
+
+### Colour
+
+Components that carry a colour take the same two props everywhere:
+
+```tsx
+<Stat tone="critical" />          // semantic role, follows the theme
+<Glyph colour={category.hex} />   // raw CSS colour, for data the system cannot name
+```
+
+`tone` wins when both are given. `muted` overrides both.
+
+### Theming and extension
+
+Every component defines its own custom properties, defaulted from the semantic
+layer. Retheme from any ancestor without specificity fights:
+
+```css
+.marketing-site {
+  --nx-btn-border: var(--nx-fg-info);
+  --nx-panel-padding: var(--nx-space-7);
+}
+```
+
+Component tokens are named `--nx-<component>-<part>`. See
+[STYLING.md](https://github.com/JadRizk/nexus/blob/main/packages/react/STYLING.md)
+for the rule and the trap it avoids.
+
+## Accessibility
+
+Every claim is asserted by a machine in the repository's browser suite.
+
+- `Drawer` and `CommandPalette` trap focus, restore it on close, and close on
+  Escape. Closed drawers are `inert` and `aria-hidden`.
+- `CommandPalette` is a real ARIA combobox: the input keeps focus and owns
+  `aria-activedescendant`, results are a `listbox`, a live region announces the
+  count.
+- `ToggleRow` is a real checkbox; `Slider` is a native range input with
+  `aria-valuetext`; `TabStrip` uses roving tabindex with arrow, Home and End.
+- `Glyph` encodes category by silhouette, never by colour alone (WCAG 1.4.1).
+- The focus ring is global and cannot be removed per component (WCAG 2.4.7).
+- `prefers-reduced-motion` and `prefers-contrast` are honoured.
+
+## Related
+
+- [`@nexus-cyberdeck/tokens`](https://www.npmjs.com/package/@nexus-cyberdeck/tokens): the CSS custom properties this package renders with.
+- [`@nexus-cyberdeck/graph`](https://www.npmjs.com/package/@nexus-cyberdeck/graph): the force-directed WebGL canvas built with the same language.
+
+## License
+
+MIT
