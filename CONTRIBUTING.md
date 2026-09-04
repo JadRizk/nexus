@@ -28,7 +28,9 @@ npm run typecheck      # tsc, strict, every workspace
 npm run test           # unit tests, every workspace
 npm run test:coverage  # the coverage gate CI applies
 npm run build          # packages + reference/preview.jsx
+npm run build -w apps/showcase   # root `build` does not cover the showcase
 node scripts/check-docs.mjs
+node scripts/check-peer-floor.mjs  # graph vs the oldest three it supports
 ```
 
 CI runs exactly these, then fails if any generated file has drifted:

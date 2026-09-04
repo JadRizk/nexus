@@ -15,6 +15,9 @@ canvas is domain-agnostic: you supply the node and link categories.
 npm install @nexus-cyberdeck/graph three
 ```
 
+> Not published yet. Until the first release, install from `npm pack` output —
+> see the [getting-started guide](https://github.com/JadRizk/nexus/blob/main/docs/getting-started.md).
+
 React 18.3 or 19 and Three.js 0.170 or later are peer dependencies.
 
 The floor is checked: CI compiles this package against three@0.170.0 on every

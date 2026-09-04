@@ -204,9 +204,10 @@ import "@nexus-cyberdeck/tokens/crt.css";
 <div className="nx-crt nx-crt--roll nx-crt--grain">…</div>
 ```
 
-One composited pseudo-element, no JavaScript, and it turns itself off under
-`prefers-reduced-motion`, `prefers-contrast: more`, or `data-nx-crt="off"`.
-Use it on a hero surface, not behind every panel.
+One composited pseudo-element and no JavaScript. It switches off entirely
+under `prefers-contrast: more` or `data-nx-crt="off"`, and under
+`prefers-reduced-motion` the rolling bar stops while the static scanlines
+remain. Use it on a hero surface, not behind every panel.
 
 ## Things that will bite you
 

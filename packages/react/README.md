@@ -17,6 +17,9 @@ npm install @nexus-cyberdeck/react @nexus-cyberdeck/tokens
 
 React 18.3 or 19 is a peer dependency.
 
+> Not published yet. Until the first release, install from `npm pack` output —
+> see the [getting-started guide](https://github.com/JadRizk/nexus/blob/main/docs/getting-started.md).
+
 ## Use
 
 ```tsx
@@ -90,7 +93,9 @@ for the rule and the trap it avoids.
 
 ## Accessibility
 
-Every claim is asserted by a machine in the repository's browser suite.
+Every claim below is asserted by a test in this repository: unit tests for
+the ARIA wiring and focus behaviour, and the browser suite — axe-core over a
+real renderer — for the things jsdom cannot see.
 
 - `Drawer` and `CommandPalette` trap focus, restore it on close, and close on
   Escape. Closed drawers are `inert` and `aria-hidden`.
@@ -105,8 +110,8 @@ Every claim is asserted by a machine in the repository's browser suite.
 
 ## Related
 
-- [`@nexus-cyberdeck/tokens`](https://www.npmjs.com/package/@nexus-cyberdeck/tokens): the CSS custom properties this package renders with.
-- [`@nexus-cyberdeck/graph`](https://www.npmjs.com/package/@nexus-cyberdeck/graph): the force-directed WebGL canvas built with the same language.
+- [`@nexus-cyberdeck/tokens`](https://github.com/JadRizk/nexus/blob/main/packages/tokens/README.md): the CSS custom properties this package renders with.
+- [`@nexus-cyberdeck/graph`](https://github.com/JadRizk/nexus/blob/main/packages/graph/README.md): the force-directed WebGL canvas built with the same language.
 
 ## License
 

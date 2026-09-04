@@ -23,6 +23,9 @@ type scale differ, which is why switching themes never touches component code.
 npm install @nexus-cyberdeck/tokens
 ```
 
+> Not published yet. Until the first release, install from `npm pack` output —
+> see the [getting-started guide](https://github.com/JadRizk/nexus/blob/main/docs/getting-started.md).
+
 ## Use
 
 Import the stylesheet once and set `data-nx-theme` on any element. The custom
@@ -103,8 +106,10 @@ import tokens from "@nexus-cyberdeck/tokens/tokens.json";
 - Type sizes are `rem` multiplied by a per-theme scale, so browser zoom and
   user font-size preferences keep working (WCAG 1.4.4).
 - `--nx-blink` is capped at 0.94 Hz, below the 3 Hz flash threshold (WCAG 2.3.1).
-- `crt.css` disables itself under `prefers-reduced-motion`, `prefers-contrast:
-more`, and `data-nx-crt="off"`.
+- `crt.css` switches off entirely under `prefers-contrast: more` and
+  `data-nx-crt="off"`. Under `prefers-reduced-motion` its one animation — the
+  rolling refresh bar — stops and the bar is removed; the static scanlines
+  remain, because they are texture rather than motion.
 
 ## License
 

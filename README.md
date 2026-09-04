@@ -225,7 +225,9 @@ Verified behaviours:
 - **Blink capped at 0.94 Hz**, below the 3 Hz threshold in WCAG 2.3.1
 - **Slider tracks use `--nx-border-strong`** (3:1) not the decorative hairline,
   because a track is a UI component boundary under 1.4.11
-- `prefers-reduced-motion` and `prefers-contrast` both honoured
+- **`prefers-reduced-motion` collapses every animation**, the blink included,
+  and **`prefers-contrast: more` removes the CRT overlay** — both asserted
+  against a real renderer
 - **The contrast bargain is asserted in both directions**: `hud-aa` passes
   axe's colour-contrast rule and `hud` is required to fail it
 
@@ -244,9 +246,11 @@ JavaScript. Reserve the shader version for a hero canvas.
 <span class="nx-crt-split">CHROMATIC FRINGING</span>
 ```
 
-Three independent escape hatches: `data-nx-crt="off"`,
-`prefers-reduced-motion`, and `prefers-contrast: more`, because someone asking
-for more contrast should not be fighting a scanline overlay.
+Two switches turn the layer off outright: `data-nx-crt="off"`, an author
+decision, and `prefers-contrast: more`, because someone asking for more
+contrast should not be fighting a scanline overlay. Under
+`prefers-reduced-motion` the rolling refresh bar stops and is removed; the
+static scanlines stay, since they are texture rather than motion.
 
 ## Claude Design
 

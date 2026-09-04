@@ -222,6 +222,47 @@ test.describe("claims axe cannot make", () => {
     expect(state.opacity).toBe("1");
   });
 
+  test("prefers-contrast: more switches the CRT layer off", async ({ page }) => {
+    // The README offers this as an escape hatch: someone asking for more
+    // contrast should not be fighting a scanline overlay. Nothing asserted it
+    // until now, and the rule lives in a stylesheet no unit test loads.
+    await page.emulateMedia({ contrast: "more" });
+    await gotoPage(page, "home", "hud-aa", { crt: true });
+    await settle(page);
+
+    const layer = page.locator(".nx-crt").first();
+    await expect(layer).toBeAttached();
+    const painted = await layer.evaluate((el) => ({
+      after: getComputedStyle(el, "::after").display,
+      before: getComputedStyle(el, "::before").display,
+    }));
+    expect(painted.after).toBe("none");
+    expect(painted.before).toBe("none");
+  });
+
+  test("the slider track is a 3:1 boundary, not the decorative hairline", async ({ page }) => {
+    // WCAG 1.4.11: a track is a UI component boundary, so it may not use the
+    // hairline. Comparing resolved colours rather than token names, because
+    // what ships is whatever the cascade actually produced.
+    await gotoPage(page, "primitives");
+    const slider = page.locator(".nx-slider").first();
+    await expect(slider).toBeAttached();
+
+    const colours = await slider.evaluate((el) => {
+      const probe = document.createElement("div");
+      el.parentElement.appendChild(probe);
+      probe.style.background = "var(--nx-border-strong)";
+      const strong = getComputedStyle(probe).backgroundColor;
+      probe.style.background = "var(--nx-border-default)";
+      const hairline = getComputedStyle(probe).backgroundColor;
+      probe.remove();
+      return { track: getComputedStyle(el).backgroundColor, strong, hairline };
+    });
+
+    expect(colours.track).toBe(colours.strong);
+    expect(colours.track).not.toBe(colours.hairline);
+  });
+
   test("every interactive control is reachable by keyboard", async ({ page }) => {
     // axe checks that controls are labelled; it does not walk the tab order.
     // A control that is focusable but visually covered by something else is a
