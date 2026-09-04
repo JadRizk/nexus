@@ -2096,7 +2096,7 @@ function Shell() {
           <div style={{ display: "flex", alignItems: "baseline", gap: "var(--nx-space-3)" }}>
             <Wordmark size="var(--nx-text-lg)">NEXUS</Wordmark>
             <span style={{ color: "var(--nx-fg-tertiary)", fontSize: "var(--nx-text-2xs)",
-              letterSpacing: "var(--nx-track-wider)" }}>DS v2.0 <BlinkCursor /></span>
+              letterSpacing: "var(--nx-track-wider)" }}>DS v3.0 <BlinkCursor /></span>
           </div>
           <nav aria-label="Sections" style={{ display: "flex", gap: "var(--nx-space-2)", flex: 1 }}>
             {ROUTES.map((r) => (

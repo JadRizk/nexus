@@ -57,7 +57,7 @@ export function HomePage() {
               marginTop: "var(--nx-space-2)", color: "var(--nx-fg-tertiary)",
               fontSize: "var(--nx-text-2xs)", letterSpacing: "var(--nx-track-wider)",
             }}>
-              DESIGN SYSTEM v1.0 <BlinkCursor />
+              DESIGN SYSTEM v{__NX_VERSION__} <BlinkCursor />
             </div>
           </div>
 
@@ -67,9 +67,9 @@ export function HomePage() {
             padding: "var(--nx-space-4) var(--nx-space-5) 0",
             display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1px var(--nx-space-4)",
           }}>
-            <KeyValue label="TOKENS" value="78" />
+            <KeyValue label="TOKENS" value={String(__NX_TOKENS__)} />
             <KeyValue label="THEMES" value="2" />
-            <KeyValue label="COMPS" value="16" />
+            <KeyValue label="COMPS" value={String(__NX_COMPONENTS__)} />
             <KeyValue label="DEPS" value="0" />
           </div>
 

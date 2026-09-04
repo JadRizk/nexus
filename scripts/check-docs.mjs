@@ -1,54 +1,39 @@
 #!/usr/bin/env node
-// Fails when the figures quoted in the docs and the showcase drift from the
-// code. This used to be a three-way parity check across tokens.css, tokens.json
-// and the contrast table in index.ts — that part is gone, because tokens.css
-// and contrast.gen.ts are now generated from tokens.json and cannot disagree
-// with it by construction. What is left is the drift no generator can prevent:
-// prose that quotes a number.
-import { readdirSync, readFileSync } from "node:fs";
+// Fails when the figures quoted in the docs drift from the code.
+//
+// The showcase reads its figures at build time (vite.config.ts `define`) and
+// scripts/build-preview.mjs stamps them into reference/preview.jsx, so those
+// two cannot drift by construction any more. What is left is prose that
+// quotes a number — the README — plus a belt-and-braces check that the
+// stamped preview really was regenerated after the last change.
+import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { componentCount, shortVersion, tokenCount, version } from "./ds-figures.mjs";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const read = (p) => readFileSync(join(root, p), "utf8");
 
 const problems = [];
-
-const tokenCount = new Set(
-  Array.from(read("packages/tokens/src/tokens.css").matchAll(/^\s*(--nx-[a-z0-9-]+)\s*:/gm), (m) => m[1]),
-).size;
-
-// Counted from the component folders, which is now the real inventory: one
-// folder per component, each exporting itself through its own index.ts.
-const componentsDir = join(root, "packages/react/src/components");
-const componentCount = readdirSync(componentsDir, { withFileTypes: true }).filter(
-  (entry) => entry.isDirectory(),
-).length;
-
 const quoted = `${tokenCount} tokens · ${componentCount} components`;
 
-for (const file of ["apps/showcase/src/App.tsx", "reference/preview.jsx"]) {
-  const claim = read(file).match(/\d+ tokens · \d+ components/);
-  if (claim && claim[0] !== quoted) {
-    problems.push(`${file} advertises "${claim[0]}" — the code has ${quoted}`);
-  }
+const preview = read("reference/preview.jsx");
+const claim = preview.match(/\d+ tokens · \d+ components/);
+if (claim && claim[0] !== quoted) {
+  problems.push(`reference/preview.jsx advertises "${claim[0]}" — the code has ${quoted}`);
+}
+const previewVersion = preview.match(/DS v(\d+\.\d+)/);
+if (previewVersion && previewVersion[1] !== shortVersion) {
+  problems.push(
+    `reference/preview.jsx advertises "DS v${previewVersion[1]}" — @nexus-cyberdeck/react is ${version}`,
+  );
 }
 
-// The version quoted in the showcase chrome is the third figure that drifts
-// silently — it read "DS v1.0" through a major bump. Checked against the
-// package it actually describes rather than kept in step by hand.
-const version = JSON.parse(read("packages/react/package.json")).version;
-const shortVersion = version.split(".").slice(0, 2).join(".");
-for (const file of ["apps/showcase/src/App.tsx", "reference/preview.jsx"]) {
-  const claim = read(file).match(/DS v(\d+\.\d+)/);
-  if (claim && claim[1] !== shortVersion) {
-    problems.push(`${file} advertises "DS v${claim[1]}" — @nexus-cyberdeck/react is ${version}`);
-  }
-}
-
-const readme = read("README.md").match(/@nexus\/react\s+(\d+) components/);
+const readme = read("README.md").match(/@nexus-cyberdeck\/react\s+(\d+) components/);
 if (readme && Number(readme[1]) !== componentCount) {
-  problems.push(`README.md advertises ${readme[1]} components — the code exports ${componentCount}`);
+  problems.push(
+    `README.md advertises ${readme[1]} components — the code exports ${componentCount}`,
+  );
 }
 
 if (problems.length) {
@@ -58,4 +43,4 @@ if (problems.length) {
   process.exit(1);
 }
 
-console.log(`Docs OK — ${quoted}.`);
+console.log(`Docs OK — DS v${shortVersion}, ${quoted}.`);

@@ -12,6 +12,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { esbuildAlias } from "../workspace-alias.mjs";
+import { componentCount, shortVersion, tokenCount } from "./ds-figures.mjs";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const previewPath = join(root, "reference/preview.jsx");
@@ -26,7 +27,13 @@ async function main() {
       "has the hand-authored section been renamed or removed?",
     );
   }
-  const tail = existing.slice(boundaryLineStart);
+  // The tail is hand-authored, but the figures it quotes are not: they are
+  // stamped from the code on every build, the same way the showcase's Vite
+  // config injects them, so a version bump cannot leave preview.jsx stale.
+  const tail = existing
+    .slice(boundaryLineStart)
+    .replace(/DS v\d+\.\d+/g, `DS v${shortVersion}`)
+    .replace(/\d+ tokens · \d+ components/g, `${tokenCount} tokens · ${componentCount} components`);
 
   const result = await build({
     entryPoints: [join(root, "packages/react/src/index.ts")],

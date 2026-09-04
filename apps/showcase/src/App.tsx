@@ -52,7 +52,7 @@ function Shell() {
             <span style={{
               color: "var(--nx-fg-tertiary)", fontSize: "var(--nx-text-2xs)",
               letterSpacing: "var(--nx-track-wider)",
-            }}>DS v2.0 <BlinkCursor /></span>
+            }}>DS v{__NX_VERSION__} <BlinkCursor /></span>
           </div>
 
           <nav aria-label="Sections" style={{ display: "flex", gap: "var(--nx-space-2)", flex: 1 }}>
@@ -105,7 +105,7 @@ function Shell() {
           fontSize: "var(--nx-text-2xs)", letterSpacing: "var(--nx-track-wider)",
           textTransform: "uppercase", borderTop: "var(--nx-hairline) solid var(--nx-border-default)",
         }}>
-          {`Zero runtime dependencies · 83 tokens · 19 components${route === "overlays" ? " · ⌘K opens the palette" : ""}`}
+          {`Zero runtime dependencies · ${__NX_TOKENS__} tokens · ${__NX_COMPONENTS__} components${route === "overlays" ? " · ⌘K opens the palette" : ""}`}
         </footer>
       )}
     </div>
