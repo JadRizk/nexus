@@ -18,11 +18,11 @@ const root = dirname(fileURLToPath(import.meta.url));
 const src = (pkg, file) => join(root, "packages", pkg, "src", file);
 
 export const workspaceAlias = [
-  { find: /^@nexus\/tokens$/, replacement: src("tokens", "index.ts") },
-  { find: /^@nexus\/tokens\/(.*)$/, replacement: src("tokens", "$1") },
-  { find: /^@nexus\/react$/, replacement: src("react", "index.ts") },
-  { find: /^@nexus\/react\/(.*)$/, replacement: src("react", "$1") },
-  { find: /^@nexus\/graph$/, replacement: src("graph", "index.ts") },
+  { find: /^@nexus-cyberdeck\/tokens$/, replacement: src("tokens", "index.ts") },
+  { find: /^@nexus-cyberdeck\/tokens\/(.*)$/, replacement: src("tokens", "$1") },
+  { find: /^@nexus-cyberdeck\/react$/, replacement: src("react", "index.ts") },
+  { find: /^@nexus-cyberdeck\/react\/(.*)$/, replacement: src("react", "$1") },
+  { find: /^@nexus-cyberdeck\/graph$/, replacement: src("graph", "index.ts") },
 ];
 
 /**
