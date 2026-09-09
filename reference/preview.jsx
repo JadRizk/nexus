@@ -467,7 +467,7 @@ function MeterRow({ label, value, total, tone: tone2, colour, labelWidth }) {
 }
 
 // packages/react/src/components/NexusProvider/NexusProvider.tsx
-import { createContext, useContext, useEffect as useEffect4, useState as useState2 } from "react";
+import { createContext, useContext, useMemo as useMemo2, useState as useState2 } from "react";
 var Ctx = createContext({
   theme: "hud-aa",
   crt: true,
@@ -486,9 +486,11 @@ function NexusProvider({
 }) {
   const [t, setTheme] = useState2(theme);
   const [c, setCrt] = useState2(crt);
-  useEffect4(() => setTheme(theme), [theme]);
-  useEffect4(() => setCrt(crt), [crt]);
-  return /* @__PURE__ */ React.createElement(Ctx.Provider, { value: { theme: t, crt: c, setTheme, setCrt } }, /* @__PURE__ */ React.createElement("div", { className: mergeClassName("nx-root", className), "data-nx-theme": t, "data-nx-crt": c ? "on" : "off", ...rest }, children));
+  const value = useMemo2(
+    () => ({ theme: t, crt: c, setTheme, setCrt }),
+    [t, c]
+  );
+  return /* @__PURE__ */ React.createElement(Ctx.Provider, { value }, /* @__PURE__ */ React.createElement("div", { className: mergeClassName("nx-root", className), "data-nx-theme": t, "data-nx-crt": c ? "on" : "off", ...rest }, children));
 }
 
 // packages/react/src/components/Slider/Slider.tsx
