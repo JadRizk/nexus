@@ -155,22 +155,39 @@ function useFocusTrap(active, onDismiss) {
 
 // packages/react/src/hooks/useHotkey.ts
 import { useEffect as useEffect2, useRef as useRef2 } from "react";
+var MODIFIER_KEYWORDS = /* @__PURE__ */ new Set(["mod", "shift", "ctrl", "alt", "meta"]);
 function useHotkey(combo, handler) {
   const handlerRef = useRef2(handler);
   useEffect2(() => {
     handlerRef.current = handler;
   });
+  const parts = combo.toLowerCase().split("+");
+  const key = parts[parts.length - 1] ?? "";
+  const modifierParts = parts.slice(0, -1);
+  for (const part of modifierParts) {
+    if (!MODIFIER_KEYWORDS.has(part)) {
+      throw new Error(
+        `useHotkey: unrecognised combo part "${part}" in "${combo}". Expected one of mod, shift, ctrl, alt, meta before the trailing key.`
+      );
+    }
+  }
+  const wantMod = modifierParts.includes("mod");
+  const wantShift = modifierParts.includes("shift");
+  const wantCtrl = modifierParts.includes("ctrl");
+  const wantAlt = modifierParts.includes("alt");
+  const wantMeta = modifierParts.includes("meta");
   useEffect2(() => {
-    const parts = combo.toLowerCase().split("+");
-    const key = parts[parts.length - 1] ?? "";
-    const wantMod = parts.includes("mod");
-    const wantShift = parts.includes("shift");
     const on = (e) => {
-      const mod = e.metaKey || e.ctrlKey;
-      if (wantMod !== mod) return;
       if (wantShift !== e.shiftKey) return;
+      if (wantAlt !== e.altKey) return;
+      if (wantMod) {
+        if (!(e.metaKey || e.ctrlKey)) return;
+      } else {
+        if (wantCtrl !== e.ctrlKey) return;
+        if (wantMeta !== e.metaKey) return;
+      }
       if (e.key.toLowerCase() !== key) return;
-      if (!wantMod) {
+      if (!wantMod && !wantCtrl && !wantAlt && !wantMeta) {
         const t = e.target;
         const typing = !!t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable);
         if (typing) return;
@@ -180,7 +197,7 @@ function useHotkey(combo, handler) {
     };
     window.addEventListener("keydown", on);
     return () => window.removeEventListener("keydown", on);
-  }, [combo]);
+  }, [combo, key, wantMod, wantShift, wantCtrl, wantAlt, wantMeta]);
 }
 
 // packages/react/src/search/rankItems.ts
