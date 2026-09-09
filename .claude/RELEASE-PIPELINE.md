@@ -27,11 +27,58 @@ up tickets from a shared Kanban board, implements them in isolated git
 worktrees, opens PRs, reviews them, and merges what's safe to merge — leaving
 everything else for me to decide.
 
-**Board:** https://claude.ai/code/artifact/6924b2a1-418b-48f8-a536-37b7005b4e60
-(Artifact tool, collection `"tickets"`, one document per ticket `NX-01`..`NX-36`)
 **Repo:** `/Users/jadrizk/Documents/Nexus` — `JadRizk/nexus` on GitHub, private.
 `gh` is authenticated with repo scope. There is no branch-protection backstop
 on `main` (private repo, free tier) — review before merge is the only one.
+
+## Data store
+
+**`.claude/tickets/*.json` is the canonical, live ticket store** — one file
+per ticket, read and written exclusively through `.claude/ticket-store.mjs`
+(never edit the JSON by hand: its locking is the only thing that keeps two
+sessions from both winning a claim on the same ticket). This directory is
+**gitignored on purpose, for now** — it changes on every claim and status
+write, and committing it would make every write a commit. Don't try to `git
+add` it; don't remove it from `.gitignore` without being asked.
+
+**Always invoke the script by its absolute path,
+`/Users/jadrizk/Documents/Nexus/.claude/ticket-store.mjs`, never a relative
+one.** This matters more than it looks: a spawned implementer agent runs
+inside its own git worktree — a fresh checkout containing only what's
+*committed* — and `.claude/tickets/` and this script are both gitignored, so
+they don't exist there at all. The absolute path still works from any cwd
+because the script locates the tickets directory relative to its own real
+file location, not the caller's cwd (verified: running it from an unrelated
+directory still finds and only ever touches the one real
+`.claude/tickets/`). A relative path from inside a worktree would just fail
+with "module not found" — if you ever see that error from this script,
+you used a relative path; fix the command, don't work around it.
+
+```
+node /Users/jadrizk/Documents/Nexus/.claude/ticket-store.mjs list
+node /Users/jadrizk/Documents/Nexus/.claude/ticket-store.mjs get NX-07
+node /Users/jadrizk/Documents/Nexus/.claude/ticket-store.mjs claim NX-07 agent-nx-07 "Branch nx-07-x"  # atomic; {ok:false,...} if already taken
+node /Users/jadrizk/Documents/Nexus/.claude/ticket-store.mjs update NX-07 agent-nx-07 '{"status":"review"}'
+node /Users/jadrizk/Documents/Nexus/.claude/ticket-store.mjs log NX-07 pipeline "Reviewed: no findings."
+```
+
+`update`'s patch merges at the top level; an object or array field in the
+patch **replaces** the existing one wholesale (matching the semantics below),
+so include the full `log`/`acceptance` array when you're changing one entry
+in it, not just the new entry.
+
+A live dashboard reads the same files: `node .claude/board-server.mjs` (or
+`preview_start name: "ticket-board"` if `.claude/launch.json` has that entry)
+serves it at `http://localhost:4317`, polling `.claude/tickets/` every few
+seconds. It's read-only by design — writes still go through the CLI above.
+
+There is also a **hosted mirror** on claude.ai
+(https://claude.ai/code/artifact/6924b2a1-418b-48f8-a536-37b7005b4e60,
+Artifact tool, collection `"tickets"`) from before the store moved local.
+It is **not kept in sync automatically** — treat it as stale unless you just
+pushed to it yourself. Use it only if you want an interactive, clickable view
+from outside this machine; don't read from it to decide what's ready, and
+don't write ticket-lifecycle state there — the local files are the truth.
 
 ## Policy
 
@@ -67,20 +114,25 @@ sign-off before landing.
 
 ## One iteration
 
-1. Read the board (`read_db`, `query`, collection `tickets`).
+1. Read the board: `node /Users/jadrizk/Documents/Nexus/.claude/ticket-store.mjs list`.
 2. Handle every ticket with status `review` first, oldest first:
    - Read its PR link from the log. `gh pr checks <PR>` for CI status.
    - If not already reviewed this iteration, review the diff yourself — see
      "Review, not rubber-stamp" below — and post findings as a PR comment.
    - Apply the merge policy above. If merging: `gh pr merge --squash`, then
-     update the ticket to `status: "done"` with a log entry naming the merge
-     commit. If waiting: log entry saying exactly what's waited on, and
-     include it in your final report.
-3. Count tickets `in_progress` with an `agent-*` assignee. If below 2 and the
-   ready queue (status `todo`, every `blockedBy` id `done`, not NX-01, not the
+     `ticket-store.mjs update <ID> pipeline '{"status":"done"}'` plus
+     `... log <ID> pipeline "<merge commit>"` (absolute path, as above). If
+     waiting: log entry saying exactly what's waited on, and include it in
+     your final report.
+3. Count tickets `in_progress` with an `agent-*` assignee (from the `list`
+   output — re-read it fresh each time, don't reuse a count from earlier in
+   the session; another session may be running this same pipeline
+   concurrently against the same local files). If below 2 and the ready queue
+   (status `todo`, every `blockedBy` id `done`, not NX-01, not the
    history-rewrite half of NX-20) is non-empty, spawn one `Agent` call per
-   open slot (isolation: `worktree`, subagent_type `general-purpose`) using
-   the implementer brief below, lowest `order` first.
+   open slot (isolation: `worktree`, subagent_type `general-purpose`, `model`:
+   the ticket's `modelHint` field — see "Model tiering" below) using the
+   implementer brief below, lowest `order` first.
 4. If nothing is `in_progress`, `review`, or ready-and-includable: report a
    final summary and stop (don't keep scheduling wakeups against an empty
    queue).
@@ -90,6 +142,34 @@ sign-off before landing.
    the same instructions as the prompt for `prompt`, so the next firing
    continues the loop.
 
+## Model tiering
+
+Every ticket carries a `modelHint`: `"haiku"`, `"sonnet"`, `"opus"`, or
+`null`. Pass it as the spawned `Agent` call's `model` parameter. This exists
+to put a cheap, fast model on mechanical work and reserve the most capable
+one for work where a subtle mistake is expensive to catch later — not to
+save cost by weakening review; review (yours, in this same session, not a
+spawned agent) always runs at your own model, never downgraded.
+
+- **`haiku`** — a single well-defined, low-ambiguity transformation: a config
+  line, a README paragraph, moving a class from one file to another, a
+  decision that's really a checklist. If a careful engineer could do it
+  correctly on the first pass without thinking hard, it's `haiku`.
+- **`sonnet`** — the default. Most tickets: real logic changes, new tests,
+  moderate cross-file reasoning, research-then-decide tasks.
+- **`opus`** — genuine design judgment, a breaking API decision, or anything
+  where correctness is easy to get subtly wrong and hard to notice: focus
+  traps and other accessibility-critical interaction logic, WebGL/shader
+  internals, effect-ordering bugs, redesigning a guard that backs an
+  accessibility guarantee.
+- **`null`** — not an autonomous coding task at all (an external account
+  action, a human-only decision). These are usually already in the exclusion
+  list; don't spawn them regardless of hint.
+
+If a ticket has no `modelHint` (created after this convention, or by hand),
+default to `sonnet` rather than guessing low. When you create a new ticket,
+set `modelHint` using the same criteria, in the same write that creates it.
+
 ## Implementer brief (give this to each spawned agent, filled in per ticket)
 
 ```
@@ -97,8 +177,11 @@ You are implementing one ticket from a shared release board for
 /Users/jadrizk/Documents/Nexus. Work only inside your own worktree.
 
 Ticket: <ID> — <title>
-Board: https://claude.ai/code/artifact/6924b2a1-418b-48f8-a536-37b7005b4e60
-(collection "tickets", doc_id "<ID>")
+Data store: /Users/jadrizk/Documents/Nexus/.claude/ticket-store.mjs — ALWAYS
+by this absolute path, never a relative one (your worktree doesn't have a
+copy of it or of .claude/tickets/; the absolute path still resolves the one
+real ticket store correctly from any cwd — see .claude/RELEASE-PIPELINE.md's
+"Data store" section if this is unclear).
 
 <paste the ticket's full description, tasks, acceptance criteria, refs and
 findings here>
@@ -107,10 +190,10 @@ findings here>
    `npm install` if node_modules is missing.
 2. Read CONTRIBUTING.md, and packages/react/STYLING.md if touching
    packages/react, before editing anything.
-3. Claim it: `read_db get` doc_id <ID> for the current `log`, then
-   `write_db update` with ONLY status "in_progress", assignee "agent-<id>",
-   updatedAt/updatedBy, and log = existing + one new entry. Don't touch other
-   fields or other tickets.
+3. Claim it: `node /Users/jadrizk/Documents/Nexus/.claude/ticket-store.mjs
+   claim <ID> agent-<id-lower> "Claimed. Branch <branch>."` — check the
+   result's `.ok`; if false (someone else already has it), stop and report
+   that rather than proceeding.
 4. Do exactly the tasks listed — nothing broader. Ambiguity gets the
    narrowest reasonable call, stated in the PR, not expanded scope.
 5. Mirror CI exactly before you consider this done — see "Mirror CI exactly"
@@ -120,10 +203,12 @@ findings here>
    blocker, stop, and say so in your final summary.
 7. Commit using the commit-message convention below, push, open a PR using
    the PR description template below.
-8. Update the ticket: status "review", acceptance array with done:true ONLY
-   on criteria you actually verified, log entry with the PR URL and branch.
-   Never set status "done" yourself and never merge — a separate review pass
-   handles that.
+8. Update the ticket (absolute path, as in step 3): `status: "review"`,
+   `acceptance` with `done: true` ONLY on criteria you actually verified, and
+   a `log` entry with the PR URL and branch — e.g. `ticket-store.mjs update
+   <ID> agent-<id-lower> '{"status":"review","acceptance":[...]}'` then
+   `... log <ID> agent-<id-lower> "PR: <url>"`. Never set status "done"
+   yourself and never merge — a separate review pass handles that.
 9. Report back: ticket id, PR URL, which criteria you verified, anything left
    for a human.
 
