@@ -18,18 +18,27 @@ function BlinkCursor({ char = "\u2588", style }) {
   return /* @__PURE__ */ React.createElement("span", { "aria-hidden": "true", className: "nx-blink", style }, char);
 }
 
-// packages/react/src/components/Button/Button.tsx
-function Button({ active = false, children, ...rest }) {
-  return /* @__PURE__ */ React.createElement("button", { type: "button", className: "nx-btn", "data-active": active ? "1" : "0", ...rest }, children);
-}
-
-// packages/react/src/components/CommandPalette/CommandPalette.tsx
-import { useEffect as useEffect3, useId, useMemo, useRef as useRef3, useState } from "react";
-
 // packages/react/src/className.ts
 function mergeClassName(base, className) {
   return className ? `${base} ${className}`.trim() : base;
 }
+
+// packages/react/src/components/Button/Button.tsx
+function Button({ active = false, className, children, ...rest }) {
+  return /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      type: "button",
+      className: mergeClassName("nx-btn", className),
+      "data-active": active ? "1" : "0",
+      ...rest
+    },
+    children
+  );
+}
+
+// packages/react/src/components/CommandPalette/CommandPalette.tsx
+import { useEffect as useEffect3, useId, useMemo, useRef as useRef3, useState } from "react";
 
 // packages/react/src/components/Panel/Panel.tsx
 function Panel({
@@ -374,10 +383,9 @@ function Drawer({
       },
       title
     ), subtitle != null && /* @__PURE__ */ React.createElement("div", { className: "nx-drawer__subtitle" }, subtitle)), /* @__PURE__ */ React.createElement(
-      "button",
+      Button,
       {
-        type: "button",
-        className: "nx-btn nx-drawer__close",
+        className: "nx-drawer__close",
         onClick: onClose,
         "aria-label": "Close details"
       },
