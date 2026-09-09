@@ -160,6 +160,8 @@ export interface GraphCanvasProps {
   onStats?: (stats: GraphStats) => void;
   /** Called once if WebGL setup throws (including an invalid graph: an edge to an unknown node id, a duplicate node id, or a category id missing from the maps) or the WebGL context is lost — the canvas renders nothing further after this. */
   onFatal?: (message: string) => void;
+  /** Accessible name for the canvas, exposed via `role="img"`. The label pool and tooltip are `aria-hidden` — this is the one name assistive tech gets for the whole graph. */
+  ariaLabel?: string;
   className?: string;
   style?: CSSProperties;
 }
