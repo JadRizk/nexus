@@ -146,8 +146,11 @@ are read from the code at build time by `scripts/ds-figures.mjs`, and
 npm run build:tokens     # regenerates both; runs as part of npm run build
 ```
 
-Editing either generated file by hand is caught in CI. Style Dictionary v4+ and
-Figma Tokens Studio can read the token file unchanged.
+Editing either generated file by hand is caught in CI. The source file is
+DTCG-structured (`$value`/`$type`/`$description`); values are written as CSS
+strings (hex colours, `rem`/`ms` dimensions, `cubic-bezier()`) rather than the
+newer structured DTCG value shapes, so treat it as DTCG-flavoured rather than
+a strict DTCG document a tool is guaranteed to import unchanged.
 
 Three layers. **Components may reference only the semantic layer**, enforced by
 ESLint and stylelint rather than by convention.
