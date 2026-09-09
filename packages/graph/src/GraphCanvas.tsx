@@ -97,12 +97,22 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
   // above between mounts, so it has to live outside the effect's closure.
   const idToIndexRef = useRef<Map<unknown, number>>(new Map());
 
+  // Forwards every field of PhysicsConfig, not a subset: gravity and damping
+  // are documented props too, and omitting them here left them permanently
+  // pinned to the solver's own defaults. Depends on the fields rather than on
+  // physicsCfg, which is a fresh object every render. On first mount this is
+  // still a no-op — api.current.params does not exist until the mount effect
+  // below has run — so boot() applies the initial config itself.
   useEffect(() => {
     api.current.params?.({
       repulsion: physicsCfg.repulsion, linkDistance: physicsCfg.linkDistance,
+      gravity: physicsCfg.gravity, damping: physicsCfg.damping,
       cursorForce: physicsCfg.cursorForce, settle: physicsCfg.settle,
     });
-  }, [physicsCfg.repulsion, physicsCfg.linkDistance, physicsCfg.cursorForce, physicsCfg.settle]);
+  }, [
+    physicsCfg.repulsion, physicsCfg.linkDistance, physicsCfg.gravity,
+    physicsCfg.damping, physicsCfg.cursorForce, physicsCfg.settle,
+  ]);
 
   useEffect(() => {
     api.current.refilterInternal?.();
@@ -159,6 +169,13 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
           return { a: eA[e]!, b: eB[e]!, dist: cat.dist, strength: cat.strength };
         }),
       });
+      // The params effect above cannot reach the solver on the render that
+      // creates it, so the initial `physics` prop has to be applied here or it
+      // never lands. Numerically inert when the prop is absent: physicsCfg is
+      // DEFAULT_PHYSICS, which matches the solver's own starting params, and
+      // setParams' alpha floor of 0.28 is below the alpha of 1 a fresh solver
+      // already has.
+      sim.setParams(physicsCfg);
       const pos = sim.pos;
 
       const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
