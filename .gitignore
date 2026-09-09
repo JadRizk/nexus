@@ -4,6 +4,15 @@ dist/
 .DS_Store
 .claude/scheduled_tasks.lock
 
+# Local release-board pipeline — live ticket data and the local dashboard
+# that reads it. Kept out of git for now: the data changes on every claim
+# and status update, and committing it would make every write a commit.
+# See .claude/RELEASE-PIPELINE.md for what this is and why.
+.claude/tickets/
+.claude/board-local.html
+.claude/board-server.mjs
+.claude/ticket-store.mjs
+
 # design-sync
 .ds-sync/
 ds-bundle/
