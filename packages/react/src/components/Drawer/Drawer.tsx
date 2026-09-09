@@ -1,5 +1,5 @@
 import { useId, version as reactVersion } from "react";
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties, ReactNode, RefObject } from "react";
 import { Panel } from "../Panel/index.js";
 import { HazardRule } from "../HazardRule/index.js";
 import { useFocusTrap } from "../../hooks/index.js";
@@ -55,7 +55,14 @@ export function Drawer({
 
   return (
     <div
-      ref={trapRef}
+      // @types/react 18's `RefObject<T>` already bakes `| null` into `current`,
+      // so a plain HTML element's `ref` prop wants `RefObject<T>` there; 19
+      // moved the `| null` onto the ref prop itself and made `RefObject<T>`
+      // exact, so it wants `RefObject<T | null>` instead. useFocusTrap returns
+      // the honest `RefObject<T | null>` for 19's sake (see its own comment),
+      // which 18's stricter generic-variance check then rejects here even
+      // though the underlying object is identical either way — hence the cast.
+      ref={trapRef as RefObject<HTMLDivElement>}
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
