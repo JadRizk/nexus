@@ -719,6 +719,8 @@ const NX_CSS = `/* =============================================================
    are computed against --nx-bg-surface (#0A0C0B) at build time, not typed in.
    ========================================================================== */
 :root {
+  color-scheme: dark;
+
   /* surfaces + signature palette */
   --nx-void:      #08090A;
   --nx-panel:     #0A0C0B;

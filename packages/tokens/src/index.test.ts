@@ -1,6 +1,10 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
-  border, contrast, duration, space, surface, text, themeMeetsAA, tone, track, WCAG,
+  border, BORDER_TONES, contrast, duration, space, surface, SURFACES, text,
+  themeMeetsAA, tone, TONES, track, WCAG,
 } from "./index.js";
 
 describe("accessor functions", () => {
@@ -36,5 +40,45 @@ describe("themeMeetsAA", () => {
     for (const key of ["phosphor", "acid", "lime", "data", "sodium", "violet", "alarm"] as const) {
       expect(contrast["hud-aa"][key]).toBe(contrast.hud[key]);
     }
+  });
+});
+
+describe("typed unions stay in sync with tokens.json", () => {
+  // Tone, Surface and BorderTone are hand-written (see index.ts's module
+  // comment on why), not generated from tokens.json the way tokens.css and
+  // contrast.gen.ts are. That leaves one way for them to drift silently: a
+  // semantic role added to the JSON with nobody remembering to add the
+  // matching entry here. This diffs the two role by role, so that drift is a
+  // failing test rather than a typed handle nobody noticed was missing.
+  const here = dirname(fileURLToPath(import.meta.url));
+  const tokens = JSON.parse(readFileSync(join(here, "tokens.json"), "utf8"));
+
+  /** Role names declared under a semantic group, e.g. semantic.fg.* */
+  const rolesOf = (group: Record<string, unknown>) =>
+    Object.keys(group)
+      .filter((k) => !k.startsWith("$"))
+      .sort();
+
+  it("Tone covers exactly the roles in semantic.fg", () => {
+    expect([...TONES].sort()).toEqual(rolesOf(tokens.semantic.fg));
+  });
+
+  it("Surface covers exactly the roles in semantic.bg", () => {
+    expect([...SURFACES].sort()).toEqual(rolesOf(tokens.semantic.bg));
+  });
+
+  it("BorderTone covers exactly the roles in semantic.border", () => {
+    expect([...BORDER_TONES].sort()).toEqual(rolesOf(tokens.semantic.border));
+  });
+
+  it("tone(\"cat-lime\") and tone(\"cat-violet\") typecheck and resolve", () => {
+    expect(tone("cat-lime")).toBe("var(--nx-fg-cat-lime)");
+    expect(tone("cat-violet")).toBe("var(--nx-fg-cat-violet)");
+  });
+
+  it("surface(\"hover\"), surface(\"active\") and surface(\"track\") typecheck and resolve", () => {
+    expect(surface("hover")).toBe("var(--nx-bg-hover)");
+    expect(surface("active")).toBe("var(--nx-bg-active)");
+    expect(surface("track")).toBe("var(--nx-bg-track)");
   });
 });
