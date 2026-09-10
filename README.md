@@ -260,16 +260,6 @@ contrast should not be fighting a scanline overlay. Under
 `prefers-reduced-motion` the rolling refresh bar stops and is removed; the
 static scanlines stay, since they are texture rather than motion.
 
-## Claude Design
-
-`@nexus-cyberdeck/react` is wired to a [Claude Design](https://claude.ai/design)
-project through `.design-sync/`: `config.json` names the package and the
-provider, `previews/` holds one authored preview per component, and
-`conventions.md` is the usage guidance uploaded alongside the bundle so
-generated screens use real tokens and wrap the tree in `NexusProvider`. The
-sync tooling itself is staged into `.ds-sync/` and `ds-bundle/`, both
-git-ignored.
-
 ## Visual regression
 
 The visual suite covers the things jsdom cannot see: Panel's corner ticks,

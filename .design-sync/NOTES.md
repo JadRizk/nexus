@@ -11,9 +11,9 @@
 
 ## Provider
 
-`NexusProvider` (`packages/react/src/primitives.tsx`) applies the `.nx-root`
-class, which sets the dark canvas background and phosphor foreground colour
-every other component's styling assumes (`packages/tokens/src/tokens.css`).
+`NexusProvider` (`packages/react/src/components/NexusProvider/`) applies the
+`.nx-root` class, which sets the dark canvas background and phosphor foreground
+colour every other component's styling assumes (`packages/tokens/src/tokens.css`).
 Without it, every preview would render on the harness's hardcoded white card
 background with washed-out light-on-light text. Wired via `cfg.provider`
 (`theme: "hud-aa"`, `crt: false` — the CRT scanline effect is opt-in via a
@@ -75,5 +75,5 @@ assuming it's a real component bug.
   above). A future re-sync with Playwright available should run the full
   automated render-check + capture at least once to cross-check these grades.
 - `@nexus-cyberdeck/graph` (Three.js graph canvas) is intentionally out of scope for
-  this sync — uncommitted, no build output yet at sync time. Re-scope in a
-  future sync once it's built and stable.
+  this sync — committed, but not yet in scope for design system sync. Re-scope in a
+  future sync once component designs are ready.
