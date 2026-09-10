@@ -1,5 +1,8 @@
 # @nexus-cyberdeck/tokens
 
+This stylesheet styles `html` and `body` directly because the system expects
+to own the viewport, not share the page with other content.
+
 Design tokens for the [Nexus Cyberdeck](https://github.com/JadRizk/nexus#readme)
 HUD design system. Plain CSS custom properties with zero runtime dependencies,
 plus typed accessors for TypeScript, plus contrast ratios computed at build

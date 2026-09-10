@@ -405,6 +405,12 @@ ${THEMES.filter((t) => t !== DEFAULT_THEME)
    are computed against --nx-bg-surface (${SURFACE}) at build time, not typed in.
    ========================================================================== */`);
   out.push(":root {");
+  // Both shipped themes are dark. Without this, a native control (scrollbar,
+  // <select>, form field) renders with the light UA palette and clashes with
+  // everything around it, because the browser has no other signal that this
+  // page never offers a light appearance.
+  out.push("  color-scheme: dark;");
+  out.push("");
 
   const groups = [
     ["primitive.colour", "surfaces + signature palette"],

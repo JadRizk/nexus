@@ -14,14 +14,17 @@ export type { NexusTheme } from "./contrast.gen.js";
 
 import { contrast, themeTargets } from "./contrast.gen.js";
 import type { NexusTheme } from "./contrast.gen.js";
+import type { TONES, SURFACES, BORDER_TONES } from "./roles.js";
 
-/** Foreground roles. `critical` is the only route to the alarm colour. */
-export type Tone =
-  | "default" | "muted" | "subtle" | "tertiary" | "disabled"
-  | "accent" | "info" | "warning" | "critical";
+/*
+ * Tone, Surface and BorderTone are derived from the role arrays in roles.ts,
+ * which stay internal — see that file for why. The types below are public;
+ * the arrays behind them are not.
+ */
+export type Tone = (typeof TONES)[number];
+export type Surface = (typeof SURFACES)[number];
+export type BorderTone = (typeof BORDER_TONES)[number];
 
-export type Surface = "canvas" | "surface" | "raised";
-export type BorderTone = "default" | "strong" | "accent";
 export type SpaceStep = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 export type TextSize = "2xs" | "xs" | "sm" | "md" | "lg" | "xl";
 export type Tracking = "tight" | "normal" | "wide" | "wider";
