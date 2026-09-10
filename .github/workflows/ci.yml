@@ -38,6 +38,36 @@ jobs:
       - name: Build (packages + reference/preview.jsx)
         run: npm run build
 
+      # arethetypeswrong catches a package.json exports map that resolves
+      # correctly at runtime but lies to TypeScript's module resolution — the
+      # `import`/`require` conditions each need their own `types` entry
+      # (index.d.ts vs. index.d.cts) or node16-from-CJS consumers see the ESM
+      # types applied to the CommonJS build ("Masquerading as ESM"). `--pack`
+      # runs `npm pack` first, so this checks the tarball a consumer actually
+      # installs, not the working tree.
+      #
+      # tokens and react also export CSS/JSON asset subpaths, which attw always
+      # flags as unresolvable for lacking a .d.ts — a limitation of attw
+      # checking non-code assets, not a resolution bug. Those subpaths are
+      # excluded by name rather than by switching `no-resolution` off, because
+      # `--ignore-rules no-resolution` disables the rule for the WHOLE package:
+      # with it, an `.` entrypoint pointing at files that do not exist still
+      # reports "No problems found" and exits 0 — the exact bug class this gate
+      # exists to catch. `--exclude-entrypoints` keeps the rule live on `.`.
+      # graph exports only `.` and `./package.json`, so it needs no exclusion
+      # and is the control showing the rule passes fully enabled.
+      #
+      # Invoked as @arethetypeswrong/cli, not the bare `attw` bin name: `npx
+      # attw` falls through to a registry package of that name which is a
+      # dependency-confusion placeholder that prints an error and exits 0, so a
+      # tree missing the devDependency would silently pass this gate instead of
+      # failing it.
+      - name: Types are not wrong (attw --pack)
+        run: |
+          npx @arethetypeswrong/cli --pack packages/tokens --exclude-entrypoints tokens.css crt.css tokens.json
+          npx @arethetypeswrong/cli --pack packages/react --exclude-entrypoints styles.css
+          npx @arethetypeswrong/cli --pack packages/graph
+
       # The showcase is the only place the packages are consumed end to end, so
       # a build failure here is the earliest signal that an API change broke a
       # real consumer rather than only the tests.
