@@ -14,28 +14,15 @@ export type { NexusTheme } from "./contrast.gen.js";
 
 import { contrast, themeTargets } from "./contrast.gen.js";
 import type { NexusTheme } from "./contrast.gen.js";
+import type { TONES, SURFACES, BORDER_TONES } from "./roles.js";
 
-/**
- * Foreground roles. `critical` is the only route to the alarm colour;
- * `cat-lime` and `cat-violet` are categorical slots that carry no status
- * meaning of their own.
- *
- * Kept as a runtime array so index.test.ts can diff it against
- * `semantic.fg` in tokens.json — a role added to the JSON without a matching
- * entry here fails that test rather than silently having no typed handle.
+/*
+ * Tone, Surface and BorderTone are derived from the role arrays in roles.ts,
+ * which stay internal — see that file for why. The types below are public;
+ * the arrays behind them are not.
  */
-export const TONES = [
-  "default", "muted", "subtle", "tertiary", "disabled",
-  "accent", "info", "warning", "critical", "cat-lime", "cat-violet",
-] as const;
 export type Tone = (typeof TONES)[number];
-
-/** Background roles. See TONES for why this is an array, not a bare union. */
-export const SURFACES = ["canvas", "surface", "raised", "hover", "active", "track"] as const;
 export type Surface = (typeof SURFACES)[number];
-
-/** Border roles. See TONES for why this is an array, not a bare union. */
-export const BORDER_TONES = ["default", "strong", "accent"] as const;
 export type BorderTone = (typeof BORDER_TONES)[number];
 
 export type SpaceStep = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;

@@ -3,9 +3,11 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
-  border, BORDER_TONES, contrast, duration, space, surface, SURFACES, text,
-  themeMeetsAA, tone, TONES, track, WCAG,
+  border, contrast, duration, space, surface, text,
+  themeMeetsAA, tone, track, WCAG,
 } from "./index.js";
+// Internal, deliberately not re-exported from index.js — see roles.ts.
+import { BORDER_TONES, SURFACES, TONES } from "./roles.js";
 
 describe("accessor functions", () => {
   it("build the expected custom-property reference", () => {
@@ -44,7 +46,7 @@ describe("themeMeetsAA", () => {
 });
 
 describe("typed unions stay in sync with tokens.json", () => {
-  // Tone, Surface and BorderTone are hand-written (see index.ts's module
+  // Tone, Surface and BorderTone are hand-written (see roles.ts's module
   // comment on why), not generated from tokens.json the way tokens.css and
   // contrast.gen.ts are. That leaves one way for them to drift silently: a
   // semantic role added to the JSON with nobody remembering to add the
