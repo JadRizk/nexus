@@ -209,6 +209,37 @@ test.describe("claims axe cannot make", () => {
     expect(ring.offset).not.toBe("");
   });
 
+  test("Slider relocates the focus ring to the thumb (WCAG 2.4.7 exception)", async ({ page }) => {
+    // The Slider removes the outline from the input and applies it to the
+    // thumb via :focus-visible::-webkit-slider-thumb and
+    // :focus-visible::-moz-range-thumb. When focused, the input itself has
+    // outline: none (Slider.css:32), and the visual ring appears on the thumb.
+    // This test verifies the input does not have an outline when focused.
+    await gotoPage(page, "primitives");
+    const slider = page.locator(".nx-slider").first();
+    await expect(slider).toBeAttached();
+    await slider.focus();
+    await expect(slider).toBeFocused();
+    const outline = await slider.evaluate((el) => getComputedStyle(el).outline);
+    expect(outline).toBe("none");
+  });
+
+  test("CommandPalette deliberately suppresses the focus ring on the input (WCAG 2.4.7 exception)", async ({ page }) => {
+    // The CommandPalette input suppresses the global focus ring with
+    // outline: none in :focus-visible (CommandPalette.css:61-62). This is
+    // deliberate: the ARIA combobox pattern keeps focus on this input for
+    // the entire life of the palette, so a permanently lit ring would
+    // distinguish nothing. The panel appearing is the indicator.
+    await gotoPage(page, "overlays");
+    await page.getByRole("button", { name: "Open palette" }).click();
+    const input = page.getByRole("combobox");
+    await expect(input).toBeAttached();
+    await input.focus();
+    await expect(input).toBeFocused();
+    const outline = await input.evaluate((el) => getComputedStyle(el).outline);
+    expect(outline).toBe("none");
+  });
+
   test("prefers-reduced-motion collapses animation, including the blink", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await gotoPage(page, "primitives");
