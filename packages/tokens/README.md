@@ -100,8 +100,11 @@ restraint is what makes it read as a warning.
 
 ## Design tools
 
-`tokens.json` is exported in [W3C DTCG](https://tr.designtokens.org/format/)
-format and is importable by Style Dictionary v4+ and Figma Tokens Studio:
+`tokens.json` is written in [W3C DTCG](https://tr.designtokens.org/format/)
+shape (`$value`/`$type`/`$description`), but values are CSS strings (hex
+colours, `rem`/`ms` dimensions, `cubic-bezier()`) rather than the newer
+structured DTCG value shapes — so treat it as DTCG-flavoured rather than a
+strict DTCG document a tool is guaranteed to import unchanged:
 
 ```ts
 import tokens from "@nexus-cyberdeck/tokens/tokens.json";

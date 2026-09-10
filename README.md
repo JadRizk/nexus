@@ -77,7 +77,7 @@ on any element and the custom properties cascade.
 
 - [Getting started](docs/getting-started.md): zero to a themed console, verified against a real install.
 - [Component reference](packages/react/README.md): every component, the colour props, the accessibility guarantees.
-- [Tokens reference](packages/tokens/README.md): every custom property, the typed accessors, DTCG import into Figma or Style Dictionary.
+- [Tokens reference](packages/tokens/README.md): every custom property, the typed accessors, the DTCG-shaped source file.
 - [Graph reference](packages/graph/README.md): data model, props, controller.
 - [STYLING.md](packages/react/STYLING.md): the rule behind the component-token layer and the specificity trap it avoids.
 - The showcase (`npm run dev`) renders every component with a rationale note, an accessibility note and a code sample, plus the graph and a shader lab.
