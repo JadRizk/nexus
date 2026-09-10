@@ -794,8 +794,8 @@ const NX_CSS = `/* =============================================================
   --nx-fg-cat-lime:    var(--nx-lime);                   /* Categorical slot — carries no status meaning */
   --nx-fg-cat-violet:  var(--nx-violet);                 /* Categorical slot */
 
-  --nx-border-default:  var(--nx-grey-100);
-  --nx-border-strong:   var(--nx-grey-200);
+  --nx-border-default:  var(--nx-grey-100);              /* Decorative hairline */
+  --nx-border-strong:   var(--nx-grey-200);              /* UI boundary */
   --nx-border-accent:   var(--nx-fg-accent);
 
   --nx-split-r:  rgba(255, 46, 99, 0.33);
@@ -813,8 +813,8 @@ const NX_CSS = `/* =============================================================
 :root,
 [data-nx-theme="hud-aa"] {
   --nx-grey-100:    #2F382B;                             /* 1.61:1  Decorative hairline only */
-  --nx-grey-200:    #53624B;                             /* 3.01:1  UI boundary — target 3.0 for WCAG 1.4.11 */
-  --nx-grey-300:    #6B7F61;                             /* 4.52:1  Disabled text — target 4.5 for WCAG 1.4.3 */
+  --nx-grey-200:    #57664F;                             /* 3.19:1  UI boundary — target 3.0 for WCAG 1.4.11, on the raised surface */
+  --nx-grey-300:    #6F8465;                             /* 4.82:1  Disabled text — target 4.5 for WCAG 1.4.3, on the raised surface */
   --nx-grey-400:    #788E6D;                             /* 5.50:1 */
   --nx-grey-500:    #8DA084;                             /* 7.00:1  Target 7.0 — AAA body text */
   --nx-grey-600:    #B0BDA9;                             /* 10.00:1  Target 10.0 */
