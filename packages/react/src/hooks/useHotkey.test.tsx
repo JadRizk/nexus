@@ -70,4 +70,76 @@ describe("useHotkey", () => {
     fireEvent.keyDown(window, { key: "/" });
     expect(handler).toHaveBeenCalledOnce();
   });
+
+  it("fires ctrl+k on ctrlKey specifically, and stays reachable from a focused field", () => {
+    const handler = vi.fn();
+    function Harness() {
+      useHotkey("ctrl+k", handler);
+      return <input data-testid="field" />;
+    }
+    render(<Harness />);
+    const field = screen.getByTestId("field");
+    field.focus();
+    fireEvent.keyDown(field, { key: "k", ctrlKey: true });
+    expect(handler).toHaveBeenCalledOnce();
+  });
+
+  it("does not fire ctrl+k for metaKey alone, unlike mod", () => {
+    const handler = vi.fn();
+    function Harness() {
+      useHotkey("ctrl+k", handler);
+      return null;
+    }
+    render(<Harness />);
+    fireEvent.keyDown(window, { key: "k", metaKey: true });
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it("fires alt+k on altKey, and stays reachable from a focused field", () => {
+    const handler = vi.fn();
+    function Harness() {
+      useHotkey("alt+k", handler);
+      return <input data-testid="field" />;
+    }
+    render(<Harness />);
+    const field = screen.getByTestId("field");
+    field.focus();
+    fireEvent.keyDown(field, { key: "k", altKey: true });
+    expect(handler).toHaveBeenCalledOnce();
+  });
+
+  it("fires meta+k on metaKey specifically, and stays reachable from a focused field", () => {
+    const handler = vi.fn();
+    function Harness() {
+      useHotkey("meta+k", handler);
+      return <input data-testid="field" />;
+    }
+    render(<Harness />);
+    const field = screen.getByTestId("field");
+    field.focus();
+    fireEvent.keyDown(field, { key: "k", metaKey: true });
+    expect(handler).toHaveBeenCalledOnce();
+  });
+
+  it("does not fire meta+k for ctrlKey alone, unlike mod", () => {
+    const handler = vi.fn();
+    function Harness() {
+      useHotkey("meta+k", handler);
+      return null;
+    }
+    render(<Harness />);
+    fireEvent.keyDown(window, { key: "k", ctrlKey: true });
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it("throws on an unrecognised combo part", () => {
+    function Harness() {
+      useHotkey("ctrl+foo+k", () => {});
+      return null;
+    }
+    // Swallow the (expected) React error-boundary console noise for this render.
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(() => render(<Harness />)).toThrow(/unrecognised combo part "foo"/);
+    spy.mockRestore();
+  });
 });
