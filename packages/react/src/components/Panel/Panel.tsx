@@ -10,7 +10,12 @@ export interface PanelProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 export function Panel({
-  corners = ["tl", "br"], padded = true, raised = false, className = "", children, ...rest
+  corners = ["tl", "br"],
+  padded = true,
+  raised = false,
+  className = "",
+  children,
+  ...rest
 }: PanelProps) {
   return (
     <div

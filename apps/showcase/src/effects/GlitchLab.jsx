@@ -1,6 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Panel, Button, TabStrip, Slider, ToggleRow, SectionHeading, HazardRule, Wordmark,
+  Panel,
+  Button,
+  TabStrip,
+  Slider,
+  ToggleRow,
+  SectionHeading,
+  HazardRule,
+  Wordmark,
 } from "@nexus-cyberdeck/react";
 
 /* ============================================================================
@@ -158,9 +165,14 @@ float luma(vec3 c){ return dot(c, vec3(0.299,0.587,0.114)); }
 const EFFECTS = [
   /* -------------------------------------------------------------- TAPE -- */
   {
-    id: "dropout", group: "TAPE", label: "TAPE DROPOUT",
+    id: "dropout",
+    group: "TAPE",
+    label: "TAPE DROPOUT",
     note: "Short bright dashes where the head loses contact with the oxide. Real dropout is horizontal, one to three scanlines tall, and biased white because the AGC over-corrects for the missing signal.",
-    params: [["rate", 0, 1, 0.35], ["len", 0.005, 0.12, 0.04]],
+    params: [
+      ["rate", 0, 1, 0.35],
+      ["len", 0.005, 0.12, 0.04],
+    ],
     frag: `${COMMON}
 uniform float u_rate, u_len;
 void main(){
@@ -181,9 +193,15 @@ void main(){
 }`,
   },
   {
-    id: "tracking", group: "TAPE", label: "TRACKING BAND",
+    id: "tracking",
+    group: "TAPE",
+    label: "TRACKING BAND",
     note: "Azimuth misalignment: a band of the tape reads at the wrong angle, so it loses high-frequency detail and shifts horizontally. The band drifts vertically because the error is periodic with head rotation.",
-    params: [["height", 0.02, 0.4, 0.12], ["shift", 0, 0.15, 0.04], ["speed", -1, 1, 0.18]],
+    params: [
+      ["height", 0.02, 0.4, 0.12],
+      ["shift", 0, 0.15, 0.04],
+      ["speed", -1, 1, 0.18],
+    ],
     frag: `${COMMON}
 uniform float u_height, u_shift, u_speed;
 void main(){
@@ -205,9 +223,14 @@ void main(){
 }`,
   },
   {
-    id: "headswitch", group: "TAPE", label: "HEAD SWITCH",
+    id: "headswitch",
+    group: "TAPE",
+    label: "HEAD SWITCH",
     note: "The signature VHS tell. The video head physically swaps mid-field, so the bottom ~6 scanlines of EVERY frame are displaced and noisy. It is a constant, not a random glitch — which is exactly why it reads as tape rather than as an effect.",
-    params: [["lines", 2, 24, 7], ["skew", 0, 0.2, 0.06]],
+    params: [
+      ["lines", 2, 24, 7],
+      ["skew", 0, 0.2, 0.06],
+    ],
     frag: `${COMMON}
 uniform float u_lines, u_skew;
 void main(){
@@ -229,9 +252,14 @@ void main(){
 
   /* ---------------------------------------------------------- COMPOSITE -- */
   {
-    id: "chroma", group: "SIGNAL", label: "CHROMA BLEED",
+    id: "chroma",
+    group: "SIGNAL",
+    label: "CHROMA BLEED",
     note: "NTSC gives chroma roughly a third of luma's bandwidth, so colour smears horizontally while detail stays sharp. Done properly: convert to YIQ, blur only I and Q, convert back. Blurring RGB instead just looks out of focus.",
-    params: [["width", 0, 24, 9], ["lag", -6, 12, 4]],
+    params: [
+      ["width", 0, 24, 9],
+      ["lag", -6, 12, 4],
+    ],
     frag: `${COMMON}
 uniform float u_width, u_lag;
 const mat3 RGB2YIQ = mat3(0.299,0.596,0.211, 0.587,-0.274,-0.523, 0.114,-0.322,0.312);
@@ -251,9 +279,14 @@ void main(){
 }`,
   },
   {
-    id: "dotcrawl", group: "SIGNAL", label: "DOT CRAWL",
+    id: "dotcrawl",
+    group: "SIGNAL",
+    label: "DOT CRAWL",
     note: "The checkerboard shimmer along colour edges. The chroma subcarrier gets misread as luma, and it CRAWLS because subcarrier phase inverts every frame. Gate it on chroma gradient — dot crawl on a flat area is a bug, not an artifact.",
-    params: [["freq", 40, 400, 180], ["gain", 0, 1, 0.45]],
+    params: [
+      ["freq", 40, 400, 180],
+      ["gain", 0, 1, 0.45],
+    ],
     frag: `${COMMON}
 uniform float u_freq, u_gain;
 void main(){
@@ -269,9 +302,14 @@ void main(){
 }`,
   },
   {
-    id: "ghost", group: "SIGNAL", label: "MULTIPATH GHOST",
+    id: "ghost",
+    group: "SIGNAL",
+    label: "MULTIPATH GHOST",
     note: "An antenna receives the signal twice — once direct, once bounced off a building — and the reflection arrives late, so it lands to the RIGHT of the original, attenuated. Two taps read as a city; one reads as a mistake.",
-    params: [["delay", 0.002, 0.12, 0.028], ["decay", 0, 1, 0.45]],
+    params: [
+      ["delay", 0.002, 0.12, 0.028],
+      ["decay", 0, 1, 0.45],
+    ],
     frag: `${COMMON}
 uniform float u_delay, u_decay;
 void main(){
@@ -283,9 +321,14 @@ void main(){
 }`,
   },
   {
-    id: "jitter", group: "SIGNAL", label: "SYNC JITTER",
+    id: "jitter",
+    group: "SIGNAL",
+    label: "SYNC JITTER",
     note: "Unstable horizontal sync: each scanline starts a fraction early or late, so vertical edges go ragged. Correlate the noise slightly down the frame or it looks like static rather than a timing fault.",
-    params: [["amp", 0, 0.05, 0.006], ["rate", 1, 90, 26]],
+    params: [
+      ["amp", 0, 0.05, 0.006],
+      ["rate", 1, 90, 26],
+    ],
     frag: `${COMMON}
 uniform float u_amp, u_rate;
 void main(){
@@ -300,9 +343,15 @@ void main(){
 
   /* ------------------------------------------------------------ DIGITAL -- */
   {
-    id: "blocks", group: "DIGITAL", label: "DATAMOSH",
+    id: "blocks",
+    group: "DIGITAL",
+    label: "DATAMOSH",
     note: "Corrupted motion vectors: macroblocks get told to copy from the wrong place. Snap displacement to the block grid — smooth offsets look like a warp, and codecs do not warp.",
-    params: [["size", 4, 96, 26], ["rate", 0, 1, 0.18], ["push", 0, 0.4, 0.09]],
+    params: [
+      ["size", 4, 96, 26],
+      ["rate", 0, 1, 0.18],
+      ["push", 0, 0.4, 0.09],
+    ],
     frag: `${COMMON}
 uniform float u_size, u_rate, u_push;
 void main(){
@@ -324,9 +373,14 @@ void main(){
 }`,
   },
   {
-    id: "crush", group: "DIGITAL", label: "BITCRUSH",
+    id: "crush",
+    group: "DIGITAL",
+    label: "BITCRUSH",
     note: "Posterise with a 4×4 Bayer matrix rather than rounding. Ordered dithering is what makes low bit depth read as a limited display instead of as a broken gradient — the same reason it looked right on a Game Boy.",
-    params: [["bits", 1, 8, 3], ["dither", 0, 1, 0.8]],
+    params: [
+      ["bits", 1, 8, 3],
+      ["dither", 0, 1, 0.8],
+    ],
     frag: `${COMMON}
 uniform float u_bits, u_dither;
 float bayer(vec2 p){
@@ -350,9 +404,14 @@ void main(){
 }`,
   },
   {
-    id: "streak", group: "DIGITAL", label: "LUMA STREAK",
+    id: "streak",
+    group: "DIGITAL",
+    label: "LUMA STREAK",
     note: "Bright pixels drag horizontally until something brighter interrupts them. A cheap cousin of pixel sorting — a true sort needs a full row in registers, which a fragment shader does not have, but the read is close and it costs one march.",
-    params: [["thresh", 0, 1, 0.55], ["reach", 4, 160, 60]],
+    params: [
+      ["thresh", 0, 1, 0.55],
+      ["reach", 4, 160, 60],
+    ],
     frag: `${COMMON}
 uniform float u_thresh, u_reach;
 void main(){
@@ -373,7 +432,9 @@ void main(){
 
   /* ------------------------------------------------------------ DISPLAY -- */
   {
-    id: "interlace", group: "DISPLAY", label: "INTERLACE COMB",
+    id: "interlace",
+    group: "DISPLAY",
+    label: "INTERLACE COMB",
     note: "Two fields captured 1/60s apart and woven together, so anything moving grows comb teeth. Offsetting odd lines in time — not just in space — is what separates this from a scanline overlay.",
     params: [["offset", 0, 0.04, 0.008]],
     frag: `${COMMON}
@@ -386,9 +447,14 @@ void main(){
 }`,
   },
   {
-    id: "roll", group: "DISPLAY", label: "VERTICAL ROLL",
+    id: "roll",
+    group: "DISPLAY",
+    label: "VERTICAL ROLL",
     note: "Vertical sync lost: the picture slides and the blanking interval becomes visible as a dark bar. The bar is the important part — a roll without it is just a scroll.",
-    params: [["speed", -1.5, 1.5, 0.22], ["bar", 0, 0.2, 0.05]],
+    params: [
+      ["speed", -1.5, 1.5, 0.22],
+      ["bar", 0, 0.2, 0.05],
+    ],
     frag: `${COMMON}
 uniform float u_speed, u_bar;
 void main(){
@@ -404,9 +470,15 @@ void main(){
 }`,
   },
   {
-    id: "holo", group: "DISPLAY", label: "HOLOGRAM",
+    id: "holo",
+    group: "DISPLAY",
+    label: "HOLOGRAM",
     note: "Not an analogue artifact — a synthetic one. Horizontal scan bands travelling upward, a brightness flicker, and an edge lift that fakes Fresnel. The travelling direction matters: downward reads as a screen, upward reads as a projection.",
-    params: [["bands", 40, 500, 160], ["lift", 0, 2, 0.7], ["flicker", 0, 1, 0.3]],
+    params: [
+      ["bands", 40, 500, 160],
+      ["lift", 0, 2, 0.7],
+      ["flicker", 0, 1, 0.3],
+    ],
     frag: `${COMMON}
 uniform float u_bands, u_lift, u_flicker;
 void main(){
@@ -425,9 +497,15 @@ void main(){
 }`,
   },
   {
-    id: "feedback", group: "DISPLAY", label: "FEEDBACK TUNNEL",
+    id: "feedback",
+    group: "DISPLAY",
+    label: "FEEDBACK TUNNEL",
     note: "A camera pointed at its own monitor. Each frame is composited with a scaled and rotated copy of the last, so detail spirals inward forever. Keep decay under ~0.9 or it saturates to white in about a second.",
-    params: [["zoom", 0.9, 1.1, 1.012], ["rot", -0.05, 0.05, 0.004], ["decay", 0, 0.95, 0.72]],
+    params: [
+      ["zoom", 0.9, 1.1, 1.012],
+      ["rot", -0.05, 0.05, 0.004],
+      ["decay", 0, 0.95, 0.72],
+    ],
     extra: ["uPrev"],
     frag: `${COMMON}
 uniform sampler2D uPrev;
@@ -445,9 +523,16 @@ void main(){
 
   /* -------------------------------------------------------------- GLASS -- */
   {
-    id: "crt", group: "GLASS", label: "CRT COMPOSITE",
+    id: "crt",
+    group: "GLASS",
+    label: "CRT COMPOSITE",
     note: "The tube itself: barrel curvature with a hard black beyond the edge, chromatic aberration scaling toward the corners, scanlines, an RGB aperture grille on a 3px cycle, a rolling refresh bar, grain and vignette.",
-    params: [["curve", 0, 1.6, 0.5], ["scan", 0, 1, 0.5], ["aberr", 0, 4, 1.0], ["grain", 0, 1.5, 0.4]],
+    params: [
+      ["curve", 0, 1.6, 0.5],
+      ["scan", 0, 1, 0.5],
+      ["aberr", 0, 4, 1.0],
+      ["grain", 0, 1.5, 0.4],
+    ],
     frag: `${COMMON}
 uniform float u_curve, u_scan, u_aberr, u_grain;
 void main(){
@@ -507,102 +592,608 @@ void main(){
 
 const EVENTS = [
   {
-    id: "dropout", label: "DROPOUT", key: "1", dur: 0.22, chaos: 0.35,
-    cause: "A flaw in the oxide passes under the head. Signal is gone for a few scanlines, the AGC over-corrects, and colour drops out before luma does.",
+    id: "dropout",
+    label: "DROPOUT",
+    key: "1",
+    dur: 0.22,
+    chaos: 0.35,
+    cause:
+      "A flaw in the oxide passes under the head. Signal is gone for a few scanlines, the AGC over-corrects, and colour drops out before luma does.",
     tracks: [
-      { fx: "dropout", param: "amt", mode: "max", keys: [[0, 0], [0.03, 1, "step"], [0.55, 0.7], [1, 0]] },
-      { fx: "dropout", param: "rate", mode: "set", keys: [[0, 0.9], [1, 0.5]] },
-      { fx: "tracking", param: "amt", mode: "max", keys: [[0, 0], [0.10, 0.8], [0.7, 0.2], [1, 0]] },
+      {
+        fx: "dropout",
+        param: "amt",
+        mode: "max",
+        keys: [
+          [0, 0],
+          [0.03, 1, "step"],
+          [0.55, 0.7],
+          [1, 0],
+        ],
+      },
+      {
+        fx: "dropout",
+        param: "rate",
+        mode: "set",
+        keys: [
+          [0, 0.9],
+          [1, 0.5],
+        ],
+      },
+      {
+        fx: "tracking",
+        param: "amt",
+        mode: "max",
+        keys: [
+          [0, 0],
+          [0.1, 0.8],
+          [0.7, 0.2],
+          [1, 0],
+        ],
+      },
       // chroma dies before luma — colour loss is the tell
-      { fx: "chroma", param: "amt", mode: "max", keys: [[0, 0], [0.06, 1, "step"], [0.8, 0.4], [1, 0]] },
-      { fx: "chroma", param: "width", mode: "set", keys: [[0, 22], [1, 9]] },
+      {
+        fx: "chroma",
+        param: "amt",
+        mode: "max",
+        keys: [
+          [0, 0],
+          [0.06, 1, "step"],
+          [0.8, 0.4],
+          [1, 0],
+        ],
+      },
+      {
+        fx: "chroma",
+        param: "width",
+        mode: "set",
+        keys: [
+          [0, 22],
+          [1, 9],
+        ],
+      },
     ],
   },
   {
-    id: "signal", label: "SIGNAL LOSS", key: "2", dur: 0.95, chaos: 0.5,
-    cause: "The antenna gets knocked. Vertical sync goes first, the picture rolls, multipath ghosting doubles up, and it wobbles back rather than snapping back.",
+    id: "signal",
+    label: "SIGNAL LOSS",
+    key: "2",
+    dur: 0.95,
+    chaos: 0.5,
+    cause:
+      "The antenna gets knocked. Vertical sync goes first, the picture rolls, multipath ghosting doubles up, and it wobbles back rather than snapping back.",
     tracks: [
-      { fx: "roll", param: "amt", mode: "max", keys: [[0, 0], [0.04, 1], [0.45, 0.9], [0.75, 0.35], [1, 0]] },
-      { fx: "roll", param: "speed", mode: "set", keys: [[0, 1.3], [0.5, 0.6], [1, 0.1]] },
-      { fx: "jitter", param: "amt", mode: "max", keys: [[0, 0], [0.02, 1], [0.6, 0.55], [1, 0]] },
-      { fx: "jitter", param: "amp", mode: "set", keys: [[0, 0.03], [1, 0.004]] },
+      {
+        fx: "roll",
+        param: "amt",
+        mode: "max",
+        keys: [
+          [0, 0],
+          [0.04, 1],
+          [0.45, 0.9],
+          [0.75, 0.35],
+          [1, 0],
+        ],
+      },
+      {
+        fx: "roll",
+        param: "speed",
+        mode: "set",
+        keys: [
+          [0, 1.3],
+          [0.5, 0.6],
+          [1, 0.1],
+        ],
+      },
+      {
+        fx: "jitter",
+        param: "amt",
+        mode: "max",
+        keys: [
+          [0, 0],
+          [0.02, 1],
+          [0.6, 0.55],
+          [1, 0],
+        ],
+      },
+      {
+        fx: "jitter",
+        param: "amp",
+        mode: "set",
+        keys: [
+          [0, 0.03],
+          [1, 0.004],
+        ],
+      },
       // ghost arrives late — offset from the sync failure, not simultaneous
-      { fx: "ghost", param: "amt", mode: "max", keys: [[0, 0], [0.12, 0], [0.20, 0.9], [0.85, 0.3], [1, 0]] },
-      { fx: "crt", param: "grain", mode: "add", keys: [[0, 0], [0.1, 0.9], [0.7, 0.35], [1, 0]] },
+      {
+        fx: "ghost",
+        param: "amt",
+        mode: "max",
+        keys: [
+          [0, 0],
+          [0.12, 0],
+          [0.2, 0.9],
+          [0.85, 0.3],
+          [1, 0],
+        ],
+      },
+      {
+        fx: "crt",
+        param: "grain",
+        mode: "add",
+        keys: [
+          [0, 0],
+          [0.1, 0.9],
+          [0.7, 0.35],
+          [1, 0],
+        ],
+      },
     ],
   },
   {
-    id: "corrupt", label: "DATA CORRUPT", key: "3", dur: 0.38, chaos: 0.2,
-    cause: "Packet loss. Motion vectors point at garbage, so macroblocks copy from the wrong place and hold there until the next keyframe. Everything steps — codecs quantise, they do not ease.",
+    id: "corrupt",
+    label: "DATA CORRUPT",
+    key: "3",
+    dur: 0.38,
+    chaos: 0.2,
+    cause:
+      "Packet loss. Motion vectors point at garbage, so macroblocks copy from the wrong place and hold there until the next keyframe. Everything steps — codecs quantise, they do not ease.",
     tracks: [
-      { fx: "blocks", param: "amt", mode: "max", keys: [[0, 0], [0.02, 1, "step"], [0.45, 1, "step"], [0.75, 0.6, "step"], [1, 0, "step"]] },
-      { fx: "blocks", param: "rate", mode: "set", keys: [[0, 0.7], [0.5, 0.45, "step"], [1, 0.2, "step"]] },
-      { fx: "blocks", param: "push", mode: "set", keys: [[0, 0.26], [1, 0.08, "step"]] },
-      { fx: "streak", param: "amt", mode: "max", keys: [[0, 0], [0.14, 0.8, "step"], [0.7, 0.4, "step"], [1, 0, "step"]] },
-      { fx: "crush", param: "amt", mode: "max", keys: [[0, 0], [0.08, 0.9, "step"], [0.6, 0.5, "step"], [1, 0, "step"]] },
-      { fx: "crush", param: "bits", mode: "set", keys: [[0, 2], [1, 5, "step"]] },
+      {
+        fx: "blocks",
+        param: "amt",
+        mode: "max",
+        keys: [
+          [0, 0],
+          [0.02, 1, "step"],
+          [0.45, 1, "step"],
+          [0.75, 0.6, "step"],
+          [1, 0, "step"],
+        ],
+      },
+      {
+        fx: "blocks",
+        param: "rate",
+        mode: "set",
+        keys: [
+          [0, 0.7],
+          [0.5, 0.45, "step"],
+          [1, 0.2, "step"],
+        ],
+      },
+      {
+        fx: "blocks",
+        param: "push",
+        mode: "set",
+        keys: [
+          [0, 0.26],
+          [1, 0.08, "step"],
+        ],
+      },
+      {
+        fx: "streak",
+        param: "amt",
+        mode: "max",
+        keys: [
+          [0, 0],
+          [0.14, 0.8, "step"],
+          [0.7, 0.4, "step"],
+          [1, 0, "step"],
+        ],
+      },
+      {
+        fx: "crush",
+        param: "amt",
+        mode: "max",
+        keys: [
+          [0, 0],
+          [0.08, 0.9, "step"],
+          [0.6, 0.5, "step"],
+          [1, 0, "step"],
+        ],
+      },
+      {
+        fx: "crush",
+        param: "bits",
+        mode: "set",
+        keys: [
+          [0, 2],
+          [1, 5, "step"],
+        ],
+      },
     ],
   },
   {
-    id: "crash", label: "HEAD CRASH", key: "4", dur: 0.55, chaos: 0.8,
-    cause: "Mechanical failure. Everything at once, with the head-switch region swelling from six scanlines to most of the frame. The chaos term is high, so it stutters rather than fades.",
+    id: "crash",
+    label: "HEAD CRASH",
+    key: "4",
+    dur: 0.55,
+    chaos: 0.8,
+    cause:
+      "Mechanical failure. Everything at once, with the head-switch region swelling from six scanlines to most of the frame. The chaos term is high, so it stutters rather than fades.",
     tracks: [
-      { fx: "headswitch", param: "amt", mode: "max", keys: [[0, 0], [0.02, 1, "step"], [0.6, 0.8], [1, 0]] },
-      { fx: "headswitch", param: "lines", mode: "set", keys: [[0, 90], [0.5, 40], [1, 7]] },
-      { fx: "headswitch", param: "skew", mode: "set", keys: [[0, 0.18], [1, 0.06]] },
-      { fx: "tracking", param: "amt", mode: "max", keys: [[0, 0], [0.05, 1], [0.7, 0.5], [1, 0]] },
-      { fx: "tracking", param: "shift", mode: "set", keys: [[0, 0.13], [1, 0.04]] },
-      { fx: "jitter", param: "amt", mode: "max", keys: [[0, 0], [0.03, 1], [0.8, 0.4], [1, 0]] },
-      { fx: "dropout", param: "amt", mode: "max", keys: [[0, 0], [0.06, 1], [0.75, 0.5], [1, 0]] },
-      { fx: "blocks", param: "amt", mode: "max", keys: [[0, 0], [0.10, 0.7, "step"], [0.6, 0.3, "step"], [1, 0, "step"]] },
+      {
+        fx: "headswitch",
+        param: "amt",
+        mode: "max",
+        keys: [
+          [0, 0],
+          [0.02, 1, "step"],
+          [0.6, 0.8],
+          [1, 0],
+        ],
+      },
+      {
+        fx: "headswitch",
+        param: "lines",
+        mode: "set",
+        keys: [
+          [0, 90],
+          [0.5, 40],
+          [1, 7],
+        ],
+      },
+      {
+        fx: "headswitch",
+        param: "skew",
+        mode: "set",
+        keys: [
+          [0, 0.18],
+          [1, 0.06],
+        ],
+      },
+      {
+        fx: "tracking",
+        param: "amt",
+        mode: "max",
+        keys: [
+          [0, 0],
+          [0.05, 1],
+          [0.7, 0.5],
+          [1, 0],
+        ],
+      },
+      {
+        fx: "tracking",
+        param: "shift",
+        mode: "set",
+        keys: [
+          [0, 0.13],
+          [1, 0.04],
+        ],
+      },
+      {
+        fx: "jitter",
+        param: "amt",
+        mode: "max",
+        keys: [
+          [0, 0],
+          [0.03, 1],
+          [0.8, 0.4],
+          [1, 0],
+        ],
+      },
+      {
+        fx: "dropout",
+        param: "amt",
+        mode: "max",
+        keys: [
+          [0, 0],
+          [0.06, 1],
+          [0.75, 0.5],
+          [1, 0],
+        ],
+      },
+      {
+        fx: "blocks",
+        param: "amt",
+        mode: "max",
+        keys: [
+          [0, 0],
+          [0.1, 0.7, "step"],
+          [0.6, 0.3, "step"],
+          [1, 0, "step"],
+        ],
+      },
     ],
   },
   {
-    id: "degauss", label: "DEGAUSS", key: "5", dur: 1.2, chaos: 0.05,
-    cause: "The degauss coil fires on power-up. Purely smooth — a magnetic field settling, not a signal failing. No chaos, no stepping, sine decay.",
+    id: "degauss",
+    label: "DEGAUSS",
+    key: "5",
+    dur: 1.2,
+    chaos: 0.05,
+    cause:
+      "The degauss coil fires on power-up. Purely smooth — a magnetic field settling, not a signal failing. No chaos, no stepping, sine decay.",
     tracks: [
-      { fx: "chroma", param: "amt", mode: "max", keys: [[0, 0], [0.06, 1], [0.5, 0.6], [1, 0]] },
-      { fx: "chroma", param: "width", mode: "set", keys: [[0, 24], [0.5, 14], [1, 9]] },
-      { fx: "chroma", param: "lag", mode: "set", keys: [[0, 11], [0.4, -5], [0.7, 6], [1, 4]] },
-      { fx: "crt", param: "aberr", mode: "add", keys: [[0, 0], [0.08, 3.2], [0.4, 1.2], [0.65, 2.0], [1, 0]] },
-      { fx: "crt", param: "curve", mode: "add", keys: [[0, 0], [0.12, 0.5], [0.5, 0.15], [1, 0]] },
-      { fx: "holo", param: "amt", mode: "max", keys: [[0, 0], [0.15, 0.35], [0.6, 0.15], [1, 0]] },
+      {
+        fx: "chroma",
+        param: "amt",
+        mode: "max",
+        keys: [
+          [0, 0],
+          [0.06, 1],
+          [0.5, 0.6],
+          [1, 0],
+        ],
+      },
+      {
+        fx: "chroma",
+        param: "width",
+        mode: "set",
+        keys: [
+          [0, 24],
+          [0.5, 14],
+          [1, 9],
+        ],
+      },
+      {
+        fx: "chroma",
+        param: "lag",
+        mode: "set",
+        keys: [
+          [0, 11],
+          [0.4, -5],
+          [0.7, 6],
+          [1, 4],
+        ],
+      },
+      {
+        fx: "crt",
+        param: "aberr",
+        mode: "add",
+        keys: [
+          [0, 0],
+          [0.08, 3.2],
+          [0.4, 1.2],
+          [0.65, 2.0],
+          [1, 0],
+        ],
+      },
+      {
+        fx: "crt",
+        param: "curve",
+        mode: "add",
+        keys: [
+          [0, 0],
+          [0.12, 0.5],
+          [0.5, 0.15],
+          [1, 0],
+        ],
+      },
+      {
+        fx: "holo",
+        param: "amt",
+        mode: "max",
+        keys: [
+          [0, 0],
+          [0.15, 0.35],
+          [0.6, 0.15],
+          [1, 0],
+        ],
+      },
     ],
   },
   {
-    id: "scrub", label: "SCRUB", key: "6", dur: 0.7, chaos: 0.3,
-    cause: "Shuttle search. The tape moves faster than playback speed, so the tracking band sweeps through rapidly and the head-switch point wanders up the frame.",
+    id: "scrub",
+    label: "SCRUB",
+    key: "6",
+    dur: 0.7,
+    chaos: 0.3,
+    cause:
+      "Shuttle search. The tape moves faster than playback speed, so the tracking band sweeps through rapidly and the head-switch point wanders up the frame.",
     tracks: [
-      { fx: "tracking", param: "amt", mode: "max", keys: [[0, 0], [0.05, 1], [0.85, 0.9], [1, 0]] },
-      { fx: "tracking", param: "speed", mode: "set", keys: [[0, 1.4], [0.6, 0.9], [1, 0.18]] },
-      { fx: "tracking", param: "height", mode: "set", keys: [[0, 0.30], [1, 0.12]] },
-      { fx: "headswitch", param: "amt", mode: "max", keys: [[0, 0], [0.08, 0.9], [0.85, 0.5], [1, 0]] },
-      { fx: "headswitch", param: "lines", mode: "set", keys: [[0, 26], [1, 7]] },
-      { fx: "interlace", param: "amt", mode: "max", keys: [[0, 0], [0.1, 0.8], [0.9, 0.3], [1, 0]] },
+      {
+        fx: "tracking",
+        param: "amt",
+        mode: "max",
+        keys: [
+          [0, 0],
+          [0.05, 1],
+          [0.85, 0.9],
+          [1, 0],
+        ],
+      },
+      {
+        fx: "tracking",
+        param: "speed",
+        mode: "set",
+        keys: [
+          [0, 1.4],
+          [0.6, 0.9],
+          [1, 0.18],
+        ],
+      },
+      {
+        fx: "tracking",
+        param: "height",
+        mode: "set",
+        keys: [
+          [0, 0.3],
+          [1, 0.12],
+        ],
+      },
+      {
+        fx: "headswitch",
+        param: "amt",
+        mode: "max",
+        keys: [
+          [0, 0],
+          [0.08, 0.9],
+          [0.85, 0.5],
+          [1, 0],
+        ],
+      },
+      {
+        fx: "headswitch",
+        param: "lines",
+        mode: "set",
+        keys: [
+          [0, 26],
+          [1, 7],
+        ],
+      },
+      {
+        fx: "interlace",
+        param: "amt",
+        mode: "max",
+        keys: [
+          [0, 0],
+          [0.1, 0.8],
+          [0.9, 0.3],
+          [1, 0],
+        ],
+      },
     ],
   },
   {
-    id: "interference", label: "INTERFERENCE", key: "7", dur: 2.0, chaos: 0.15,
-    cause: "Something periodic nearby — a motor, a transmitter. Low amplitude, long duration, and it pulses rather than decays. The kind of fault you live with rather than notice.",
+    id: "interference",
+    label: "INTERFERENCE",
+    key: "7",
+    dur: 2.0,
+    chaos: 0.15,
+    cause:
+      "Something periodic nearby — a motor, a transmitter. Low amplitude, long duration, and it pulses rather than decays. The kind of fault you live with rather than notice.",
     tracks: [
-      { fx: "ghost", param: "amt", mode: "max", keys: [[0, 0], [0.1, 0.5], [0.3, 0.15], [0.5, 0.6], [0.7, 0.2], [0.9, 0.4], [1, 0]] },
-      { fx: "ghost", param: "delay", mode: "set", keys: [[0, 0.02], [0.5, 0.06], [1, 0.03]] },
-      { fx: "jitter", param: "amt", mode: "max", keys: [[0, 0], [0.15, 0.35], [0.55, 0.2], [0.8, 0.4], [1, 0]] },
-      { fx: "dotcrawl", param: "amt", mode: "max", keys: [[0, 0], [0.2, 0.8], [1, 0]] },
+      {
+        fx: "ghost",
+        param: "amt",
+        mode: "max",
+        keys: [
+          [0, 0],
+          [0.1, 0.5],
+          [0.3, 0.15],
+          [0.5, 0.6],
+          [0.7, 0.2],
+          [0.9, 0.4],
+          [1, 0],
+        ],
+      },
+      {
+        fx: "ghost",
+        param: "delay",
+        mode: "set",
+        keys: [
+          [0, 0.02],
+          [0.5, 0.06],
+          [1, 0.03],
+        ],
+      },
+      {
+        fx: "jitter",
+        param: "amt",
+        mode: "max",
+        keys: [
+          [0, 0],
+          [0.15, 0.35],
+          [0.55, 0.2],
+          [0.8, 0.4],
+          [1, 0],
+        ],
+      },
+      {
+        fx: "dotcrawl",
+        param: "amt",
+        mode: "max",
+        keys: [
+          [0, 0],
+          [0.2, 0.8],
+          [1, 0],
+        ],
+      },
     ],
   },
   {
-    id: "boot", label: "COLD BOOT", key: "8", dur: 1.5, chaos: 0.25,
-    cause: "Power-on. Sync has not locked yet so the picture rolls, then catches. Useful as a route transition — the screen is genuinely arriving rather than fading in.",
+    id: "boot",
+    label: "COLD BOOT",
+    key: "8",
+    dur: 1.5,
+    chaos: 0.25,
+    cause:
+      "Power-on. Sync has not locked yet so the picture rolls, then catches. Useful as a route transition — the screen is genuinely arriving rather than fading in.",
     tracks: [
-      { fx: "roll", param: "amt", mode: "max", keys: [[0, 1], [0.35, 0.9], [0.6, 0.4], [1, 0]] },
-      { fx: "roll", param: "speed", mode: "set", keys: [[0, 1.5], [0.5, 0.5], [1, 0.05]] },
-      { fx: "roll", param: "bar", mode: "set", keys: [[0, 0.16], [1, 0.04]] },
-      { fx: "crush", param: "amt", mode: "max", keys: [[0, 1], [0.25, 0.6, "step"], [0.5, 0, "step"], [1, 0, "step"]] },
-      { fx: "crush", param: "bits", mode: "set", keys: [[0, 1], [0.4, 4, "step"], [1, 8, "step"]] },
-      { fx: "jitter", param: "amt", mode: "max", keys: [[0, 0.9], [0.4, 0.4], [1, 0]] },
-      { fx: "crt", param: "grain", mode: "add", keys: [[0, 1.0], [0.5, 0.3], [1, 0]] },
-      { fx: "crt", param: "scan", mode: "add", keys: [[0, 0.4], [0.6, 0.1], [1, 0]] },
+      {
+        fx: "roll",
+        param: "amt",
+        mode: "max",
+        keys: [
+          [0, 1],
+          [0.35, 0.9],
+          [0.6, 0.4],
+          [1, 0],
+        ],
+      },
+      {
+        fx: "roll",
+        param: "speed",
+        mode: "set",
+        keys: [
+          [0, 1.5],
+          [0.5, 0.5],
+          [1, 0.05],
+        ],
+      },
+      {
+        fx: "roll",
+        param: "bar",
+        mode: "set",
+        keys: [
+          [0, 0.16],
+          [1, 0.04],
+        ],
+      },
+      {
+        fx: "crush",
+        param: "amt",
+        mode: "max",
+        keys: [
+          [0, 1],
+          [0.25, 0.6, "step"],
+          [0.5, 0, "step"],
+          [1, 0, "step"],
+        ],
+      },
+      {
+        fx: "crush",
+        param: "bits",
+        mode: "set",
+        keys: [
+          [0, 1],
+          [0.4, 4, "step"],
+          [1, 8, "step"],
+        ],
+      },
+      {
+        fx: "jitter",
+        param: "amt",
+        mode: "max",
+        keys: [
+          [0, 0.9],
+          [0.4, 0.4],
+          [1, 0],
+        ],
+      },
+      {
+        fx: "crt",
+        param: "grain",
+        mode: "add",
+        keys: [
+          [0, 1.0],
+          [0.5, 0.3],
+          [1, 0],
+        ],
+      },
+      {
+        fx: "crt",
+        param: "scan",
+        mode: "add",
+        keys: [
+          [0, 0.4],
+          [0.6, 0.1],
+          [1, 0],
+        ],
+      },
     ],
   },
 ];
@@ -611,10 +1202,43 @@ const EVENTS = [
    are what sell it — a second fault landing while the first is still decaying
    reads as a system coming apart, not as two effects. */
 const CHAINS = [
-  { id: "cascade", label: "CASCADE", steps: [[0, "dropout"], [0.12, "corrupt"], [0.34, "signal"]] },
-  { id: "collapse", label: "COLLAPSE", steps: [[0, "corrupt"], [0.08, "crash"], [0.5, "signal"], [1.1, "boot"]] },
-  { id: "wake", label: "WAKE", steps: [[0, "boot"], [0.9, "degauss"]] },
-  { id: "hunt", label: "HUNT", steps: [[0, "scrub"], [0.3, "dropout"], [0.55, "scrub"], [0.9, "interference"]] },
+  {
+    id: "cascade",
+    label: "CASCADE",
+    steps: [
+      [0, "dropout"],
+      [0.12, "corrupt"],
+      [0.34, "signal"],
+    ],
+  },
+  {
+    id: "collapse",
+    label: "COLLAPSE",
+    steps: [
+      [0, "corrupt"],
+      [0.08, "crash"],
+      [0.5, "signal"],
+      [1.1, "boot"],
+    ],
+  },
+  {
+    id: "wake",
+    label: "WAKE",
+    steps: [
+      [0, "boot"],
+      [0.9, "degauss"],
+    ],
+  },
+  {
+    id: "hunt",
+    label: "HUNT",
+    steps: [
+      [0, "scrub"],
+      [0.3, "dropout"],
+      [0.55, "scrub"],
+      [0.9, "interference"],
+    ],
+  },
 ];
 
 const EV_BY_ID = Object.fromEntries(EVENTS.map((e) => [e.id, e]));
@@ -623,7 +1247,8 @@ const EV_BY_ID = Object.fromEntries(EVENTS.map((e) => [e.id, e]));
 export function sampleKeys(keys, u) {
   if (u <= keys[0][0]) return keys[0][1];
   for (let i = 1; i < keys.length; i++) {
-    const k1 = keys[i], k0 = keys[i - 1];
+    const k1 = keys[i],
+      k0 = keys[i - 1];
     if (u <= k1[0]) {
       if (k1[2] === "step") return k0[1];
       const t = (u - k0[0]) / Math.max(1e-6, k1[0] - k0[0]);
@@ -633,7 +1258,10 @@ export function sampleKeys(keys, u) {
   return keys[keys.length - 1][1];
 }
 
-export const hashf = (n) => { const s = Math.sin(n) * 43758.5453123; return s - Math.floor(s); };
+export const hashf = (n) => {
+  const s = Math.sin(n) * 43758.5453123;
+  return s - Math.floor(s);
+};
 
 /**
  * The chaos term. Quantised to ~24Hz so it stutters like frames dropping
@@ -644,7 +1272,7 @@ export function chaosEnv(u, chaos, seed) {
   if (chaos <= 0) return 1;
   const f = Math.floor(u * 24);
   const n = hashf(f * 7.13 + seed * 31.7);
-  const dip = n > 0.72 ? (1 - chaos * (0.35 + 0.65 * hashf(f * 3.1 + seed))) : 1;
+  const dip = n > 0.72 ? 1 - chaos * (0.35 + 0.65 * hashf(f * 3.1 + seed)) : 1;
   return dip;
 }
 /* ------------------------------------------------------------- base presets */
@@ -691,8 +1319,8 @@ const PRESETS = {
    audio is hostile regardless.
    ========================================================================== */
 
-const NTSC_SCAN = 15734;   // horizontal scan frequency — the CRT whine
-const MAINS = 60;          // hum fundamental; use 50 outside the Americas
+const NTSC_SCAN = 15734; // horizontal scan frequency — the CRT whine
+const MAINS = 60; // hum fundamental; use 50 outside the Americas
 
 function createAudio() {
   const AC = window.AudioContext || window.webkitAudioContext;
@@ -722,8 +1350,13 @@ function createAudio() {
   /* ---------------------------------------------------------- primitives */
   function noise(t, dur, o = {}) {
     const {
-      f0 = 2000, f1 = f0, q = 1, type = "bandpass",
-      gain = 0.4, attack = 0.003, curve = "exp",
+      f0 = 2000,
+      f1 = f0,
+      q = 1,
+      type = "bandpass",
+      gain = 0.4,
+      attack = 0.003,
+      curve = "exp",
     } = o;
     const src = ctx.createBufferSource();
     src.buffer = noiseBuf;
@@ -743,17 +1376,23 @@ function createAudio() {
     if (curve === "exp") g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     else g.gain.linearRampToValueAtTime(0.0001, t + dur);
 
-    src.connect(filt); filt.connect(g); g.connect(master);
+    src.connect(filt);
+    filt.connect(g);
+    g.connect(master);
     src.start(t);
     src.stop(t + dur + 0.06);
-    src.onended = () => { try { g.disconnect(); filt.disconnect(); } catch { /* noop */ } };
+    src.onended = () => {
+      try {
+        g.disconnect();
+        filt.disconnect();
+      } catch {
+        /* noop */
+      }
+    };
   }
 
   function tone(t, dur, o = {}) {
-    const {
-      f0 = 200, f1 = f0, type = "sine", gain = 0.25,
-      attack = 0.004, lp = 0, q = 1,
-    } = o;
+    const { f0 = 200, f1 = f0, type = "sine", gain = 0.25, attack = 0.004, lp = 0, q = 1 } = o;
     const osc = ctx.createOscillator();
     osc.type = type;
     osc.frequency.setValueAtTime(Math.max(10, f0), t);
@@ -773,10 +1412,18 @@ function createAudio() {
     g.gain.setValueAtTime(0.0001, t);
     g.gain.linearRampToValueAtTime(gain, t + attack);
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    node.connect(g); g.connect(master);
+    node.connect(g);
+    g.connect(master);
     osc.start(t);
     osc.stop(t + dur + 0.05);
-    osc.onended = () => { try { g.disconnect(); if (filt) filt.disconnect(); } catch { /* noop */ } };
+    osc.onended = () => {
+      try {
+        g.disconnect();
+        if (filt) filt.disconnect();
+      } catch {
+        /* noop */
+      }
+    };
   }
 
   /* -------------------------------------------------- per-event voicing --
@@ -792,9 +1439,16 @@ function createAudio() {
     // Sync failure: the 60Hz field buzz detunes downward, snow swells behind it.
     signal(t) {
       tone(t, 0.55, { f0: MAINS, f1: MAINS * 0.45, type: "sawtooth", gain: 0.16, lp: 800, q: 6 });
-      noise(t + 0.02, 0.85, { f0: 1200, f1: 5000, q: 0.4, type: "highpass", gain: 0.30, attack: 0.06 });
-      noise(t + 0.30, 0.5, { f0: 300, q: 1.2, gain: 0.14 });
-      tone(t + 0.62, 0.28, { f0: MAINS * 0.5, f1: MAINS, type: "square", gain: 0.10, lp: 500 });
+      noise(t + 0.02, 0.85, {
+        f0: 1200,
+        f1: 5000,
+        q: 0.4,
+        type: "highpass",
+        gain: 0.3,
+        attack: 0.06,
+      });
+      noise(t + 0.3, 0.5, { f0: 300, q: 1.2, gain: 0.14 });
+      tone(t + 0.62, 0.28, { f0: MAINS * 0.5, f1: MAINS, type: "square", gain: 0.1, lp: 500 });
     },
 
     // Packet loss: stepped square blips at quantised pitches. Deliberately
@@ -814,36 +1468,36 @@ function createAudio() {
     crash(t) {
       tone(t, 0.35, { f0: 90, f1: 32, type: "sine", gain: 0.5, attack: 0.001, lp: 300 });
       noise(t, 0.42, { f0: 400, f1: 2600, q: 0.6, gain: 0.42, attack: 0.002 });
-      tone(t + 0.04, 0.30, { f0: 700, f1: 4200, type: "sawtooth", gain: 0.12, lp: 5000, q: 8 });
-      noise(t + 0.18, 0.30, { f0: 6000, f1: 900, q: 1.5, gain: 0.25 });
+      tone(t + 0.04, 0.3, { f0: 700, f1: 4200, type: "sawtooth", gain: 0.12, lp: 5000, q: 8 });
+      noise(t + 0.18, 0.3, { f0: 6000, f1: 900, q: 1.5, gain: 0.25 });
     },
 
     // The degauss coil: a resonant thunk. Smooth, mechanical, no noise at all.
     degauss(t) {
       tone(t, 0.85, { f0: 150, f1: 38, type: "sine", gain: 0.55, attack: 0.006, lp: 420, q: 9 });
       tone(t + 0.01, 0.6, { f0: 300, f1: 76, type: "triangle", gain: 0.16, lp: 600, q: 4 });
-      noise(t, 0.20, { f0: 120, f1: 60, q: 4, gain: 0.10, attack: 0.01 });
+      noise(t, 0.2, { f0: 120, f1: 60, q: 4, gain: 0.1, attack: 0.01 });
     },
 
     // Shuttle search: pitched tape wow sweeping past playback speed.
     scrub(t) {
       noise(t, 0.55, { f0: 500, f1: 2400, q: 3.5, gain: 0.28, attack: 0.01 });
-      noise(t + 0.1, 0.45, { f0: 2200, f1: 700, q: 3.0, gain: 0.20, attack: 0.01 });
+      noise(t + 0.1, 0.45, { f0: 2200, f1: 700, q: 3.0, gain: 0.2, attack: 0.01 });
       tone(t, 0.5, { f0: 240, f1: 900, type: "sawtooth", gain: 0.07, lp: 2500, q: 5 });
     },
 
     // Something periodic nearby: mains hum with a slow beat against itself.
     interference(t) {
-      tone(t, 1.7, { f0: MAINS, type: "sawtooth", gain: 0.10, lp: 400, q: 3, attack: 0.15 });
+      tone(t, 1.7, { f0: MAINS, type: "sawtooth", gain: 0.1, lp: 400, q: 3, attack: 0.15 });
       tone(t + 0.05, 1.5, { f0: MAINS * 2 + 1.5, type: "sine", gain: 0.06, attack: 0.2 });
       for (let i = 0; i < 4; i++) {
-        noise(t + 0.15 + i * 0.42, 0.12, { f0: R(1800, 3400), q: 2, gain: 0.10 });
+        noise(t + 0.15 + i * 0.42, 0.12, { f0: R(1800, 3400), q: 2, gain: 0.1 });
       }
     },
 
     // Power-on: relay click, HV whine spinning up to scan frequency, thunk.
     boot(t) {
-      noise(t, 0.02, { f0: 3000, q: 0.5, gain: 0.5, attack: 0.0005 });   // relay
+      noise(t, 0.02, { f0: 3000, q: 0.5, gain: 0.5, attack: 0.0005 }); // relay
       tone(t + 0.05, 0.9, { f0: 400, f1: NTSC_SCAN, type: "sine", gain: 0.05, attack: 0.2 });
       noise(t + 0.06, 0.7, { f0: 200, f1: 1800, q: 0.8, gain: 0.18, attack: 0.1 });
       VOICES.degauss(t + 0.55);
@@ -859,8 +1513,20 @@ function createAudio() {
     if (bed) {
       // stop the sources AND disconnect the gain/filter nodes behind them,
       // or the graph accumulates orphans every time this is toggled
-      bed.sources.forEach((n) => { try { n.stop(); } catch { /* noop */ } });
-      bed.chain.forEach((n) => { try { n.disconnect(); } catch { /* noop */ } });
+      bed.sources.forEach((n) => {
+        try {
+          n.stop();
+        } catch {
+          /* noop */
+        }
+      });
+      bed.chain.forEach((n) => {
+        try {
+          n.disconnect();
+        } catch {
+          /* noop */
+        }
+      });
       bed = null;
     }
     if (!on) return;
@@ -870,12 +1536,19 @@ function createAudio() {
 
     // tape hiss
     const hs = ctx.createBufferSource();
-    hs.buffer = noiseBuf; hs.loop = true;
+    hs.buffer = noiseBuf;
+    hs.loop = true;
     const hf = ctx.createBiquadFilter();
-    hf.type = "highpass"; hf.frequency.value = 3200;
-    const hg = ctx.createGain(); hg.gain.value = hiss * 0.035;
-    hs.connect(hf); hf.connect(hg); hg.connect(master);
-    hs.start(t); sources.push(hs); chain.push(hf, hg);
+    hf.type = "highpass";
+    hf.frequency.value = 3200;
+    const hg = ctx.createGain();
+    hg.gain.value = hiss * 0.035;
+    hs.connect(hf);
+    hf.connect(hg);
+    hg.connect(master);
+    hs.start(t);
+    sources.push(hs);
+    chain.push(hf, hg);
 
     // mains hum plus its second harmonic
     [MAINS, MAINS * 2].forEach((f, i) => {
@@ -883,10 +1556,16 @@ function createAudio() {
       o.type = i ? "sine" : "sawtooth";
       o.frequency.value = f;
       const lp = ctx.createBiquadFilter();
-      lp.type = "lowpass"; lp.frequency.value = 260;
-      const g = ctx.createGain(); g.gain.value = hum * (i ? 0.012 : 0.022);
-      o.connect(lp); lp.connect(g); g.connect(master);
-      o.start(t); sources.push(o); chain.push(lp, g);
+      lp.type = "lowpass";
+      lp.frequency.value = 260;
+      const g = ctx.createGain();
+      g.gain.value = hum * (i ? 0.012 : 0.022);
+      o.connect(lp);
+      lp.connect(g);
+      g.connect(master);
+      o.start(t);
+      sources.push(o);
+      chain.push(lp, g);
     });
 
     // the flyback whine. Many adults cannot hear 15.7kHz at all — that is
@@ -894,14 +1573,20 @@ function createAudio() {
     const w = ctx.createOscillator();
     w.type = "sine";
     w.frequency.value = NTSC_SCAN;
-    const wg = ctx.createGain(); wg.gain.value = whine * 0.010;
+    const wg = ctx.createGain();
+    wg.gain.value = whine * 0.01;
     const lfo = ctx.createOscillator();
-    lfo.frequency.value = 0.23;                 // slow drift, so it feels alive
-    const lfoG = ctx.createGain(); lfoG.gain.value = 6;
-    lfo.connect(lfoG); lfoG.connect(w.frequency);
-    w.connect(wg); wg.connect(master);
-    w.start(t); lfo.start(t);
-    sources.push(w, lfo); chain.push(wg, lfoG);
+    lfo.frequency.value = 0.23; // slow drift, so it feels alive
+    const lfoG = ctx.createGain();
+    lfoG.gain.value = 6;
+    lfo.connect(lfoG);
+    lfoG.connect(w.frequency);
+    w.connect(wg);
+    wg.connect(master);
+    w.start(t);
+    lfo.start(t);
+    sources.push(w, lfo);
+    chain.push(wg, lfoG);
 
     bed = { sources, chain };
   }
@@ -915,18 +1600,29 @@ function createAudio() {
       // a touch of scheduling latency keeps the first sample from being clipped
       v(ctx.currentTime + 0.01);
     },
-    setVolume: (v) => { master.gain.setTargetAtTime(v, ctx.currentTime, 0.02); },
+    setVolume: (v) => {
+      master.gain.setTargetAtTime(v, ctx.currentTime, 0.02);
+    },
     setBed,
-    dispose() { setBed(false); try { ctx.close(); } catch { /* noop */ } },
+    dispose() {
+      setBed(false);
+      try {
+        ctx.close();
+      } catch {
+        /* noop */
+      }
+    },
   };
 }
 
 /* ================================================================== WebGL */
 function compile(gl, type, src) {
   const s = gl.createShader(type);
-  gl.shaderSource(s, src); gl.compileShader(s);
+  gl.shaderSource(s, src);
+  gl.compileShader(s);
   if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
-    const log = gl.getShaderInfoLog(s); gl.deleteShader(s);
+    const log = gl.getShaderInfoLog(s);
+    gl.deleteShader(s);
     throw new Error(log || "shader compile failed");
   }
   return s;
@@ -939,9 +1635,13 @@ function program(gl, frag) {
   const p = gl.createProgram();
   const v = compile(gl, gl.VERTEX_SHADER, VS);
   const f = compile(gl, gl.FRAGMENT_SHADER, frag);
-  gl.attachShader(p, v); gl.attachShader(p, f); gl.linkProgram(p);
-  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p) || "link failed");
-  gl.deleteShader(v); gl.deleteShader(f);
+  gl.attachShader(p, v);
+  gl.attachShader(p, f);
+  gl.linkProgram(p);
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS))
+    throw new Error(gl.getProgramInfoLog(p) || "link failed");
+  gl.deleteShader(v);
+  gl.deleteShader(f);
   return p;
 }
 function makeRT(gl, w, h) {
@@ -975,8 +1675,14 @@ function makeRT(gl, w, h) {
 const SOURCES = ["GRAPH", "BARS", "HUD"];
 const GROUPS = ["TAPE", "SIGNAL", "DIGITAL", "DISPLAY", "GLASS"];
 const TRACK_COL = [
-  "var(--nx-fg-accent)", "var(--nx-fg-info)", "var(--nx-fg-warning)", "var(--nx-fg-critical)",
-  "var(--nx-fg-cat-violet)", "var(--nx-fg-cat-lime)", "var(--nx-fg-default)", "#3AC6D4",
+  "var(--nx-fg-accent)",
+  "var(--nx-fg-info)",
+  "var(--nx-fg-warning)",
+  "var(--nx-fg-critical)",
+  "var(--nx-fg-cat-violet)",
+  "var(--nx-fg-cat-lime)",
+  "var(--nx-fg-default)",
+  "#3AC6D4",
 ];
 const fmt = (v) => (Math.abs(v) >= 10 ? v.toFixed(0) : v.toFixed(3));
 
@@ -1051,15 +1757,25 @@ export default function GlitchLab() {
     setSound(true);
   }, [vol]);
 
-  useEffect(() => { audioRef.current?.setVolume(sound ? vol : 0); }, [vol, sound]);
-  useEffect(() => { audioRef.current?.setBed(sound && bed); }, [bed, sound]);
+  useEffect(() => {
+    audioRef.current?.setVolume(sound ? vol : 0);
+  }, [vol, sound]);
+  useEffect(() => {
+    audioRef.current?.setBed(sound && bed);
+  }, [bed, sound]);
   useEffect(() => () => audioRef.current?.dispose(), []);
 
   useEffect(() => {
     const onKey = (e) => {
       if (/^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return;
       const ev = EVENTS.find((x) => x.key === e.key);
-      if (ev) { e.preventDefault(); fire(ev.id); setOpenEv(ev.id); setTab("events"); return; }
+      if (ev) {
+        e.preventDefault();
+        fire(ev.id);
+        setOpenEv(ev.id);
+        setTab("events");
+        return;
+      }
       if (e.key === " ") {
         e.preventDefault();
         fire(EVENTS[(Math.random() * EVENTS.length) | 0].id);
@@ -1075,37 +1791,61 @@ export default function GlitchLab() {
     const canvas = document.createElement("canvas");
     canvas.style.cssText = "display:block;width:100%;height:100%";
     host.appendChild(canvas);
-    const gl = canvas.getContext("webgl", { antialias: false, alpha: false })
-      || canvas.getContext("experimental-webgl");
-    if (!gl) { setErr("WebGL unavailable in this context."); return undefined; }
+    const gl =
+      canvas.getContext("webgl", { antialias: false, alpha: false }) ||
+      canvas.getContext("experimental-webgl");
+    if (!gl) {
+      setErr("WebGL unavailable in this context.");
+      return undefined;
+    }
 
-    let progs, srcProg, copyProg, quad, rtA, rtB, feed0, feed1, raf = 0;
+    let progs,
+      srcProg,
+      copyProg,
+      quad,
+      rtA,
+      rtB,
+      feed0,
+      feed1,
+      raf = 0;
     try {
       srcProg = program(gl, SRC_FS);
-      copyProg = program(gl, `${COMMON}\nvoid main(){ gl_FragColor = vec4(texture2D(uTex, vUv).rgb, 1.0); }`);
+      copyProg = program(
+        gl,
+        `${COMMON}\nvoid main(){ gl_FragColor = vec4(texture2D(uTex, vUv).rgb, 1.0); }`,
+      );
       progs = {};
       for (const e of EFFECTS) progs[e.id] = program(gl, e.frag);
-    } catch (e) { setErr(String(e.message || e)); return undefined; }
+    } catch (e) {
+      setErr(String(e.message || e));
+      return undefined;
+    }
 
     quad = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, quad);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
 
-    let W = 1, H = 1;
+    let W = 1,
+      H = 1;
     const dpr = Math.min(window.devicePixelRatio, 1.5);
     const resize = () => {
       W = Math.max(2, Math.floor(host.clientWidth * dpr));
       H = Math.max(2, Math.floor(host.clientHeight * dpr));
-      canvas.width = W; canvas.height = H;
+      canvas.width = W;
+      canvas.height = H;
       [rtA, rtB, feed0, feed1].forEach((rt) => {
         if (!rt) return;
-        gl.deleteTexture(rt.tex); gl.deleteFramebuffer(rt.fb);
+        gl.deleteTexture(rt.tex);
+        gl.deleteFramebuffer(rt.fb);
       });
-      rtA = makeRT(gl, W, H); rtB = makeRT(gl, W, H);
-      feed0 = makeRT(gl, W, H); feed1 = makeRT(gl, W, H);
+      rtA = makeRT(gl, W, H);
+      rtB = makeRT(gl, W, H);
+      feed0 = makeRT(gl, W, H);
+      feed1 = makeRT(gl, W, H);
     };
     resize();
-    const ro = new ResizeObserver(resize); ro.observe(host);
+    const ro = new ResizeObserver(resize);
+    ro.observe(host);
 
     const bind = (prog) => {
       gl.useProgram(prog);
@@ -1116,7 +1856,12 @@ export default function GlitchLab() {
       return (n) => gl.getUniformLocation(prog, n);
     };
 
-    let t0 = performance.now(), fAcc = 0, fN = 0, fT = 0, nextAuto = 2, liveT = 0;
+    let t0 = performance.now(),
+      fAcc = 0,
+      fN = 0,
+      fT = 0,
+      nextAuto = 2,
+      liveT = 0;
 
     const frame = (now) => {
       raf = requestAnimationFrame(frame);
@@ -1153,7 +1898,10 @@ export default function GlitchLab() {
       for (let i = activeRef.current.length - 1; i >= 0; i--) {
         const ev = activeRef.current[i];
         const u = (time - ev.t0) / ev.def.dur;
-        if (u >= 1) { activeRef.current.splice(i, 1); continue; }
+        if (u >= 1) {
+          activeRef.current.splice(i, 1);
+          continue;
+        }
         if (u < 0) continue;
         const env = chaosEnv(u, ev.def.chaos, ev.seed);
         running.push({ id: ev.def.id, label: ev.def.label, u });
@@ -1167,7 +1915,10 @@ export default function GlitchLab() {
         }
       }
       liveT += dt;
-      if (liveT > 0.05) { liveT = 0; setLive(running); }
+      if (liveT > 0.05) {
+        liveT = 0;
+        setLive(running);
+      }
 
       /* ---- render ----------------------------------------------------- */
       gl.viewport(0, 0, W, H);
@@ -1180,7 +1931,8 @@ export default function GlitchLab() {
       gl.uniform1i(u("uMode"), srcRef.current);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
 
-      let src = rtA, dst = rtB;
+      let src = rtA,
+        dst = rtB;
 
       for (const e of EFFECTS) {
         const b = base[e.id];
@@ -1218,9 +1970,13 @@ export default function GlitchLab() {
           gl.uniform1i(cu("uTex"), 0);
           gl.uniform2f(cu("uRes"), W, H);
           gl.drawArrays(gl.TRIANGLES, 0, 3);
-          const t = feed0; feed0 = feed1; feed1 = t;
+          const t = feed0;
+          feed0 = feed1;
+          feed1 = t;
         }
-        const t = src; src = dst; dst = t;
+        const t = src;
+        src = dst;
+        dst = t;
       }
 
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -1231,12 +1987,23 @@ export default function GlitchLab() {
       gl.uniform2f(u("uRes"), W, H);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
 
-      fAcc += 1 / Math.max(dt, 1e-4); fN++; fT += dt;
-      if (fT > 0.5) { setFps(Math.round(fAcc / fN)); fAcc = 0; fN = 0; fT = 0; }
+      fAcc += 1 / Math.max(dt, 1e-4);
+      fN++;
+      fT += dt;
+      if (fT > 0.5) {
+        setFps(Math.round(fAcc / fN));
+        fAcc = 0;
+        fN = 0;
+        fT = 0;
+      }
     };
     raf = requestAnimationFrame(frame);
 
-    return () => { cancelAnimationFrame(raf); ro.disconnect(); canvas.remove(); };
+    return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+      canvas.remove();
+    };
   }, []);
 
   const selFx = EFFECTS.find((e) => e.id === openFx);
@@ -1245,21 +2012,38 @@ export default function GlitchLab() {
 
   if (err) {
     return (
-      <div style={{
-        background: "var(--nx-bg-canvas)", color: "var(--nx-fg-critical)", height: "100%",
-        padding: "var(--nx-space-8)", fontFamily: "var(--nx-font-mono)", fontSize: "var(--nx-text-sm)", lineHeight: 1.8,
-      }}>
-        <div style={{ letterSpacing: "var(--nx-track-wider)", marginBottom: "var(--nx-space-4)" }}>▚ SHADER FAULT</div>
+      <div
+        style={{
+          background: "var(--nx-bg-canvas)",
+          color: "var(--nx-fg-critical)",
+          height: "100%",
+          padding: "var(--nx-space-8)",
+          fontFamily: "var(--nx-font-mono)",
+          fontSize: "var(--nx-text-sm)",
+          lineHeight: 1.8,
+        }}
+      >
+        <div style={{ letterSpacing: "var(--nx-track-wider)", marginBottom: "var(--nx-space-4)" }}>
+          ▚ SHADER FAULT
+        </div>
         <div style={{ color: "var(--nx-fg-subtle)" }}>{err}</div>
       </div>
     );
   }
 
   return (
-    <div style={{
-      position: "relative", width: "100%", height: "100%", background: "var(--nx-bg-canvas)",
-      overflow: "hidden", fontFamily: "var(--nx-font-mono)", fontSize: "var(--nx-text-xs)", color: "var(--nx-fg-subtle)",
-    }}>
+    <div
+      style={{
+        position: "relative",
+        width: "100%",
+        height: "100%",
+        background: "var(--nx-bg-canvas)",
+        overflow: "hidden",
+        fontFamily: "var(--nx-font-mono)",
+        fontSize: "var(--nx-text-xs)",
+        color: "var(--nx-fg-subtle)",
+      }}
+    >
       <style>{`
         .nxgl-trigger { position: relative; overflow: hidden; text-align: left; cursor: pointer;
           border: var(--nx-hairline) solid var(--nx-border-default); background: rgba(12,16,12,.6);
@@ -1273,30 +2057,85 @@ export default function GlitchLab() {
       <div ref={hostRef} style={{ position: "absolute", inset: 0 }} />
 
       {/* ------------------------------------------------------ left column */}
-      <div style={{
-        position: "absolute", top: "var(--nx-space-5)", bottom: "var(--nx-space-5)", left: "var(--nx-space-5)",
-        width: 226, overflowY: "auto", scrollbarWidth: "thin", display: "flex", flexDirection: "column", gap: "var(--nx-space-4)",
-      }}>
+      <div
+        style={{
+          position: "absolute",
+          top: "var(--nx-space-5)",
+          bottom: "var(--nx-space-5)",
+          left: "var(--nx-space-5)",
+          width: 226,
+          overflowY: "auto",
+          scrollbarWidth: "thin",
+          display: "flex",
+          flexDirection: "column",
+          gap: "var(--nx-space-4)",
+        }}
+      >
         <Panel style={{ flexShrink: 0 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "var(--nx-space-4)" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-end",
+              marginBottom: "var(--nx-space-4)",
+            }}
+          >
             <Wordmark size="var(--nx-text-lg)">GLITCH LAB</Wordmark>
-            <span style={{
-              fontFamily: "var(--nx-font-stencil)", fontSize: "var(--nx-text-xl)", lineHeight: 0.8,
-              color: fps > 50 ? "var(--nx-fg-accent)" : fps > 28 ? "var(--nx-fg-warning)" : "var(--nx-fg-critical)",
-            }}>{fps}</span>
+            <span
+              style={{
+                fontFamily: "var(--nx-font-stencil)",
+                fontSize: "var(--nx-text-xl)",
+                lineHeight: 0.8,
+                color:
+                  fps > 50
+                    ? "var(--nx-fg-accent)"
+                    : fps > 28
+                      ? "var(--nx-fg-warning)"
+                      : "var(--nx-fg-critical)",
+              }}
+            >
+              {fps}
+            </span>
           </div>
           <HazardRule style={{ marginBottom: "var(--nx-space-4)" }} />
           <div style={{ display: "flex", gap: "var(--nx-space-2)" }}>
             {SOURCES.map((s, i) => (
-              <Button key={s} active={source === i} style={{ flex: 1 }} onClick={() => setSource(i)}>{s}</Button>
+              <Button
+                key={s}
+                active={source === i}
+                style={{ flex: 1 }}
+                onClick={() => setSource(i)}
+              >
+                {s}
+              </Button>
             ))}
           </div>
-          <div style={{ marginTop: "var(--nx-space-4)", color: "var(--nx-fg-tertiary)", letterSpacing: "var(--nx-track-wide)", fontSize: "var(--nx-text-2xs)" }}>
+          <div
+            style={{
+              marginTop: "var(--nx-space-4)",
+              color: "var(--nx-fg-tertiary)",
+              letterSpacing: "var(--nx-track-wide)",
+              fontSize: "var(--nx-text-2xs)",
+            }}
+          >
             RESTING STATE
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--nx-space-2)", marginTop: "var(--nx-space-2)" }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "var(--nx-space-2)",
+              marginTop: "var(--nx-space-2)",
+            }}
+          >
             {Object.keys(PRESETS).map((p) => (
-              <Button key={p} style={{ fontSize: "var(--nx-text-2xs)" }} onClick={() => setCfg(makeBase(p))}>{p}</Button>
+              <Button
+                key={p}
+                style={{ fontSize: "var(--nx-text-2xs)" }}
+                onClick={() => setCfg(makeBase(p))}
+              >
+                {p}
+              </Button>
             ))}
           </div>
         </Panel>
@@ -1304,19 +2143,42 @@ export default function GlitchLab() {
         {/* ------------------------------------------------ event triggers */}
         <Panel style={{ flexShrink: 0 }}>
           <SectionHeading>/// EVENTS — TRANSIENT</SectionHeading>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--nx-space-2)" }}>
+          <div
+            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--nx-space-2)" }}
+          >
             {EVENTS.map((e) => {
               const run = live.find((l) => l.id === e.id);
               return (
-                <button key={e.id} type="button" className="nxgl-trigger"
-                  onMouseDown={() => { fire(e.id); setOpenEv(e.id); setTab("events"); }}>
+                <button
+                  key={e.id}
+                  type="button"
+                  className="nxgl-trigger"
+                  onMouseDown={() => {
+                    fire(e.id);
+                    setOpenEv(e.id);
+                    setTab("events");
+                  }}
+                >
                   {run && (
-                    <span style={{
-                      position: "absolute", inset: 0, background: "var(--nx-bg-active)",
-                      transform: `scaleX(${1 - run.u})`, transformOrigin: "left", pointerEvents: "none",
-                    }} />
+                    <span
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        background: "var(--nx-bg-active)",
+                        transform: `scaleX(${1 - run.u})`,
+                        transformOrigin: "left",
+                        pointerEvents: "none",
+                      }}
+                    />
                   )}
-                  <span style={{ position: "relative", display: "flex", justifyContent: "space-between", gap: "var(--nx-space-2)" }}>
+                  <span
+                    style={{
+                      position: "relative",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: "var(--nx-space-2)",
+                    }}
+                  >
                     <span>{e.label}</span>
                     <span style={{ color: "var(--nx-fg-disabled)" }}>{e.key}</span>
                   </span>
@@ -1325,88 +2187,204 @@ export default function GlitchLab() {
             })}
           </div>
 
-          <SectionHeading style={{ margin: "var(--nx-space-5) 0 var(--nx-space-2)" }}>/// CHAINS — CASCADING</SectionHeading>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--nx-space-2)" }}>
+          <SectionHeading style={{ margin: "var(--nx-space-5) 0 var(--nx-space-2)" }}>
+            /// CHAINS — CASCADING
+          </SectionHeading>
+          <div
+            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--nx-space-2)" }}
+          >
             {CHAINS.map((c) => (
-              <button key={c.id} type="button" className="nxgl-trigger" onMouseDown={() => fireChain(c)}>
+              <button
+                key={c.id}
+                type="button"
+                className="nxgl-trigger"
+                onMouseDown={() => fireChain(c)}
+              >
                 <span style={{ color: "var(--nx-fg-warning)" }}>{c.label}</span>
               </button>
             ))}
           </div>
 
-          <div style={{ display: "flex", gap: "var(--nx-space-2)", marginTop: "var(--nx-space-4)", alignItems: "center" }}>
-            <Button active={autoFire} style={{ flex: 1 }} onClick={() => setAutoFire((v) => !v)}>Auto</Button>
-            <Button style={{ flex: 1 }} onMouseDown={() => fire(EVENTS[(Math.random() * EVENTS.length) | 0].id)}>Random</Button>
+          <div
+            style={{
+              display: "flex",
+              gap: "var(--nx-space-2)",
+              marginTop: "var(--nx-space-4)",
+              alignItems: "center",
+            }}
+          >
+            <Button active={autoFire} style={{ flex: 1 }} onClick={() => setAutoFire((v) => !v)}>
+              Auto
+            </Button>
+            <Button
+              style={{ flex: 1 }}
+              onMouseDown={() => fire(EVENTS[(Math.random() * EVENTS.length) | 0].id)}
+            >
+              Random
+            </Button>
           </div>
           {autoFire && (
             <div style={{ marginTop: "var(--nx-space-3)" }}>
-              <Slider label="frequency" value={rate} min={0} max={1} step={0.01} onChange={setRate} format={(v) => v.toFixed(2)} />
+              <Slider
+                label="frequency"
+                value={rate}
+                min={0}
+                max={1}
+                step={0.01}
+                onChange={setRate}
+                format={(v) => v.toFixed(2)}
+              />
             </div>
           )}
 
-          <div style={{
-            marginTop: "var(--nx-space-4)", paddingTop: "var(--nx-space-3)", borderTop: "var(--nx-hairline) solid var(--nx-border-default)",
-            color: "var(--nx-fg-tertiary)", fontSize: "var(--nx-text-2xs)", letterSpacing: "var(--nx-track-normal)", minHeight: 26,
-          }}>
-            {live.length === 0
-              ? <span style={{ color: "var(--nx-fg-disabled)" }}>BUS IDLE · KEYS 1–8 · SPACE RANDOM</span>
-              : live.map((l) => (
-                <div key={l.id} style={{ display: "flex", justifyContent: "space-between", color: "var(--nx-fg-accent)" }}>
+          <div
+            style={{
+              marginTop: "var(--nx-space-4)",
+              paddingTop: "var(--nx-space-3)",
+              borderTop: "var(--nx-hairline) solid var(--nx-border-default)",
+              color: "var(--nx-fg-tertiary)",
+              fontSize: "var(--nx-text-2xs)",
+              letterSpacing: "var(--nx-track-normal)",
+              minHeight: 26,
+            }}
+          >
+            {live.length === 0 ? (
+              <span style={{ color: "var(--nx-fg-disabled)" }}>
+                BUS IDLE · KEYS 1–8 · SPACE RANDOM
+              </span>
+            ) : (
+              live.map((l) => (
+                <div
+                  key={l.id}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    color: "var(--nx-fg-accent)",
+                  }}
+                >
                   <span>▸ {l.label}</span>
                   <span style={{ color: "var(--nx-fg-tertiary)" }}>{Math.round(l.u * 100)}%</span>
                 </div>
-              ))}
+              ))
+            )}
           </div>
         </Panel>
 
         {/* ------------------------------------------------ audio */}
         <Panel style={{ flexShrink: 0 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--nx-space-3)" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "var(--nx-space-3)",
+            }}
+          >
             <SectionHeading style={{ marginBottom: 0 }}>/// AUDIO — SYNTHESISED</SectionHeading>
-            <Button active={sound} onClick={() => (sound ? (setSound(false), setBedOn(false)) : enableSound())}>
+            <Button
+              active={sound}
+              onClick={() => (sound ? (setSound(false), setBedOn(false)) : enableSound())}
+            >
               {sound ? "ON" : "ENABLE"}
             </Button>
           </div>
           {sound ? (
             <>
-              <Slider label="volume" value={vol} min={0} max={1} step={0.01} onChange={setVol} format={(v) => v.toFixed(2)} />
-              <div style={{ display: "flex", gap: "var(--nx-space-2)", marginTop: "var(--nx-space-1)" }}>
-                <Button active={bed} style={{ flex: 1 }} onClick={() => setBedOn((v) => !v)}>Room tone</Button>
+              <Slider
+                label="volume"
+                value={vol}
+                min={0}
+                max={1}
+                step={0.01}
+                onChange={setVol}
+                format={(v) => v.toFixed(2)}
+              />
+              <div
+                style={{
+                  display: "flex",
+                  gap: "var(--nx-space-2)",
+                  marginTop: "var(--nx-space-1)",
+                }}
+              >
+                <Button active={bed} style={{ flex: 1 }} onClick={() => setBedOn((v) => !v)}>
+                  Room tone
+                </Button>
               </div>
-              <div style={{ marginTop: "var(--nx-space-3)", color: "var(--nx-fg-subtle)", fontSize: "var(--nx-text-2xs)", lineHeight: 1.6 }}>
-                Bed is tape hiss + 60Hz mains + flyback whine at 15.734kHz — the NTSC
-                scan rate. Many adults cannot hear that last one at all.
+              <div
+                style={{
+                  marginTop: "var(--nx-space-3)",
+                  color: "var(--nx-fg-subtle)",
+                  fontSize: "var(--nx-text-2xs)",
+                  lineHeight: 1.6,
+                }}
+              >
+                Bed is tape hiss + 60Hz mains + flyback whine at 15.734kHz — the NTSC scan rate.
+                Many adults cannot hear that last one at all.
               </div>
             </>
           ) : (
-            <div style={{ color: "var(--nx-fg-subtle)", fontSize: "var(--nx-text-2xs)", lineHeight: 1.65 }}>
-              No files, no licences. Every voice is generated, so no two shots
-              of an event are identical.
+            <div
+              style={{
+                color: "var(--nx-fg-subtle)",
+                fontSize: "var(--nx-text-2xs)",
+                lineHeight: 1.65,
+              }}
+            >
+              No files, no licences. Every voice is generated, so no two shots of an event are
+              identical.
             </div>
           )}
         </Panel>
 
         {/* ------------------------------------------------ resting stack */}
         <Panel style={{ flexShrink: 0 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "var(--nx-space-3)" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              marginBottom: "var(--nx-space-3)",
+            }}
+          >
             <SectionHeading style={{ marginBottom: 0 }}>/// STACK</SectionHeading>
-            <span style={{ color: "var(--nx-fg-tertiary)", fontSize: "var(--nx-text-2xs)" }}>{activeCount} ON</span>
+            <span style={{ color: "var(--nx-fg-tertiary)", fontSize: "var(--nx-text-2xs)" }}>
+              {activeCount} ON
+            </span>
           </div>
           {GROUPS.map((g) => (
             <div key={g} style={{ marginBottom: "var(--nx-space-3)" }}>
-              <div style={{ color: "var(--nx-fg-disabled)", fontSize: "var(--nx-text-2xs)", letterSpacing: "var(--nx-track-wider)", marginBottom: "var(--nx-space-1)" }}>{g}</div>
+              <div
+                style={{
+                  color: "var(--nx-fg-disabled)",
+                  fontSize: "var(--nx-text-2xs)",
+                  letterSpacing: "var(--nx-track-wider)",
+                  marginBottom: "var(--nx-space-1)",
+                }}
+              >
+                {g}
+              </div>
               {EFFECTS.filter((e) => e.group === g).map((e) => {
                 const hot = live.some((l) => EV_BY_ID[l.id].tracks.some((t) => t.fx === e.id));
                 return (
-                  <div key={e.id} onClick={() => { setOpenFx(e.id); setTab("fx"); }}
+                  <div
+                    key={e.id}
+                    onClick={() => {
+                      setOpenFx(e.id);
+                      setTab("fx");
+                    }}
                     style={{
                       cursor: "pointer",
                       borderLeft: `2px solid ${openFx === e.id ? "var(--nx-fg-accent)" : "transparent"}`,
-                    }}>
+                    }}
+                  >
                     <ToggleRow
                       checked={!!cfg[e.id].on}
                       onChange={(v) => set(e.id, "on", v ? 1 : 0)}
-                      label={<span style={{ color: hot ? "var(--nx-fg-critical)" : undefined }}>{e.label}{hot ? " ●" : ""}</span>}
+                      label={
+                        <span style={{ color: hot ? "var(--nx-fg-critical)" : undefined }}>
+                          {e.label}
+                          {hot ? " ●" : ""}
+                        </span>
+                      }
                     />
                   </div>
                 );
@@ -1417,56 +2395,116 @@ export default function GlitchLab() {
       </div>
 
       {/* ----------------------------------------------------- right column */}
-      <div style={{
-        position: "absolute", top: "var(--nx-space-5)", bottom: "var(--nx-space-5)", right: "var(--nx-space-5)",
-        width: 282, overflowY: "auto", scrollbarWidth: "thin",
-      }}>
+      <div
+        style={{
+          position: "absolute",
+          top: "var(--nx-space-5)",
+          bottom: "var(--nx-space-5)",
+          right: "var(--nx-space-5)",
+          width: 282,
+          overflowY: "auto",
+          scrollbarWidth: "thin",
+        }}
+      >
         <Panel padded={false}>
           <div style={{ padding: "var(--nx-space-3) var(--nx-space-3) 0" }}>
             <TabStrip
               value={tab}
               onChange={setTab}
-              tabs={[{ value: "events", label: "Event" }, { value: "fx", label: "Effect" }]}
+              tabs={[
+                { value: "events", label: "Event" },
+                { value: "fx", label: "Effect" },
+              ]}
             />
           </div>
 
           {tab === "events" && selEv && (
             <div style={{ padding: "var(--nx-space-5)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ color: "var(--nx-fg-accent)", fontWeight: 700, letterSpacing: "var(--nx-track-wide)", fontSize: "var(--nx-text-sm)" }}>{selEv.label}</span>
+              <div
+                style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+              >
+                <span
+                  style={{
+                    color: "var(--nx-fg-accent)",
+                    fontWeight: 700,
+                    letterSpacing: "var(--nx-track-wide)",
+                    fontSize: "var(--nx-text-sm)",
+                  }}
+                >
+                  {selEv.label}
+                </span>
                 <Button onMouseDown={() => fire(selEv.id)}>Fire</Button>
               </div>
-              <div style={{ color: "var(--nx-fg-tertiary)", fontSize: "var(--nx-text-2xs)", letterSpacing: "var(--nx-track-wider)", margin: "var(--nx-space-3) 0 var(--nx-space-4)" }}>
-                {(selEv.dur * 1000) | 0}MS · CHAOS {selEv.chaos.toFixed(2)} · {selEv.tracks.length} TRACKS
+              <div
+                style={{
+                  color: "var(--nx-fg-tertiary)",
+                  fontSize: "var(--nx-text-2xs)",
+                  letterSpacing: "var(--nx-track-wider)",
+                  margin: "var(--nx-space-3) 0 var(--nx-space-4)",
+                }}
+              >
+                {(selEv.dur * 1000) | 0}MS · CHAOS {selEv.chaos.toFixed(2)} · {selEv.tracks.length}{" "}
+                TRACKS
               </div>
-              <p style={{ margin: "0 0 var(--nx-space-5)", color: "var(--nx-fg-subtle)", lineHeight: 1.75, fontSize: "var(--nx-text-sm)" }}>{selEv.cause}</p>
+              <p
+                style={{
+                  margin: "0 0 var(--nx-space-5)",
+                  color: "var(--nx-fg-subtle)",
+                  lineHeight: 1.75,
+                  fontSize: "var(--nx-text-sm)",
+                }}
+              >
+                {selEv.cause}
+              </p>
 
               <SectionHeading>/// ENVELOPES</SectionHeading>
               <TrackViz ev={selEv} live={live.find((l) => l.id === selEv.id)} />
 
               <div style={{ marginTop: "var(--nx-space-4)" }}>
                 {selEv.tracks.map((t, i) => (
-                  <div key={i} style={{
-                    display: "flex", justifyContent: "space-between", color: "var(--nx-fg-subtle)",
-                    fontSize: "var(--nx-text-2xs)", padding: "1px 0",
-                  }}>
+                  <div
+                    key={i}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      color: "var(--nx-fg-subtle)",
+                      fontSize: "var(--nx-text-2xs)",
+                      padding: "1px 0",
+                    }}
+                  >
                     <span style={{ color: TRACK_COL[i % TRACK_COL.length] }}>
                       {t.fx}.{t.param}
                     </span>
                     <span style={{ color: "var(--nx-fg-disabled)" }}>
-                      {t.mode}{t.keys.some((k) => k[2] === "step") ? " · step" : ""}
+                      {t.mode}
+                      {t.keys.some((k) => k[2] === "step") ? " · step" : ""}
                     </span>
                   </div>
                 ))}
               </div>
 
-              <div style={{ marginTop: "var(--nx-space-5)", paddingTop: "var(--nx-space-4)", borderTop: "var(--nx-hairline) solid var(--nx-border-default)" }}>
+              <div
+                style={{
+                  marginTop: "var(--nx-space-5)",
+                  paddingTop: "var(--nx-space-4)",
+                  borderTop: "var(--nx-hairline) solid var(--nx-border-default)",
+                }}
+              >
                 <SectionHeading>/// INTEGRATION</SectionHeading>
-                <pre style={{
-                  margin: 0, padding: "var(--nx-space-4) var(--nx-space-5)", background: "rgba(0,0,0,.35)",
-                  border: "var(--nx-hairline) solid var(--nx-border-default)", color: "var(--nx-fg-muted)",
-                  fontFamily: "var(--nx-font-mono)", fontSize: "var(--nx-text-2xs)", lineHeight: 1.7, overflowX: "auto",
-                }}><code>{`// on route change
+                <pre
+                  style={{
+                    margin: 0,
+                    padding: "var(--nx-space-4) var(--nx-space-5)",
+                    background: "rgba(0,0,0,.35)",
+                    border: "var(--nx-hairline) solid var(--nx-border-default)",
+                    color: "var(--nx-fg-muted)",
+                    fontFamily: "var(--nx-font-mono)",
+                    fontSize: "var(--nx-text-2xs)",
+                    lineHeight: 1.7,
+                    overflowX: "auto",
+                  }}
+                >
+                  <code>{`// on route change
 glitch.fire("boot");
 
 // on failed request
@@ -1474,30 +2512,90 @@ glitch.fire("${selEv.id}");
 
 // on cascading failure
 glitch.chain([[0,"dropout"],
-  [0.12,"corrupt"],[0.34,"signal"]]);`}</code></pre>
+  [0.12,"corrupt"],[0.34,"signal"]]);`}</code>
+                </pre>
               </div>
             </div>
           )}
 
           {tab === "fx" && selFx && (
             <div style={{ padding: "var(--nx-space-5)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ color: "var(--nx-fg-accent)", fontWeight: 700, letterSpacing: "var(--nx-track-wide)", fontSize: "var(--nx-text-sm)" }}>{selFx.label}</span>
-                <Button active={!!cfg[selFx.id].on} onClick={() => set(selFx.id, "on", cfg[selFx.id].on ? 0 : 1)}>
+              <div
+                style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+              >
+                <span
+                  style={{
+                    color: "var(--nx-fg-accent)",
+                    fontWeight: 700,
+                    letterSpacing: "var(--nx-track-wide)",
+                    fontSize: "var(--nx-text-sm)",
+                  }}
+                >
+                  {selFx.label}
+                </span>
+                <Button
+                  active={!!cfg[selFx.id].on}
+                  onClick={() => set(selFx.id, "on", cfg[selFx.id].on ? 0 : 1)}
+                >
                   {cfg[selFx.id].on ? "ON" : "OFF"}
                 </Button>
               </div>
-              <div style={{ color: "var(--nx-fg-tertiary)", fontSize: "var(--nx-text-2xs)", letterSpacing: "var(--nx-track-wider)", margin: "var(--nx-space-3) 0 var(--nx-space-4)" }}>
+              <div
+                style={{
+                  color: "var(--nx-fg-tertiary)",
+                  fontSize: "var(--nx-text-2xs)",
+                  letterSpacing: "var(--nx-track-wider)",
+                  margin: "var(--nx-space-3) 0 var(--nx-space-4)",
+                }}
+              >
                 {selFx.group} STAGE
               </div>
-              <p style={{ margin: "0 0 var(--nx-space-5)", color: "var(--nx-fg-subtle)", lineHeight: 1.75, fontSize: "var(--nx-text-sm)" }}>{selFx.note}</p>
-              <div style={{ height: "var(--nx-hairline)", background: "var(--nx-border-default)", marginBottom: "var(--nx-space-4)" }} />
-              <Slider label="mix" value={cfg[selFx.id].amt} min={0} max={1} step={0.01} onChange={(v) => set(selFx.id, "amt", v)} format={fmt} />
+              <p
+                style={{
+                  margin: "0 0 var(--nx-space-5)",
+                  color: "var(--nx-fg-subtle)",
+                  lineHeight: 1.75,
+                  fontSize: "var(--nx-text-sm)",
+                }}
+              >
+                {selFx.note}
+              </p>
+              <div
+                style={{
+                  height: "var(--nx-hairline)",
+                  background: "var(--nx-border-default)",
+                  marginBottom: "var(--nx-space-4)",
+                }}
+              />
+              <Slider
+                label="mix"
+                value={cfg[selFx.id].amt}
+                min={0}
+                max={1}
+                step={0.01}
+                onChange={(v) => set(selFx.id, "amt", v)}
+                format={fmt}
+              />
               {selFx.params.map(([k, lo, hi]) => (
-                <Slider key={k} label={k} value={cfg[selFx.id][k]} min={lo} max={hi}
-                  step={(hi - lo) / 200} onChange={(v) => set(selFx.id, k, v)} format={fmt} />
+                <Slider
+                  key={k}
+                  label={k}
+                  value={cfg[selFx.id][k]}
+                  min={lo}
+                  max={hi}
+                  step={(hi - lo) / 200}
+                  onChange={(v) => set(selFx.id, k, v)}
+                  format={fmt}
+                />
               ))}
-              <div style={{ marginTop: "var(--nx-space-3)", color: "var(--nx-fg-disabled)", fontSize: "var(--nx-text-2xs)", lineHeight: 1.6 }}>
+              <div
+                style={{
+                  marginTop: "var(--nx-space-3)",
+                  color: "var(--nx-fg-disabled)",
+                  fontSize: "var(--nx-text-2xs)",
+                  lineHeight: 1.6,
+                }}
+              >
                 Events override these while running, then hand control back.
               </div>
             </div>
@@ -1505,11 +2603,19 @@ glitch.chain([[0,"dropout"],
         </Panel>
       </div>
 
-      <div style={{
-        position: "absolute", bottom: "var(--nx-space-4)", left: "50%", transform: "translateX(-50%)",
-        color: "var(--nx-fg-disabled)", fontSize: "var(--nx-text-2xs)", letterSpacing: "var(--nx-track-wider)",
-        textTransform: "uppercase", pointerEvents: "none",
-      }}>
+      <div
+        style={{
+          position: "absolute",
+          bottom: "var(--nx-space-4)",
+          left: "50%",
+          transform: "translateX(-50%)",
+          color: "var(--nx-fg-disabled)",
+          fontSize: "var(--nx-text-2xs)",
+          letterSpacing: "var(--nx-track-wider)",
+          textTransform: "uppercase",
+          pointerEvents: "none",
+        }}
+      >
         events override the resting stack, then hand it back · 1–8 · space
       </div>
     </div>
@@ -1518,13 +2624,29 @@ glitch.chain([[0,"dropout"],
 
 /** Draws each track's keyframe curve, with a playhead when the event is live. */
 function TrackViz({ ev, live }) {
-  const W = 254, H = 72, N = 90;
+  const W = 254,
+    H = 72,
+    N = 90;
   return (
-    <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{
-      display: "block", border: "var(--nx-hairline) solid var(--nx-border-default)", background: "rgba(0,0,0,.35)",
-    }}>
+    <svg
+      width="100%"
+      viewBox={`0 0 ${W} ${H}`}
+      style={{
+        display: "block",
+        border: "var(--nx-hairline) solid var(--nx-border-default)",
+        background: "rgba(0,0,0,.35)",
+      }}
+    >
       {[0.25, 0.5, 0.75].map((g) => (
-        <line key={g} x1={g * W} y1={0} x2={g * W} y2={H} stroke="var(--nx-border-default)" strokeWidth="1" />
+        <line
+          key={g}
+          x1={g * W}
+          y1={0}
+          x2={g * W}
+          y2={H}
+          stroke="var(--nx-border-default)"
+          strokeWidth="1"
+        />
       ))}
       {ev.tracks.map((t, ti) => {
         let d = "";
@@ -1537,12 +2659,35 @@ function TrackViz({ ev, live }) {
           const n = hi === lo ? 0.5 : (v - lo) / (hi - lo);
           d += `${i ? "L" : "M"}${(u * W).toFixed(1)},${(H - 4 - n * (H - 9)).toFixed(1)}`;
         }
-        return <path key={ti} d={d} fill="none" stroke={TRACK_COL[ti % TRACK_COL.length]} strokeWidth="1.2" opacity="0.85" />;
+        return (
+          <path
+            key={ti}
+            d={d}
+            fill="none"
+            stroke={TRACK_COL[ti % TRACK_COL.length]}
+            strokeWidth="1.2"
+            opacity="0.85"
+          />
+        );
       })}
       {live && (
         <>
-          <line x1={live.u * W} y1={0} x2={live.u * W} y2={H} stroke="var(--nx-fg-default)" strokeWidth="1.4" />
-          <rect x={0} y={0} width={live.u * W} height={H} fill="var(--nx-fg-accent)" opacity="0.07" />
+          <line
+            x1={live.u * W}
+            y1={0}
+            x2={live.u * W}
+            y2={H}
+            stroke="var(--nx-fg-default)"
+            strokeWidth="1.4"
+          />
+          <rect
+            x={0}
+            y={0}
+            width={live.u * W}
+            height={H}
+            fill="var(--nx-fg-accent)"
+            opacity="0.07"
+          />
         </>
       )}
     </svg>

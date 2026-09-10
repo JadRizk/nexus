@@ -17,7 +17,12 @@ export interface ToggleRowProps {
 export function ToggleRow({ checked, onChange, icon, label, meta, style }: ToggleRowProps) {
   return (
     <label className="nx-row" data-checked={checked ? "1" : "0"} style={style}>
-      <input type="checkbox" className="nx-sr" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      <input
+        type="checkbox"
+        className="nx-sr"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+      />
       {icon}
       <span className="nx-row__label">{label}</span>
       {meta != null && <span className="nx-row__meta">{meta}</span>}

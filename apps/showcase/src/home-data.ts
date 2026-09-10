@@ -18,7 +18,13 @@ export interface ClassDef {
 export const CLASSES: readonly ClassDef[] = [
   { key: "atlas", label: "ATLAS", code: "ATL", shape: "hexagon", colour: "var(--nx-fg-accent)" },
   { key: "node", label: "NODE", code: "NDE", shape: "circle", colour: "var(--nx-fg-info)" },
-  { key: "unrslv", label: "UNRSLV", code: "UNR", shape: "triangle", colour: "var(--nx-fg-critical)" },
+  {
+    key: "unrslv",
+    label: "UNRSLV",
+    code: "UNR",
+    shape: "triangle",
+    colour: "var(--nx-fg-critical)",
+  },
   { key: "source", label: "SOURCE", code: "SRC", shape: "square", colour: "var(--nx-fg-warning)" },
   { key: "agent", label: "AGENT", code: "AGT", shape: "ring", colour: "var(--nx-fg-cat-violet)" },
   { key: "tag", label: "TAG", code: "TAG", shape: "diamond", colour: "var(--nx-fg-cat-lime)" },
@@ -37,7 +43,13 @@ export const RELATIONS: readonly RelationDef[] = [
   { key: "link", label: "LINK", colour: "#3AC6D4", arrow: true },
   { key: "cite", label: "CITE", colour: "var(--nx-fg-warning)", arrow: true, width: 1.5 },
   { key: "tagged", label: "TAGGED", colour: "var(--nx-fg-accent)", dashed: true, width: 0.9 },
-  { key: "mention", label: "MENTION", colour: "var(--nx-fg-cat-violet)", dashed: true, arrow: true },
+  {
+    key: "mention",
+    label: "MENTION",
+    colour: "var(--nx-fg-cat-violet)",
+    dashed: true,
+    arrow: true,
+  },
   { key: "conflict", label: "CONFLICT", colour: "var(--nx-fg-critical)", width: 1.6 },
 ];
 
@@ -55,11 +67,13 @@ const RAW_ITEMS: ReadonlyArray<readonly [string, string, GlyphShape, string, num
   ["?opaque_ledger", "UNR", "triangle", "var(--nx-fg-critical)", 3],
 ];
 
-export const ITEMS: readonly PaletteItem[] = RAW_ITEMS.map(([label, code, shape, colour, weight], id) => ({
-  id,
-  label,
-  code,
-  shape,
-  colour,
-  weight,
-}));
+export const ITEMS: readonly PaletteItem[] = RAW_ITEMS.map(
+  ([label, code, shape, colour, weight], id) => ({
+    id,
+    label,
+    code,
+    shape,
+    colour,
+    weight,
+  }),
+);

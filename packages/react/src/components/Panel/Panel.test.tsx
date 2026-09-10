@@ -56,7 +56,11 @@ describe("Panel", () => {
   });
 
   it("forwards arbitrary props, so a caller can give it a role or a label", () => {
-    render(<Panel role="region" aria-label="Inspector">body</Panel>);
+    render(
+      <Panel role="region" aria-label="Inspector">
+        body
+      </Panel>,
+    );
     expect(screen.getByRole("region", { name: "Inspector" })).toBeInTheDocument();
   });
 });

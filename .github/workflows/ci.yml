@@ -19,6 +19,11 @@ jobs:
 
       - run: npm ci
 
+      # Formatting first: it is the cheapest of these checks and a drifted
+      # file is a distraction in every diff after it, including the lint one.
+      - name: Format check (prettier)
+        run: npm run format:check
+
       # Lint before typecheck: it is the faster of the two and catches the
       # class of mistake (a primitive token referenced directly, a ref written
       # during render) that a type error never will.

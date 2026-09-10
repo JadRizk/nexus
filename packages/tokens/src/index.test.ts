@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
-  border, contrast, duration, space, surface, text, themeMeetsAA, tone, track, WCAG,
+  border,
+  contrast,
+  duration,
+  space,
+  surface,
+  text,
+  themeMeetsAA,
+  tone,
+  track,
+  WCAG,
 } from "./index.js";
 
 describe("accessor functions", () => {

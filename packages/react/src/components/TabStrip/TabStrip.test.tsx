@@ -9,7 +9,11 @@ function Harness() {
     <TabStrip
       value={value}
       onChange={setValue}
-      tabs={[{ value: "a", label: "A" }, { value: "b", label: "B" }, { value: "c", label: "C" }]}
+      tabs={[
+        { value: "a", label: "A" },
+        { value: "b", label: "B" },
+        { value: "c", label: "C" },
+      ]}
     />
   );
 }

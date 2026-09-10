@@ -37,7 +37,10 @@ export default {
     // are the only way to style a native range input's handle, and keeping the
     // native input is a deliberate accessibility decision.
     "property-no-vendor-prefix": null,
-    "selector-pseudo-element-no-unknown": [true, { ignorePseudoElements: ["-webkit-slider-thumb", "-moz-range-thumb", "-moz-range-track"] }],
+    "selector-pseudo-element-no-unknown": [
+      true,
+      { ignorePseudoElements: ["-webkit-slider-thumb", "-moz-range-thumb", "-moz-range-track"] },
+    ],
 
     // rgba() is used uniformly across both stylesheets for alpha colours.
     "color-function-alias-notation": null,

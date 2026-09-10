@@ -48,11 +48,9 @@ function buildCss(mutate) {
   const tokens = structuredClone(source);
   mutate(tokens);
   writeFileSync(sourceFile, JSON.stringify(tokens));
-  execFileSync(
-    "node",
-    [script, "--source", sourceFile, "--dry-run", "--print-css-to", cssFile],
-    { stdio: ["ignore", "ignore", "inherit"] },
-  );
+  execFileSync("node", [script, "--source", sourceFile, "--dry-run", "--print-css-to", cssFile], {
+    stdio: ["ignore", "ignore", "inherit"],
+  });
   return readFileSync(cssFile, "utf8");
 }
 

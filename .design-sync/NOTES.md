@@ -56,7 +56,7 @@ viewport, e.g. `520`). Being closer to the fixed-position descendant than
 collapsed one.
 
 **Re-sync risk**: this is a preview-authoring workaround for a harness
-interaction, not a library fix — any *new* overlay/portal component added to
+interaction, not a library fix — any _new_ overlay/portal component added to
 `@nexus-cyberdeck/react` with `position: fixed` will hit the same collapse and needs
 the same wrapper in its own preview. Grep future `[RENDER_BLANK]` /
 `[RENDER_THIN]` on a `cardMode: single` component against this note before

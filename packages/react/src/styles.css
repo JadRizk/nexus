@@ -20,12 +20,22 @@
 }
 
 @keyframes nx-blink {
-  0%, 49% { opacity: 1; }
-  50%, 100% { opacity: 0; }
+  0%,
+  49% {
+    opacity: 1;
+  }
+
+  50%,
+  100% {
+    opacity: 0;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .nx-blink { animation: none; opacity: 1; }
+  .nx-blink {
+    animation: none;
+    opacity: 1;
+  }
 }
 
 /* -------------------------------------------------------------------- Button */
@@ -429,7 +439,9 @@
   font-size: var(--nx-text-xs);
 }
 
-.nx-panel[data-nx-padded="0"] { --nx-panel-padding: 0; }
+.nx-panel[data-nx-padded="0"] {
+  --nx-panel-padding: 0;
+}
 
 .nx-panel[data-nx-raised="1"] {
   --nx-panel-shadow: var(--nx-glow-raised), var(--nx-glow-inset);
@@ -452,12 +464,25 @@
    rendered at all. Keeping these lower than the per-corner rules is what makes
    the cascade work; the "none" case is handled by suppressing the pseudo-
    element instead of by out-specifying these. */
-.nx-panel[data-nx-corners*="tl"] { --tl: var(--nx-border-accent); }
-.nx-panel[data-nx-corners*="tr"] { --tr: var(--nx-border-accent); }
-.nx-panel[data-nx-corners*="bl"] { --bl: var(--nx-border-accent); }
-.nx-panel[data-nx-corners*="br"] { --br: var(--nx-border-accent); }
+.nx-panel[data-nx-corners*="tl"] {
+  --tl: var(--nx-border-accent);
+}
 
-.nx-panel[data-nx-corners="none"]::before { content: none; }
+.nx-panel[data-nx-corners*="tr"] {
+  --tr: var(--nx-border-accent);
+}
+
+.nx-panel[data-nx-corners*="bl"] {
+  --bl: var(--nx-border-accent);
+}
+
+.nx-panel[data-nx-corners*="br"] {
+  --br: var(--nx-border-accent);
+}
+
+.nx-panel[data-nx-corners="none"]::before {
+  content: none;
+}
 
 /* :not() here is deliberate, and different from the removed-specificity bug
    above: it makes the two ::before rules target mutually exclusive states
@@ -484,15 +509,23 @@
     linear-gradient(to left, var(--br) 0 var(--nx-tick), transparent 0),
     linear-gradient(to top, var(--br) 0 var(--nx-tick), transparent 0);
   background-size:
-    var(--nx-tick) var(--nx-hairline), var(--nx-hairline) var(--nx-tick),
-    var(--nx-tick) var(--nx-hairline), var(--nx-hairline) var(--nx-tick),
-    var(--nx-tick) var(--nx-hairline), var(--nx-hairline) var(--nx-tick),
-    var(--nx-tick) var(--nx-hairline), var(--nx-hairline) var(--nx-tick);
+    var(--nx-tick) var(--nx-hairline),
+    var(--nx-hairline) var(--nx-tick),
+    var(--nx-tick) var(--nx-hairline),
+    var(--nx-hairline) var(--nx-tick),
+    var(--nx-tick) var(--nx-hairline),
+    var(--nx-hairline) var(--nx-tick),
+    var(--nx-tick) var(--nx-hairline),
+    var(--nx-hairline) var(--nx-tick);
   background-position:
-    top left, top left,
-    top right, top right,
-    bottom left, bottom left,
-    bottom right, bottom right;
+    top left,
+    top left,
+    top right,
+    top right,
+    bottom left,
+    bottom left,
+    bottom right,
+    bottom right;
 }
 
 /* ------------------------------------------------------------ SectionHeading */
@@ -610,7 +643,9 @@
   border: 0;
   padding: var(--nx-space-3) 0;
   cursor: pointer;
-  transition: color var(--nx-dur-micro), background var(--nx-dur-micro);
+  transition:
+    color var(--nx-dur-micro),
+    background var(--nx-dur-micro);
 }
 
 .nx-tab:hover {
@@ -635,7 +670,9 @@
   transition: background var(--nx-dur-micro);
 }
 
-.nx-row:hover { background: var(--nx-row-hover-bg, var(--nx-bg-hover)); }
+.nx-row:hover {
+  background: var(--nx-row-hover-bg, var(--nx-bg-hover));
+}
 
 .nx-row__label {
   flex: 1;
@@ -692,7 +729,9 @@
   color: var(--nx-wordmark-fg, var(--nx-fg-default));
   letter-spacing: -0.02em;
   transform: skewX(var(--nx-wordmark-skew, -9deg));
-  text-shadow: 2px 0 var(--nx-split-r), -2px 0 var(--nx-split-b);
+  text-shadow:
+    2px 0 var(--nx-split-r),
+    -2px 0 var(--nx-split-b);
 }
 
 /* ----------------------------------------------------------------- utilities */

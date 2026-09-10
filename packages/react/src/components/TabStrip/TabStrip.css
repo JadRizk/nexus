@@ -15,7 +15,9 @@
   border: 0;
   padding: var(--nx-space-3) 0;
   cursor: pointer;
-  transition: color var(--nx-dur-micro), background var(--nx-dur-micro);
+  transition:
+    color var(--nx-dur-micro),
+    background var(--nx-dur-micro);
 }
 
 .nx-tab:hover {

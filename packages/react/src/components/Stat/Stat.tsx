@@ -13,7 +13,12 @@ export function Stat({ label, value, tone, colour, style }: StatProps) {
     <div
       className="nx-stat"
       // Computed from props, so it cannot live in the stylesheet.
-      style={{ "--nx-stat-value-fg": resolveColour({ tone, colour }, "var(--nx-fg-default)"), ...style } as CSSProperties}
+      style={
+        {
+          "--nx-stat-value-fg": resolveColour({ tone, colour }, "var(--nx-fg-default)"),
+          ...style,
+        } as CSSProperties
+      }
     >
       <div className="nx-stat__label">{label}</div>
       <div className="nx-stat__value">{value}</div>

@@ -12,7 +12,9 @@ export function useHotkey(combo: string, handler: (e: KeyboardEvent) => void): v
   // caller passed an inline arrow — which is every ordinary call site. A ref
   // keeps the handler current while the listener is armed exactly once.
   const handlerRef = useRef(handler);
-  useEffect(() => { handlerRef.current = handler; });
+  useEffect(() => {
+    handlerRef.current = handler;
+  });
 
   useEffect(() => {
     const parts = combo.toLowerCase().split("+");
@@ -36,8 +38,7 @@ export function useHotkey(combo: string, handler: (e: KeyboardEvent) => void): v
       // exactly what typing a capital letter is.
       if (!wantMod) {
         const t = e.target as HTMLElement | null;
-        const typing =
-          !!t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable);
+        const typing = !!t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable);
         if (typing) return;
       }
 

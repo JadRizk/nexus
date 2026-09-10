@@ -47,7 +47,9 @@ from the semantic layer, and then styles itself from those:
 element.** This matters more than it looks. Writing
 
 ```css
-.nx-btn { --nx-btn-border: var(--nx-border-default); }   /* wrong */
+.nx-btn {
+  --nx-btn-border: var(--nx-border-default);
+} /* wrong */
 ```
 
 appears equivalent and silently defeats the entire mechanism: a custom property
@@ -57,12 +59,14 @@ token on every button, so a consumer's override on a wrapper would never reach
 one. The first draft of this layer did exactly that, and the test that a
 retheme actually lands is what caught it.
 
-Two things follow. States are expressed by moving the *token*, not by
+Two things follow. States are expressed by moving the _token_, not by
 restating the property, so a state cannot drift from the base rule. And a
 consumer retheming buttons sets one variable on any ancestor:
 
 ```css
-.marketing-site { --nx-btn-border: var(--nx-fg-info); }
+.marketing-site {
+  --nx-btn-border: var(--nx-fg-info);
+}
 ```
 
 That works because custom properties inherit — no specificity fight, no
@@ -83,7 +87,9 @@ custom property and keep the rule in the stylesheet:
 ```
 
 ```css
-.nx-meter::after { width: var(--nx-meter-fill); }
+.nx-meter::after {
+  width: var(--nx-meter-fill);
+}
 ```
 
 This keeps the design in one place while the number stays where it is

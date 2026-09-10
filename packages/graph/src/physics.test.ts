@@ -4,7 +4,10 @@ import { createPhysics } from "./physics.js";
 describe("createPhysics", () => {
   it("settles to a stop when there are no forces at all", () => {
     const sim = createPhysics({
-      nodes: [{ charge: 1, mass: 1 }, { charge: 1, mass: 1 }],
+      nodes: [
+        { charge: 1, mass: 1 },
+        { charge: 1, mass: 1 },
+      ],
       edges: [],
     });
     sim.setParams({ repulsion: 0, linkDistance: 1, gravity: 0, damping: 0.5, cursorForce: 0 });
@@ -15,12 +18,16 @@ describe("createPhysics", () => {
 
   it("pulls two linked nodes toward the configured rest distance", () => {
     const sim = createPhysics({
-      nodes: [{ charge: 1, mass: 1 }, { charge: 1, mass: 1 }],
+      nodes: [
+        { charge: 1, mass: 1 },
+        { charge: 1, mass: 1 },
+      ],
       edges: [{ a: 0, b: 1, dist: 1, strength: 1 }],
     });
     sim.setParams({ repulsion: 0, linkDistance: 50, gravity: 0, damping: 0.6, cursorForce: 0 });
     for (let i = 0; i < 500; i++) sim.step();
-    const dx = sim.pos[2]! - sim.pos[0]!, dy = sim.pos[3]! - sim.pos[1]!;
+    const dx = sim.pos[2]! - sim.pos[0]!,
+      dy = sim.pos[3]! - sim.pos[1]!;
     const d = Math.sqrt(dx * dx + dy * dy);
     // rest distance = eRest(1) * linkDistance(50) = 50 — generous band around it,
     // this is checking convergence toward the target, not exact equilibrium.
@@ -30,7 +37,10 @@ describe("createPhysics", () => {
 
   it("repulsion alone pushes two nodes further apart over time", () => {
     const sim = createPhysics({
-      nodes: [{ charge: 1, mass: 1 }, { charge: 1, mass: 1 }],
+      nodes: [
+        { charge: 1, mass: 1 },
+        { charge: 1, mass: 1 },
+      ],
       edges: [],
     });
     sim.setParams({ repulsion: 900, linkDistance: 1, gravity: 0, damping: 0.6, cursorForce: 0 });
@@ -52,10 +62,19 @@ describe("createPhysics", () => {
 
   it("pin locks a node's position through subsequent steps", () => {
     const sim = createPhysics({
-      nodes: [{ charge: 1, mass: 1 }, { charge: 1, mass: 1 }],
+      nodes: [
+        { charge: 1, mass: 1 },
+        { charge: 1, mass: 1 },
+      ],
       edges: [{ a: 0, b: 1, dist: 1, strength: 1 }],
     });
-    sim.setParams({ repulsion: 900, linkDistance: 78, gravity: 0.02, damping: 0.6, cursorForce: 0 });
+    sim.setParams({
+      repulsion: 900,
+      linkDistance: 78,
+      gravity: 0.02,
+      damping: 0.6,
+      cursorForce: 0,
+    });
     sim.pin(0, 123, -45);
     for (let i = 0; i < 50; i++) sim.step();
     expect(sim.pos[0]).toBeCloseTo(123);
@@ -65,7 +84,9 @@ describe("createPhysics", () => {
   it("reheat un-settles a settled simulation", () => {
     const sim = createPhysics({ nodes: [{ charge: 1, mass: 1 }], edges: [] });
     sim.setParams({ repulsion: 0, linkDistance: 1, gravity: 0, damping: 0.5, cursorForce: 0 });
-    while (sim.step()) { /* run to settled */ }
+    while (sim.step()) {
+      /* run to settled */
+    }
     expect(sim.isSettled()).toBe(true);
     sim.reheat(1);
     expect(sim.isSettled()).toBe(false);
