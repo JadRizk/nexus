@@ -2,6 +2,7 @@ import { useId, version as reactVersion } from "react";
 import type { CSSProperties, ReactNode, RefObject } from "react";
 import { Panel } from "../Panel/index.js";
 import { HazardRule } from "../HazardRule/index.js";
+import { Button } from "../Button/index.js";
 import { useFocusTrap } from "../../hooks/index.js";
 import { resolveColour } from "../../colour.js";
 import type { ToneProps } from "../../colour.js";
@@ -90,14 +91,13 @@ export function Drawer({
               </h2>
               {subtitle != null && <div className="nx-drawer__subtitle">{subtitle}</div>}
             </div>
-            <button
-              type="button"
-              className="nx-btn nx-drawer__close"
+            <Button
+              className="nx-drawer__close"
               onClick={onClose}
               aria-label="Close details"
             >
               ✕
-            </button>
+            </Button>
           </div>
         </header>
 
