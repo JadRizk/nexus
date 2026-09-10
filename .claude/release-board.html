@@ -1,0 +1,414 @@
+<!-- Point-in-time snapshot of the release board's page source, committed for local/offline reference.
+     This is NOT live data — ticket state only exists in the hosted artifact's database and changes
+     continuously. The live board is the source of truth: https://claude.ai/code/artifact/6924b2a1-418b-48f8-a536-37b7005b4e60
+     Re-copy this file after any future redesign of the board's UI; there is no automatic sync.
+     See .claude/RELEASE-PIPELINE.md for how a session uses the live board. -->
+<title>Nexus Release Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+  :root {
+    --void: #08090A; --panel: #0A0C0B; --raised: #11150F;
+    --phosphor: #DFF5C7; --muted: #B0BDA9; --subtle: #8DA084; --tertiary: #788E6D;
+    --border: #2F382B; --border-strong: #53624B;
+    --acid: #C6F135; --acid-dim: rgba(198,241,53,0.10); --acid-active: rgba(198,241,53,0.16);
+    --alarm: #FF2E63; --sodium: #FF8A1E; --violet: #9D7BFF; --data: #17E2E5; --lime: #7CFF4F;
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--void); }
+  body { margin: 0; background: var(--void); color: var(--phosphor); font-family: var(--mono); font-size: 13px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+  button, input, textarea, select { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  button:focus-visible, input:focus-visible, textarea:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--acid); outline-offset: 2px; }
+  code { font-family: var(--mono); font-size: 12px; color: var(--data); background: rgba(23,226,229,0.06); padding: 1px 4px; }
+  pre { margin: 0; padding: var(--s3); background: var(--panel); border: 1px solid var(--border); overflow-x: auto; font-size: 11.5px; line-height: 1.55; color: var(--muted); white-space: pre; }
+
+  .app { display: grid; grid-template-rows: auto auto 1fr; height: 100vh; }
+
+  /* masthead */
+  .mast { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s3) var(--s5); padding: var(--s3) var(--s5); border-bottom: 1px solid var(--border); background: var(--panel); }
+  .wordmark { font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; font-size: 12px; color: var(--acid); white-space: nowrap; }
+  .wordmark span { color: var(--tertiary); font-weight: 400; }
+  .cursor { display: inline-block; width: 6px; height: 12px; background: var(--acid); vertical-align: -2px; margin-left: 4px; animation: blink 1.064s steps(1,end) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .cursor { animation: none; } }
+  .stats { display: flex; flex-wrap: wrap; gap: var(--s2) var(--s4); font-size: 11.5px; color: var(--subtle); letter-spacing: 0.04em; font-variant-numeric: tabular-nums; }
+  .stats b { color: var(--phosphor); font-weight: 500; }
+  .stats .dot::before { content: "■ "; font-size: 9px; }
+  .stats .live::before { color: var(--lime); }
+  .stats .off::before { color: var(--sodium); }
+  .me { display: flex; align-items: center; gap: var(--s2); font-size: 11.5px; color: var(--tertiary); letter-spacing: 0.06em; text-transform: uppercase; }
+  .me input { width: 150px; background: var(--void); border: 1px solid var(--border); padding: 4px 8px; font-size: 12px; text-transform: none; letter-spacing: 0; color: var(--phosphor); }
+
+  /* toolbar */
+  .bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s3); padding: var(--s2) var(--s5); border-bottom: 1px solid var(--border); font-size: 11.5px; }
+  .bar .lbl { color: var(--tertiary); letter-spacing: 0.12em; text-transform: uppercase; font-size: 10.5px; margin-right: var(--s1); }
+  .chip { border: 1px solid var(--border); background: transparent; padding: 3px 9px; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); line-height: 1.4; }
+  .chip[aria-pressed="true"] { border-color: var(--acid); color: var(--acid); background: var(--acid-dim); }
+  .chip:hover { border-color: var(--border-strong); }
+  .bar .spacer { flex: 1; }
+  .btn { border: 1px solid var(--border-strong); background: transparent; padding: 4px 10px; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); line-height: 1.4; }
+  .btn:hover { border-color: var(--acid); color: var(--acid); }
+  .btn.primary { border-color: var(--acid); color: var(--acid); }
+  .btn.primary:hover { background: var(--acid-dim); }
+  .btn.danger { border-color: var(--alarm); color: var(--alarm); }
+  .btn:disabled { opacity: 0.4; cursor: default; }
+
+  /* board */
+  .board { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(250px, 1fr); gap: 1px; background: var(--border); overflow: auto; min-height: 0; }
+  .col { background: var(--void); display: flex; flex-direction: column; min-height: 0; }
+  .col-h { position: sticky; top: 0; z-index: 1; background: var(--void); padding: var(--s3) var(--s3) var(--s2); border-bottom: 1px solid var(--border); display: flex; align-items: baseline; gap: var(--s2); }
+  .col-h .name { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 600; color: var(--acid); }
+  .col-h .name::before { content: "///"; color: var(--tertiary); font-weight: 400; margin-right: var(--s2); }
+  .col-h .n { color: var(--tertiary); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .col-h .hint { margin-left: auto; color: var(--tertiary); font-size: 10.5px; }
+  .col.blocked .col-h .name { color: var(--sodium); }
+  .col.done .col-h .name { color: var(--lime); }
+  .cards { display: flex; flex-direction: column; gap: var(--s2); padding: var(--s2) var(--s3) var(--s5); overflow-y: auto; }
+  .card { position: relative; text-align: left; width: 100%; background: var(--panel); border: 1px solid var(--border); padding: var(--s2) var(--s3) var(--s2) 14px; display: grid; gap: 3px; }
+  .card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: var(--stripe, var(--border-strong)); }
+  .card:hover { border-color: var(--border-strong); }
+  .card.mine { border-color: var(--acid); }
+  .card .top { display: flex; align-items: baseline; gap: var(--s2); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--tertiary); }
+  .card .top .id { color: var(--data); font-weight: 500; }
+  .card .top .gate { margin-left: auto; }
+  .card .title { font-weight: 500; color: var(--phosphor); line-height: 1.35; }
+  .card .meta { display: flex; flex-wrap: wrap; gap: 4px 8px; font-size: 10.5px; color: var(--subtle); align-items: center; }
+  .card .who { color: var(--acid); }
+  .card .who::before { content: "▸ "; color: var(--tertiary); }
+  .card .wait { color: var(--sodium); }
+  .card .acc { font-variant-numeric: tabular-nums; }
+  .sev-blocker { --stripe: var(--alarm); } .sev-high { --stripe: var(--sodium); } .sev-medium { --stripe: var(--violet); } .sev-low { --stripe: var(--border-strong); }
+  .empty { color: var(--tertiary); font-size: 11.5px; padding: var(--s3); text-align: center; border: 1px dashed var(--border); }
+
+  /* notice */
+  .notice { margin: var(--s3) var(--s5) 0; padding: var(--s3) var(--s4); border: 1px solid var(--sodium); color: var(--muted); font-size: 12px; max-width: 78ch; }
+  .notice b { color: var(--sodium); font-weight: 500; }
+
+  /* drawer */
+  .scrim { position: fixed; inset: 0; background: rgba(8,9,10,0.6); z-index: 40; }
+  .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(640px, 100vw); background: var(--raised); border-left: 1px solid var(--border-strong); box-shadow: 0 0 60px rgba(198,241,53,0.10); z-index: 41; display: grid; grid-template-rows: auto 1fr auto; }
+  .drawer::before { content: ""; position: absolute; top: -1px; left: -1px; width: 10px; height: 10px; border-top: 1px solid var(--acid); border-left: 1px solid var(--acid); }
+  .d-head { padding: var(--s4) var(--s5) var(--s3); border-bottom: 1px solid var(--border); display: grid; gap: var(--s1); }
+  .d-head .top { display: flex; align-items: center; gap: var(--s3); font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--tertiary); }
+  .d-head .top .id { color: var(--data); font-weight: 600; }
+  .d-head .top .close { margin-left: auto; }
+  .d-head h2 { margin: 0; font-size: 16px; font-weight: 500; line-height: 1.3; text-wrap: balance; }
+  .d-body { overflow-y: auto; padding: var(--s3) var(--s5) var(--s5); display: grid; gap: var(--s4); align-content: start; }
+  .sec h3 { margin: 0 0 var(--s2); font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--acid); font-weight: 600; display: flex; align-items: center; gap: var(--s2); }
+  .sec h3::before { content: "///"; color: var(--tertiary); font-weight: 400; }
+  .sec h3::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+  .sec p { margin: 0; color: var(--muted); max-width: 70ch; }
+  .sec ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+  .sec li { color: var(--muted); padding-left: var(--s4); position: relative; }
+  .sec li::before { content: "■"; position: absolute; left: 0; top: 6px; font-size: 8px; color: var(--tertiary); }
+  .acc-row { display: flex; align-items: flex-start; gap: var(--s2); color: var(--muted); }
+  .acc-row input { margin: 4px 0 0; accent-color: var(--acid); }
+  .acc-row.on { color: var(--subtle); text-decoration: line-through; }
+  .rel { display: flex; flex-wrap: wrap; gap: 6px; }
+  .rel button { border: 1px solid var(--border); background: transparent; padding: 2px 8px; font-size: 11px; color: var(--data); }
+  .rel button.done { color: var(--lime); border-color: var(--border); }
+  .rel button.open { color: var(--sodium); }
+  .refs code { display: inline-block; margin: 0 6px 4px 0; white-space: normal; }
+  .log { display: grid; gap: 4px; font-size: 11.5px; }
+  .log div { color: var(--subtle); }
+  .log span { color: var(--tertiary); margin-right: var(--s2); font-variant-numeric: tabular-nums; }
+  .log b { color: var(--muted); font-weight: 500; margin-right: var(--s2); }
+  .note-row { display: flex; gap: var(--s2); }
+  .note-row input { flex: 1; background: var(--void); border: 1px solid var(--border); padding: 5px 8px; font-size: 12px; }
+  .d-foot { padding: var(--s3) var(--s5); border-top: 1px solid var(--border); display: grid; gap: var(--s2); }
+  .d-foot .row { display: flex; flex-wrap: wrap; gap: var(--s2); align-items: center; }
+  .d-foot .lbl { font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--tertiary); margin-right: var(--s1); }
+  .status-btn[aria-pressed="true"] { border-color: var(--acid); color: var(--acid); background: var(--acid-dim); }
+  .warn { color: var(--sodium); font-size: 11.5px; }
+
+  /* protocol panel */
+  .proto { position: fixed; inset: 0; z-index: 41; background: var(--raised); overflow-y: auto; padding: var(--s5); border-left: 1px solid var(--border-strong); }
+  @media (min-width: 900px) { .proto { left: auto; width: 720px; } }
+  .proto h2 { margin: 0 0 var(--s3); font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--acid); display: flex; align-items: center; gap: var(--s3); }
+  .proto h2::before { content: "///"; color: var(--tertiary); font-weight: 400; }
+  .proto h2 .close { margin-left: auto; }
+  .proto p, .proto li { color: var(--muted); max-width: 70ch; }
+  .proto ol { padding-left: 20px; margin: 0 0 var(--s3); }
+  .proto pre { margin-bottom: var(--s3); }
+  [hidden] { display: none !important; }
+</style>
+
+<div class="app">
+  <header class="mast">
+    <div class="wordmark">Nexus Cyberdeck <span>/// release board</span><span class="cursor" aria-hidden="true"></span></div>
+    <div class="stats" id="stats"><span class="dot off">connecting to the store</span></div>
+    <label class="me">You <input id="me" placeholder="name or session" autocomplete="off"></label>
+  </header>
+
+  <div class="bar">
+    <span class="lbl">Gate</span>
+    <button class="chip" data-f="gate" data-v="all" aria-pressed="true">All</button>
+    <button class="chip" data-f="gate" data-v="1" aria-pressed="false">1 · before public</button>
+    <button class="chip" data-f="gate" data-v="2" aria-pressed="false">2 · go public</button>
+    <button class="chip" data-f="gate" data-v="3" aria-pressed="false">3 · first publish</button>
+    <span class="lbl" style="margin-left:12px">Area</span>
+    <button class="chip" data-f="area" data-v="all" aria-pressed="true">All</button>
+    <button class="chip" data-f="area" data-v="react" aria-pressed="false">react</button>
+    <button class="chip" data-f="area" data-v="graph" aria-pressed="false">graph</button>
+    <button class="chip" data-f="area" data-v="tokens" aria-pressed="false">tokens</button>
+    <button class="chip" data-f="area" data-v="packaging" aria-pressed="false">packaging</button>
+    <button class="chip" data-f="area" data-v="docs" aria-pressed="false">docs</button>
+    <button class="chip" data-f="area" data-v="showcase" aria-pressed="false">showcase</button>
+    <button class="chip" data-f="area" data-v="hygiene" aria-pressed="false">hygiene</button>
+    <button class="chip" data-f="area" data-v="release" aria-pressed="false">release</button>
+    <span class="spacer"></span>
+    <button class="btn" id="mine-btn" aria-pressed="false">Mine</button>
+    <button class="btn" id="proto-btn">Agent protocol</button>
+  </div>
+
+  <div id="notice" class="notice" hidden></div>
+
+  <main class="board" id="board" aria-label="Ticket board"></main>
+</div>
+
+<div id="scrim" class="scrim" hidden></div>
+<aside id="drawer" class="drawer" hidden role="dialog" aria-modal="true" aria-labelledby="d-title"></aside>
+
+<aside id="proto" class="proto" hidden role="dialog" aria-modal="true" aria-labelledby="proto-h">
+  <h2 id="proto-h">Agent protocol <button class="btn close" id="proto-close">Close</button></h2>
+  <p>This board is the queue. A Claude session working on the Nexus repository takes a ticket here, works it in the repo, and reports back here. Humans and agents use the same store, so what you see is what every agent sees. The store is the artifact database, reached from a Claude Code session with the Artifact tool's <code>read_db</code> and <code>write_db</code> actions against this page's URL.</p>
+  <ol>
+    <li><b>Find a ready ticket.</b> A ticket is ready when its status is <code>todo</code> and every id in its <code>blockedBy</code> list has status <code>done</code>. Prefer the lowest <code>order</code> in the lowest gate.</li>
+    <li><b>Claim it</b> before touching the repo: set <code>status</code> to <code>in_progress</code>, <code>assignee</code> to your session name, and append a log entry. If another assignee is already set and the ticket is in progress, pick a different one.</li>
+    <li><b>Work it</b> in a branch named after the ticket, e.g. <code>nx-07-drawer-trap</code>. Do everything under "What needs to be done". Run the repo's own checks (lint, typecheck, test, build, check-docs) before you report.</li>
+    <li><b>Report.</b> Tick the acceptance criteria you verified, set <code>status</code> to <code>review</code>, add a log entry naming the branch or pull request. Do not mark <code>done</code> yourself; a reviewer moves it.</li>
+    <li><b>Blocked?</b> Leave status <code>in_progress</code>, add a log entry saying what you are waiting on, and clear <code>assignee</code> if you are abandoning it.</li>
+  </ol>
+  <p>Reading the queue (Artifact tool, action <code>read_db</code>):</p>
+  <pre id="proto-read"></pre>
+  <p>Claiming a ticket. <code>update</code> merges top-level fields and replaces arrays whole, so read the ticket first and send the full <code>log</code> and <code>acceptance</code> arrays back:</p>
+  <pre id="proto-claim"></pre>
+  <p>Reporting for review:</p>
+  <pre id="proto-review"></pre>
+  <p>Document shape, one per ticket in collection <code>tickets</code>, id <code>NX-nn</code>:</p>
+  <pre>{
+  id, title, gate (1|2|3), area, severity (blocker|high|medium|low),
+  status ("todo"|"in_progress"|"review"|"done"), assignee (string|null), order,
+  description, tasks: string[], acceptance: [{ text, done }],
+  blockedBy: string[], refs: string[], findings: string[],
+  createdAt, updatedAt, updatedBy, log: [{ at, by, note }]
+}</pre>
+</aside>
+
+<script>
+(() => {
+  const $ = (s, r = document) => r.querySelector(s);
+  const el = (tag, attrs = {}, ...kids) => {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (k === "class") n.className = v;
+      else if (k === "html") n.innerHTML = v;
+      else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
+      else if (v === false || v == null) continue;
+      else n.setAttribute(k, v === true ? "" : v);
+    }
+    for (const k of kids.flat()) if (k != null) n.append(k.nodeType ? k : document.createTextNode(String(k)));
+    return n;
+  };
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  // ---- state ----
+  let db = null;
+  let tickets = new Map();      // id -> doc
+  let openId = null;
+  const filters = { gate: "all", area: "all", mine: false };
+  const STATUSES = ["todo", "in_progress", "review", "done"];
+  const STATUS_LABEL = { todo: "To do", in_progress: "In progress", review: "Review", done: "Done" };
+  const COLS = [
+    { key: "blocked", name: "Blocked", hint: "waiting on another ticket" },
+    { key: "ready", name: "Ready", hint: "pick from here" },
+    { key: "in_progress", name: "In progress", hint: "claimed" },
+    { key: "review", name: "Review", hint: "a reviewer moves to done" },
+    { key: "done", name: "Done", hint: "" },
+  ];
+
+  // per-viewer name (a convenience, never authority)
+  let me = "";
+  try { me = localStorage.getItem("nx-board-me") || ""; } catch {}
+  const meInput = $("#me");
+  meInput.value = me;
+  meInput.addEventListener("input", () => { me = meInput.value.trim(); try { localStorage.setItem("nx-board-me", me); } catch {} render(); });
+
+  const nowIso = () => new Date().toISOString();
+  const who = () => me || "someone on the board";
+
+  // ---- derived ----
+  const isDone = (id) => tickets.get(id)?.status === "done";
+  const blockers = (t) => (t.blockedBy || []).filter((b) => !isDone(b));
+  const column = (t) => {
+    if (t.status === "done") return "done";
+    if (t.status === "review") return "review";
+    if (t.status === "in_progress") return "in_progress";
+    return blockers(t).length ? "blocked" : "ready";
+  };
+  const blocks = (id) => [...tickets.values()].filter((t) => (t.blockedBy || []).includes(id)).map((t) => t.id);
+  const visible = (t) =>
+    (filters.gate === "all" || String(t.gate) === filters.gate) &&
+    (filters.area === "all" || t.area === filters.area) &&
+    (!filters.mine || (me && t.assignee === me));
+
+  // ---- render board ----
+  const board = $("#board");
+  function render() {
+    const all = [...tickets.values()].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    const shown = all.filter(visible);
+    board.replaceChildren(...COLS.map((c) => {
+      const items = shown.filter((t) => column(t) === c.key);
+      return el("section", { class: `col ${c.key}`, "aria-label": c.name },
+        el("div", { class: "col-h" }, el("span", { class: "name" }, c.name), el("span", { class: "n" }, items.length), c.hint ? el("span", { class: "hint" }, c.hint) : null),
+        el("div", { class: "cards" }, items.length ? items.map(card) : el("div", { class: "empty" }, c.key === "ready" && all.length ? "nothing ready in this view" : "empty")));
+    }));
+    // stats
+    const n = { total: all.length, todo: 0, in_progress: 0, review: 0, done: 0, blocked: 0 };
+    for (const t of all) { n[t.status] = (n[t.status] || 0) + 1; if (column(t) === "blocked") n.blocked++; }
+    const active = new Set(all.filter((t) => t.status === "in_progress" && t.assignee).map((t) => t.assignee));
+    $("#stats").replaceChildren(
+      el("span", { class: `dot ${db ? "live" : "off"}` }, db ? "live store" : "store unavailable"),
+      el("span", {}, el("b", {}, n.done), ` / ${n.total} done`),
+      el("span", {}, el("b", {}, n.in_progress), " in progress"),
+      el("span", {}, el("b", {}, n.review), " in review"),
+      el("span", {}, el("b", {}, n.blocked), " blocked"),
+      el("span", {}, el("b", {}, active.size), active.size === 1 ? " agent active" : " agents active"),
+    );
+    if (openId) renderDrawer();
+  }
+
+  function card(t) {
+    const accDone = (t.acceptance || []).filter((a) => a.done).length, accN = (t.acceptance || []).length;
+    const waits = blockers(t);
+    return el("button", { class: `card sev-${t.severity}${me && t.assignee === me ? " mine" : ""}`, onclick: () => openTicket(t.id), "aria-label": `${t.id} ${t.title}` },
+      el("div", { class: "top" }, el("span", { class: "id" }, t.id), el("span", {}, t.severity), el("span", {}, t.area), el("span", { class: "gate" }, `gate ${t.gate}`)),
+      el("div", { class: "title" }, t.title),
+      el("div", { class: "meta" },
+        t.assignee ? el("span", { class: "who" }, t.assignee) : null,
+        waits.length ? el("span", { class: "wait" }, `waits on ${waits.join(", ")}`) : null,
+        accN ? el("span", { class: "acc" }, `${accDone}/${accN} criteria`) : null,
+      ),
+    );
+  }
+
+  // ---- drawer ----
+  const drawer = $("#drawer"), scrim = $("#scrim");
+  function openTicket(id) { openId = id; drawer.hidden = false; scrim.hidden = false; renderDrawer(); drawer.querySelector(".close")?.focus(); }
+  function closeTicket() { openId = null; drawer.hidden = true; scrim.hidden = true; }
+  scrim.addEventListener("click", closeTicket);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") { if (!drawer.hidden) closeTicket(); if (!proto.hidden) closeProto(); } });
+
+  function renderDrawer() {
+    const t = tickets.get(openId);
+    if (!t) { closeTicket(); return; }
+    const relBtn = (id) => { const r = tickets.get(id); return el("button", { class: r ? (r.status === "done" ? "done" : "open") : "", onclick: () => openTicket(id), title: r?.title || id }, id, r ? ` · ${STATUS_LABEL[r.status] || r.status}` : ""); };
+    const canWrite = !!db;
+    const claimedByOther = t.status === "in_progress" && t.assignee && t.assignee !== me;
+    drawer.replaceChildren(
+      el("div", { class: "d-head" },
+        el("div", { class: "top" }, el("span", { class: "id" }, t.id), el("span", {}, t.severity), el("span", {}, t.area), el("span", {}, `gate ${t.gate}`), el("span", {}, STATUS_LABEL[t.status] || t.status),
+          el("button", { class: "btn close", onclick: closeTicket }, "Close")),
+        el("h2", { id: "d-title" }, t.title),
+      ),
+      el("div", { class: "d-body" },
+        el("div", { class: "sec" }, el("h3", {}, "Description"), el("p", {}, t.description || "")),
+        el("div", { class: "sec" }, el("h3", {}, "What needs to be done"), el("ul", {}, (t.tasks || []).map((x) => el("li", {}, x)))),
+        el("div", { class: "sec" }, el("h3", {}, "Acceptance criteria"),
+          el("div", { style: "display:grid;gap:6px" }, (t.acceptance || []).map((a, i) =>
+            el("label", { class: `acc-row${a.done ? " on" : ""}` },
+              el("input", { type: "checkbox", checked: a.done ? true : null, disabled: canWrite ? null : true, onchange: (e) => toggleAcceptance(t, i, e.target.checked) }),
+              el("span", {}, a.text))))),
+        (t.blockedBy?.length || blocks(t.id).length) ? el("div", { class: "sec" }, el("h3", {}, "Relations"),
+          t.blockedBy?.length ? el("p", { style: "margin-bottom:6px" }, "Blocked by") : null,
+          t.blockedBy?.length ? el("div", { class: "rel", style: "margin-bottom:10px" }, t.blockedBy.map(relBtn)) : null,
+          blocks(t.id).length ? el("p", { style: "margin-bottom:6px" }, "Blocks") : null,
+          blocks(t.id).length ? el("div", { class: "rel" }, blocks(t.id).map(relBtn)) : null) : null,
+        t.refs?.length ? el("div", { class: "sec refs" }, el("h3", {}, "Where"), el("div", {}, t.refs.map((r) => el("code", {}, r)))) : null,
+        t.findings?.length ? el("div", { class: "sec" }, el("h3", {}, "Audit findings"), el("p", {}, t.findings.join(", "))) : null,
+        el("div", { class: "sec" }, el("h3", {}, "Log"),
+          el("div", { class: "log" }, [...(t.log || [])].reverse().map((l) => el("div", {}, el("span", {}, (l.at || "").slice(0, 16).replace("T", " ")), el("b", {}, l.by || ""), l.note || ""))),
+          canWrite ? el("div", { class: "note-row", style: "margin-top:8px" },
+            el("input", { id: "note-in", placeholder: "add a note", onkeydown: (e) => { if (e.key === "Enter") addNote(t, e.target); } }),
+            el("button", { class: "btn", onclick: () => addNote(t, $("#note-in")) }, "Add")) : null),
+      ),
+      el("div", { class: "d-foot" },
+        el("div", { class: "row" }, el("span", { class: "lbl" }, "Status"),
+          ...STATUSES.map((s) => el("button", { class: "btn status-btn", "aria-pressed": String(t.status === s), disabled: canWrite ? null : true, onclick: () => setStatus(t, s) }, STATUS_LABEL[s]))),
+        el("div", { class: "row" }, el("span", { class: "lbl" }, "Assignee"),
+          el("span", { style: "color:var(--acid)" }, t.assignee || "unassigned"),
+          canWrite ? el("button", { class: "btn primary", disabled: me ? null : true, onclick: () => claim(t), title: me ? "" : "enter your name at the top first" }, t.assignee === me ? "Claimed by you" : "Claim") : null,
+          canWrite && t.assignee ? el("button", { class: "btn", onclick: () => release(t) }, "Release") : null,
+          claimedByOther ? el("span", { class: "warn" }, `in progress by ${t.assignee}`) : null),
+        el("div", { class: "row" }, el("span", { class: "lbl" }, "Updated"), el("span", { style: "color:var(--subtle);font-size:11.5px" }, `${(t.updatedAt || "").slice(0, 16).replace("T", " ")} by ${t.updatedBy || "?"}`)),
+      ),
+    );
+  }
+
+  // ---- writes ----
+  const notice = $("#notice");
+  function showNotice(html) { notice.innerHTML = html; notice.hidden = false; }
+  async function write(t, patch, note) {
+    if (!db) return;
+    const at = nowIso();
+    const log = [...(t.log || []), { at, by: who(), note }];
+    try {
+      await db.doc(`tickets/${t.id}`).update({ ...patch, log, updatedAt: at, updatedBy: who() });
+    } catch (e) {
+      showNotice(`<b>Write failed</b> (${esc(e?.code || "error")}): ${esc(e?.message || "")}`);
+    }
+  }
+  const setStatus = (t, s) => { if (s !== t.status) write(t, { status: s }, `Status: ${STATUS_LABEL[t.status]} → ${STATUS_LABEL[s]}`); };
+  const claim = (t) => write(t, { assignee: me, status: t.status === "todo" ? "in_progress" : t.status }, `Claimed by ${me}`);
+  const release = (t) => write(t, { assignee: null, status: t.status === "in_progress" ? "todo" : t.status }, `Released by ${who()}`);
+  const toggleAcceptance = (t, i, done) => {
+    const acceptance = (t.acceptance || []).map((a, k) => (k === i ? { ...a, done } : { ...a }));
+    write(t, { acceptance }, `${done ? "Verified" : "Unverified"}: ${acceptance[i].text}`);
+  };
+  const addNote = (t, input) => { const v = input.value.trim(); if (!v) return; input.value = ""; write(t, {}, v); };
+
+  // ---- filters ----
+  for (const b of document.querySelectorAll(".chip[data-f]")) b.addEventListener("click", () => {
+    filters[b.dataset.f] = b.dataset.v;
+    for (const o of document.querySelectorAll(`.chip[data-f="${b.dataset.f}"]`)) o.setAttribute("aria-pressed", String(o === b));
+    render();
+  });
+  const mineBtn = $("#mine-btn");
+  mineBtn.addEventListener("click", () => { filters.mine = !filters.mine; mineBtn.setAttribute("aria-pressed", String(filters.mine)); render(); });
+
+  // ---- protocol panel ----
+  const proto = $("#proto");
+  const artifactUrl = "https://claude.ai/code/artifact/6924b2a1-418b-48f8-a536-37b7005b4e60";
+  $("#proto-read").textContent = `Artifact action=read_db url=${artifactUrl}\n  db_op=query collection=tickets\n  query={"where":[["status","==","todo"]],"order_by":{"field":"order"}}\n\n# then drop any ticket whose blockedBy ids are not all status "done"\n# (read_db db_op=get collection=tickets doc_id=NX-02 to check one)`;
+  $("#proto-claim").textContent = `Artifact action=write_db url=${artifactUrl}\n  db_op=update collection=tickets doc_id=NX-07\n  data={\n    "status": "in_progress",\n    "assignee": "<your session name>",\n    "updatedAt": "<ISO now>", "updatedBy": "<your session name>",\n    "log": [ ...existing log entries..., {"at": "<ISO now>", "by": "<you>", "note": "Claimed. Branch nx-07-drawer-trap."} ]\n  }`;
+  $("#proto-review").textContent = `Artifact action=write_db url=${artifactUrl}\n  db_op=update collection=tickets doc_id=NX-07\n  data={\n    "status": "review",\n    "acceptance": [ {"text": "...", "done": true}, ... every criterion, with done set to what you verified ],\n    "updatedAt": "<ISO now>", "updatedBy": "<you>",\n    "log": [ ...existing..., {"at": "...", "by": "<you>", "note": "Ready for review: PR #12. Ran lint, typecheck, test, build, check-docs: all green."} ]\n  }`;
+  function openProto() { proto.hidden = false; scrim.hidden = false; $("#proto-close").focus(); }
+  function closeProto() { proto.hidden = true; if (drawer.hidden) scrim.hidden = true; }
+  $("#proto-btn").addEventListener("click", openProto);
+  $("#proto-close").addEventListener("click", closeProto);
+
+  // ---- store ----
+  render();
+  (async () => {
+    db = window.claude?.use ? await window.claude.use("db") : null;
+    if (!db) {
+      showNotice("<b>Store unavailable in this view.</b> The board is read-only here and shows nothing until it can reach the artifact database. Open it inside claude.ai to see and move tickets.");
+      render();
+      return;
+    }
+    db.collection("tickets").onSnapshot(
+      (snap) => {
+        tickets = new Map(snap.docs.filter((d) => d.exists).map((d) => [d.id, d.data()]));
+        if (tickets.size === 0) showNotice("<b>No tickets yet.</b> The store is connected but empty; seed it with write_db from a Claude session.");
+        else notice.hidden = true;
+        render();
+      },
+      (e) => showNotice(`<b>Store error</b> (${esc(e.code)}): ${esc(e.message)}`),
+    );
+  })();
+})();
+</script>
