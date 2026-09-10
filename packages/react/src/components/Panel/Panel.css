@@ -49,12 +49,15 @@
 .nx-panel[data-nx-corners*="tl"] {
   --tl: var(--nx-border-accent);
 }
+
 .nx-panel[data-nx-corners*="tr"] {
   --tr: var(--nx-border-accent);
 }
+
 .nx-panel[data-nx-corners*="bl"] {
   --bl: var(--nx-border-accent);
 }
+
 .nx-panel[data-nx-corners*="br"] {
   --br: var(--nx-border-accent);
 }

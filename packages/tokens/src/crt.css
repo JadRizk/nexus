@@ -82,6 +82,7 @@
   from {
     transform: translateY(-120%);
   }
+
   to {
     transform: translateY(560%);
   }
@@ -153,6 +154,7 @@
   .nx-crt::before {
     display: none;
   }
+
   .nx-crt-split {
     text-shadow: none;
   }

@@ -64,6 +64,7 @@ body {
   width: 6px;
   height: 6px;
 }
+
 .nx-root ::-webkit-scrollbar-thumb {
   background: var(--nx-border-strong);
 }
