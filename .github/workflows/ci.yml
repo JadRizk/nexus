@@ -101,6 +101,19 @@ jobs:
       - name: Graph compiles against its declared three floor
         run: node scripts/check-peer-floor.mjs
 
+      # Every step above this one — typecheck, test, build, the showcase —
+      # installs only the @types/react@18 pinned in devDependencies, never the
+      # @types/react@19 half of the `react: "^18.3.0 || ^19.0.0"` peer range
+      # both packages declare. That gap is exactly how useFocusTrap shipped a
+      # `RefObject<T>` return type that was a real type error for a 19
+      # consumer (RefObject<T> is exact under 19's types, so it told them
+      # `current` could never be null): nothing here ever compiled against 19
+      # to catch it. This compiles packages/react and packages/graph's own
+      # source against @types/react@19 so a React-19-only type error fails
+      # the same pull request that introduced it, not a downstream consumer.
+      - name: React and graph compile against @types/react 19
+        run: node scripts/check-react19-types.mjs
+
       # A changeset is how a consumer finds out what changed. Asking for one on
       # the pull request is the only moment anybody remembers the reasoning; a
       # changelog reconstructed from commit messages at release time is written

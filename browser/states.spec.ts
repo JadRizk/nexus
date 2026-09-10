@@ -156,7 +156,10 @@ test.describe("theme swap", () => {
     const hud = await disabled();
 
     expect(aa).not.toBe(hud);
-    expect(aa.toUpperCase()).toBe("#6B7F61");
+    // primitive.ramp.grey-300 in each theme. The hud-aa value moved from
+    // #6B7F61 when the contrast guard started asserting floors on the raised
+    // surface as well as the panel; #6B7F61 was 4.25:1 there, under 1.4.3.
+    expect(aa.toUpperCase()).toBe("#6F8465");
     expect(hud.toUpperCase()).toBe("#3D4C39");
   });
 });

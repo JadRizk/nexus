@@ -1,7 +1,8 @@
 import { useId, version as reactVersion } from "react";
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties, ReactNode, RefObject } from "react";
 import { Panel } from "../Panel/index.js";
 import { HazardRule } from "../HazardRule/index.js";
+import { Button } from "../Button/index.js";
 import { useFocusTrap } from "../../hooks/index.js";
 import { resolveColour } from "../../colour.js";
 import type { ToneProps } from "../../colour.js";
@@ -55,7 +56,14 @@ export function Drawer({
 
   return (
     <div
-      ref={trapRef}
+      // @types/react 18's `RefObject<T>` already bakes `| null` into `current`,
+      // so a plain HTML element's `ref` prop wants `RefObject<T>` there; 19
+      // moved the `| null` onto the ref prop itself and made `RefObject<T>`
+      // exact, so it wants `RefObject<T | null>` instead. useFocusTrap returns
+      // the honest `RefObject<T | null>` for 19's sake (see its own comment),
+      // which 18's stricter generic-variance check then rejects here even
+      // though the underlying object is identical either way — hence the cast.
+      ref={trapRef as RefObject<HTMLDivElement>}
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
@@ -83,14 +91,13 @@ export function Drawer({
               </h2>
               {subtitle != null && <div className="nx-drawer__subtitle">{subtitle}</div>}
             </div>
-            <button
-              type="button"
-              className="nx-btn nx-drawer__close"
+            <Button
+              className="nx-drawer__close"
               onClick={onClose}
               aria-label="Close details"
             >
               ✕
-            </button>
+            </Button>
           </div>
         </header>
 
