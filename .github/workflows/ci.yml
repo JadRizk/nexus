@@ -38,6 +38,22 @@ jobs:
       - name: Build (packages + reference/preview.jsx)
         run: npm run build
 
+      # arethetypeswrong catches a package.json exports map that resolves
+      # correctly at runtime but lies to TypeScript's module resolution — the
+      # `import`/`require` conditions each need their own `types` entry
+      # (index.d.ts vs. index.d.cts) or node16-from-CJS consumers see the ESM
+      # types applied to the CommonJS build ("Masquerading as ESM"). `--pack`
+      # runs `npm pack` first, so this checks the tarball a consumer actually
+      # installs, not the working tree. `no-resolution` is ignored because
+      # tokens/react/graph also export CSS and JSON subpaths that attw always
+      # flags as unresolvable for lacking a .d.ts — a limitation of attw
+      # checking non-code assets, not a resolution bug in these packages.
+      - name: Types are not wrong (attw --pack)
+        run: |
+          npx attw --pack packages/tokens --ignore-rules no-resolution
+          npx attw --pack packages/react --ignore-rules no-resolution
+          npx attw --pack packages/graph
+
       # The showcase is the only place the packages are consumed end to end, so
       # a build failure here is the earliest signal that an API change broke a
       # real consumer rather than only the tests.
