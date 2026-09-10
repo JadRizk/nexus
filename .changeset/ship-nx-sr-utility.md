@@ -1,6 +1,8 @@
 ---
 "@nexus-cyberdeck/react": patch
-"@nexus-cyberdeck/tokens": patch
 ---
 
-Ship `.nx-sr` visually-hidden utility in @nexus-cyberdeck/react and document the tokens.css dependency in styles.css.
+Ship the `.nx-sr` visually-hidden utility in `@nexus-cyberdeck/react`'s own
+`styles.css`, so a consumer loading it without `tokens.css` no longer gets a
+visible checkbox and live region. The README now states that `styles.css`
+depends on `tokens.css` for the focus ring and reduced-motion rules.
