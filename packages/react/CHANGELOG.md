@@ -87,7 +87,7 @@
   `packages/tokens/dist` build when run on its own.
 
 - Updated dependencies [c9d88b5]
-  - @nexus/tokens@3.0.0
+  - @nexus-cyberdeck/tokens@3.0.0
 
 ## 2.0.0
 
@@ -138,11 +138,11 @@
   TypeScript in `src/`, while the `dist/` that tsup built on every run went
   unreferenced.
 
-  `@nexus/react`'s dependency on `@nexus/tokens` is a real version rather than a
+  `@nexus-cyberdeck/react`'s dependency on `@nexus-cyberdeck/tokens` is a real version rather than a
   wildcard. Local tooling reads source through a shared alias, so development
   still needs no build step.
 
-  Also removes a global React type augmentation that `@nexus/react` was merging
+  Also removes a global React type augmentation that `@nexus-cyberdeck/react` was merging
   into every consumer's `HTMLAttributes` — including React 19 apps, where it
   widened `inert` to the wrong type across their whole codebase.
 
@@ -159,4 +159,4 @@
 - Updated dependencies
 - Updated dependencies
 - Updated dependencies
-  - @nexus/tokens@2.0.0
+  - @nexus-cyberdeck/tokens@2.0.0

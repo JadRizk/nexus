@@ -14,16 +14,10 @@ import type {
 /* ============================================================================
    GraphCanvas
 
-   Ported from NexusCyberdeck.jsx's `boot()` — the physics/shader setup,
-   render loop, interaction handlers, label pool and tooltip are structurally
-   unchanged. What changed is exactly what had to: every lookup that used to
-   read the module-global `NODE_TYPES`/`LINK_TYPES` tables now reads the
-   `nodeCategories`/`linkCategories` props instead, node/edge `id`s (now
-   arbitrary, caller-supplied) get resolved to dense internal indices once
-   per graph, and the imperative `nodeOn`/`linkOn`/`isolate`/`selected`
-   state the original parent component owned directly are now controlled
-   props flowing in through refs, the same pattern the original already used
-   for `cfg`/`running`/`labelMode`.
+   Uses controlled props for `nodeCategories`/`linkCategories`/`selected`/etc.,
+   resolving node/edge `id`s to dense internal indices. The physics/shader
+   setup, render loop, interaction handlers, label pool and tooltip are
+   core to the Three.js-based rendering pipeline.
    ========================================================================== */
 
 // Deliberately not sourced from @nexus-cyberdeck/tokens — this package has no

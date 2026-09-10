@@ -1,14 +1,14 @@
 /* ============================================================================
    SHADERS
 
-   Moved from NexusCyberdeck.jsx. `ARROW_T` is interpolated into EDGE_VS at
+   Extracted from the prototype. `ARROW_T` is interpolated into EDGE_VS at
    module load, same as before.
 
-   `uReduced` (0 or 1) is the one departure from the prototype: it carries
-   `prefers-reduced-motion` into the node, fade and composite programs. It is a
-   float rather than a bool so each effect can be scaled by `1.0 - uReduced`
-   in place instead of forking the shader — the branches stay uniform across
-   the whole draw, so there is no divergence cost.
+   `uReduced` (0 or 1) is the one departure from the prototype's GLSL: it
+   carries `prefers-reduced-motion` into the node, fade and composite
+   programs. It is a float rather than a bool so each effect can be scaled by
+   `1.0 - uReduced` in place instead of forking the shader — the branches stay
+   uniform across the whole draw, so there is no divergence cost.
    ========================================================================== */
 
 /** Where the edge triangle-strip stops widening for the arrowhead (fraction along the strip). */

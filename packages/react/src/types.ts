@@ -1,12 +1,5 @@
 import type { ReactNode } from "react";
 
-/* ============================================================================
-   @nexus-cyberdeck/react — shared types
-
-   Types only. The hooks that used to live here are in ./hooks.ts and the
-   search ranker is in ./search.ts.
-   ========================================================================== */
-
 export type GlyphShape = "circle" | "hexagon" | "diamond" | "ring" | "square" | "triangle";
 export type Corner = "tl" | "tr" | "bl" | "br";
 
