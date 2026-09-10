@@ -43,7 +43,7 @@ export function App() {
 
 `NexusProvider` must wrap the tree. It applies `.nx-root`, which is where the
 custom properties, the dark canvas and the global focus ring live; without it
-every component renders unstyled.
+every component renders unstyled. `styles.css` requires `tokens.css` to be imported first, as it depends on the focus ring and reduced-motion rules defined in the tokens layer.
 
 ## Components
 
