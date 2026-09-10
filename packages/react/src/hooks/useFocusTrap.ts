@@ -7,11 +7,24 @@ import type { RefObject } from "react";
  * This is the single most-often-botched part of a design system, so both
  * Drawer and CommandPalette share this one implementation rather than each
  * growing their own. Returns a ref to spread onto the modal container.
+ *
+ * The return type is `RefObject<T | null>`, not `RefObject<T>`: that is what
+ * `useRef<T>(null)` actually produces, and it is the only annotation that
+ * reads correctly for both halves of the declared peer range. @types/react
+ * 18 bakes `| null` into `RefObject<T>`'s own `current` field, so consumers
+ * there never notice the difference; @types/react 19 made `RefObject<T>`
+ * exact (`current: T`, no null), so a consumer on 19 reading the old
+ * `RefObject<T>` annotation off this package's shipped `.d.ts` would believe
+ * `current` can never be null, which is false the instant the modal closes
+ * and focus restoration runs. See scripts/check-react19-types.mjs, which
+ * typechecks this package's source against @types/react 19 in CI so this
+ * cannot regress silently the way it arrived silently (CI only ever
+ * typechecked against the @types/react 18 pinned in devDependencies).
  */
 export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
   active: boolean,
   onDismiss?: () => void,
-): RefObject<T> {
+): RefObject<T | null> {
   const ref = useRef<T>(null);
   const restoreTo = useRef<Element | null>(null);
   const onDismissRef = useRef(onDismiss);

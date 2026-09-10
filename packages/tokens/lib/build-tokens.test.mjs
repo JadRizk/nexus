@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { ratio2 } from "./wcag.mjs";
 
 /* ============================================================================
    The token build refuses to emit a stylesheet whose themes miss the contrast
@@ -89,6 +90,93 @@ describe("the accessibility guard", () => {
     });
     expect(r.ok).toBe(false);
     expect(r.output).toMatch(/semantic\.fg\.default/);
+  });
+
+  /* -------------------------------------------------------------------------
+     The raised surface. Every ratio this system quotes is measured against the
+     panel (#0A0C0B) by definition, but Drawer renders on --nx-bg-raised
+     (#11150F), which is lighter — so a ramp step solved to exactly its floor
+     against the panel landed under that floor where the component draws it.
+     The guard now runs on every opaque semantic.bg.* role, and these are the
+     two values that shipped before it did.
+     ---------------------------------------------------------------------- */
+
+  it("fails when disabled text clears the floor on the panel but misses it on the raised surface", () => {
+    // #6B7F61 is the value that shipped up to this change: 4.52:1 on the
+    // panel, so the old panel-only guard passed it, and 4.25:1 on raised.
+    expect(ratio2("#6B7F61", "#0A0C0B")).toBeGreaterThanOrEqual(4.5);
+    expect(ratio2("#6B7F61", "#11150F")).toBeLessThan(4.5);
+
+    const r = build((t) => {
+      t.primitive.ramp["grey-300"].$value = "#6B7F61";
+    });
+    expect(r.ok).toBe(false);
+    expect(r.output).toMatch(/grey-300/);
+    expect(r.output).toMatch(/--nx-bg-raised/);
+    expect(r.output).toMatch(/4\.25:1/);
+    expect(r.output).toMatch(/WCAG 1\.4\.3/);
+  });
+
+  it("fails when a UI boundary clears the floor on the panel but misses it on the raised surface", () => {
+    // Likewise #53624B: 3.01:1 on the panel, 2.83:1 on raised.
+    expect(ratio2("#53624B", "#0A0C0B")).toBeGreaterThanOrEqual(3);
+    expect(ratio2("#53624B", "#11150F")).toBeLessThan(3);
+
+    const r = build((t) => {
+      t.primitive.ramp["grey-200"].$value = "#53624B";
+    });
+    expect(r.ok).toBe(false);
+    expect(r.output).toMatch(/grey-200/);
+    expect(r.output).toMatch(/--nx-bg-raised/);
+    expect(r.output).toMatch(/2\.83:1/);
+    expect(r.output).toMatch(/WCAG 1\.4\.11/);
+  });
+
+  it("holds foreground roles to the 4.5 text floor rather than the old hardcoded 3.0", () => {
+    // 3.72:1 on the panel: legible enough for the floor the guard used to
+    // apply, a full AA step short of the 4.5 the theme declares for text.
+    const dim = "#5D6E56";
+    expect(ratio2(dim, "#0A0C0B")).toBeGreaterThan(3);
+    expect(ratio2(dim, "#0A0C0B")).toBeLessThan(4.5);
+
+    const r = build((t) => {
+      t.primitive.colour.phosphor.$value = dim;
+    });
+    expect(r.ok).toBe(false);
+    expect(r.output).toMatch(/semantic\.fg\.default/);
+    expect(r.output).toMatch(/4\.5:1 floor for text/);
+  });
+
+  it("holds the boundary and focus-ring roles to the non-text floor", () => {
+    for (const [role, mutate] of [
+      ["semantic.border.strong", (t) => (t.semantic.border.strong.$value = "{primitive.ramp.grey-100}")],
+      ["semantic.focus.focus-ring", (t) => (t.semantic.focus["focus-ring"].$value = "{primitive.ramp.grey-100}")],
+    ]) {
+      const r = build(mutate);
+      expect(r.ok, `${role} pointed at the decorative hairline should fail`).toBe(false);
+      expect(r.output).toContain(role);
+      expect(r.output).toMatch(/3:1 floor/);
+    }
+  });
+
+  it("exempts the decorative hairline by token, not by value", () => {
+    // semantic.border.default resolves to the same grey-100 the case above
+    // fails on. It builds only because the token declares
+    // `nexus.contrast: "decorative"` — the exemption is a property of the
+    // role, recorded in tokens.json where it can be argued with, not of the
+    // hex and not of a name list inside the generator.
+    expect(ratio2("#2F382B", "#0A0C0B")).toBeLessThan(3);
+
+    expect(source.semantic.border.default.$extensions["nexus.contrast"]).toBe("decorative");
+    expect(build(() => {}).ok).toBe(true);
+
+    // Take the exemption away and the build stops — proof it is load-bearing
+    // rather than a comment.
+    const r = build((t) => {
+      delete t.semantic.border.default.$extensions;
+    });
+    expect(r.ok).toBe(false);
+    expect(r.output).toContain("semantic.border.default");
   });
 
   it("rejects an alias pointing at a token that does not exist", () => {
