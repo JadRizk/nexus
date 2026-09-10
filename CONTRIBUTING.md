@@ -129,6 +129,16 @@ Maintainers only. Merging to `main` with pending changesets opens a "Version
 Packages" pull request; merging that is the release. See the
 [README](README.md#releasing).
 
+## Design tooling
+
+`@nexus-cyberdeck/react` is wired to a [Claude Design](https://claude.ai/design)
+project through `.design-sync/`: `config.json` names the package and the
+provider, `previews/` holds one authored preview per component, and
+`conventions.md` is the usage guidance uploaded alongside the bundle so
+generated screens use real tokens and wrap the tree in `NexusProvider`. The
+sync tooling itself is staged into `.ds-sync/` and `ds-bundle/`, both
+git-ignored.
+
 ## Conduct
 
 This project follows the [Contributor Covenant](CODE_OF_CONDUCT.md).

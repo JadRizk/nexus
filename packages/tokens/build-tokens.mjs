@@ -22,7 +22,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { contrastRatio, ratio2 } from "./lib/wcag.mjs";
+import { ratio2 } from "./lib/wcag.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const src = (f) => join(here, "src", f);
@@ -182,6 +182,32 @@ const isOpaqueHex = (v) => /^#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$/.test(v);
  */
 const NOT_FOREGROUND = new Set(["void", "panel", "raised"]);
 
+/**
+ * Every opaque background a colour can actually land on, for a given theme:
+ * the `semantic.bg.*` roles that resolve to a solid hex, as [cssName, hex].
+ * Translucent roles (hover, active, track) are excluded because they
+ * composite over whichever of these is underneath — their effective contrast
+ * is a property of the stack, not of the token.
+ *
+ * The *reported* ratios below stay panel-referenced. "Every contrast ratio in
+ * this system is measured against --nx-bg-surface" is a deliberate definition,
+ * it is what `contrast.gen.ts` publishes, and this does not change it. What it
+ * changes is the *guard*: the definition had a gap in practice, because Drawer
+ * renders on --nx-bg-raised (#11150F), which is lighter than the panel, so a
+ * ramp step solved to exactly its floor against the panel came in under that
+ * floor where the component actually draws it. A floor asserted on one surface
+ * is not a floor. Assert it on all of them; keep quoting one.
+ */
+function opaqueSurfaces(theme) {
+  const out = [];
+  for (const [path, node] of byPath) {
+    if (!path.startsWith("semantic.bg.") || node.$type !== "color") continue;
+    const value = resolveValue(path, theme);
+    if (isOpaqueHex(value)) out.push([cssName(path), value]);
+  }
+  return out;
+}
+
 function contrastTable() {
   const table = {};
   for (const theme of THEMES) {
@@ -204,10 +230,51 @@ function contrastTable() {
 
 const failures = [];
 
+/**
+ * A token that opts out of a floor and says why in tokens.json.
+ *
+ * Exactly one token uses this today, `semantic.border.default`: a hairline
+ * that has never met 3.0 and whose lift would move every panel and button
+ * edge in the system. Encoding the exemption in the token file rather than as
+ * a name list in here is what keeps it reviewable — the reason sits next to
+ * the value, and adding one is a diff in the source of truth.
+ */
+const isExempt = (node) => node.$extensions?.["nexus.contrast"] === "decorative";
+
+/**
+ * The semantic colour roles that carry a floor, and which floor.
+ *
+ * Foregrounds are text (1.4.3), so they answer to `floors.text`. Borders and
+ * the focus ring are non-text (1.4.11, 2.4.11), so they answer to
+ * `floors.nonText`. Before this, every foreground was gated at a hardcoded
+ * 3.0 — the large-text allowance — while the themes declared 4.5 and the
+ * README quoted 4.5. The guard was a full AA step below the claim it existed
+ * to defend.
+ */
+const ROLES = [
+  ["semantic.fg.", "text", "text — WCAG 1.4.3"],
+  ["semantic.border.", "nonText", "UI boundary — WCAG 1.4.11"],
+  ["semantic.focus.", "nonText", "focus indicator — WCAG 1.4.11 and 2.4.11"],
+];
+
 function assertFloors(table) {
   for (const theme of THEMES) {
     const floors = tokens.theme[theme].wcag;
     if (!floors) continue;
+    const grounds = opaqueSurfaces(theme);
+
+    /** Fails the build for every surface `value` misses `floor` on. */
+    const check = (label, value, floor, why, suffix = "") => {
+      for (const [ground, bg] of grounds) {
+        const got = ratio2(value, bg);
+        if (got < floor) {
+          failures.push(
+            `${label} is ${got}:1 on ${ground} (${bg}), below the ${floor}:1 floor for ${why}.` +
+              suffix,
+          );
+        }
+      }
+    };
 
     // The two ramp steps the theme's accessibility claim actually rests on:
     // disabled text must clear 1.4.3, and the UI boundary must clear 1.4.11.
@@ -216,26 +283,28 @@ function assertFloors(table) {
       ["grey-200", floors.nonText, "UI boundary — WCAG 1.4.11"],
     ];
     for (const [step, floor, why] of checks) {
-      const got = table[theme][step];
-      if (got === undefined) {
+      if (table[theme][step] === undefined) {
         failures.push(`${theme}: ramp step ${step} is missing, so ${why} cannot be checked`);
-      } else if (got < floor) {
-        failures.push(
-          `${theme}/${step} is ${got}:1, below the ${floor}:1 floor for ${why}. ` +
-            `Move the colour back or change the theme's declared wcag targets deliberately.`,
-        );
+        continue;
       }
+      check(
+        `${theme}/${step}`,
+        resolveValue(`primitive.ramp.${step}`, theme),
+        floor,
+        why,
+        " Move the colour back or change the theme's declared wcag targets deliberately.",
+      );
     }
-  }
 
-  // Every foreground role must be legible on the surface it is designed for.
-  for (const [path, node] of byPath) {
-    if (!path.startsWith("semantic.fg.") || node.$type !== "color") continue;
-    const value = resolveValue(path, DEFAULT_THEME);
-    if (!isOpaqueHex(value)) continue;
-    const r = contrastRatio(value, SURFACE);
-    if (r < 3) {
-      failures.push(`${path} resolves to ${value}, only ${ratio2(value, SURFACE)}:1 on the surface`);
+    // Every semantic colour role, on every opaque surface it can land on.
+    for (const [prefix, kind, why] of ROLES) {
+      for (const [path, node] of byPath) {
+        if (!path.startsWith(prefix) || node.$type !== "color") continue;
+        if (isExempt(node)) continue;
+        const value = resolveValue(path, theme);
+        if (!isOpaqueHex(value)) continue;
+        check(`${path} resolves to ${value} in ${theme}, which`, value, floors[kind], why);
+      }
     }
   }
 }
@@ -512,5 +581,6 @@ const colours = Object.keys(table[DEFAULT_THEME]).length;
 console.log(
   `${DRY_RUN ? "[dry run] " : ""}tokens.css + contrast.gen.ts generated from tokens.json — ` +
     `${byPath.size} tokens, ${colours} contrast ratios computed, ` +
-    `${THEMES.length} themes, all AA floors met.`,
+    `${THEMES.length} themes, all AA floors met on ` +
+    `${opaqueSurfaces(DEFAULT_THEME).length} opaque surfaces.`,
 );

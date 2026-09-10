@@ -174,8 +174,8 @@ general accent alias, so it cannot quietly become a button colour.
 | ------------- | -------------------- | ------------------------ |
 | muted ramp    | lifted, AA-compliant | the prototype's original |
 | type scale    | ×1.15                | ×1.0                     |
-| disabled text | 4.52:1               | 2.14:1 ✗                 |
-| UI boundaries | 3.01:1               | 1.21:1 ✗                 |
+| disabled text | 4.82:1               | 2.14:1 ✗                 |
+| UI boundaries | 3.19:1               | 1.21:1 ✗                 |
 
 The signature colours are **identical in both**. Acid 14.98:1, data 12.19:1,
 lime 15.20:1, sodium 8.32:1, violet 6.27:1, alarm 5.44:1, phosphor 16.84:1.
@@ -183,13 +183,21 @@ All already clear AA, which is why the accessible theme needed no redesign.
 Only the muted ramp had to move, and it was solved rather than eyeballed: hue
 100°, saturation 13%, binary-searched per step against exact contrast targets.
 
+Every ratio quoted is measured against the panel surface, `--nx-bg-surface`.
+The **floors are enforced on every opaque background** a component can render
+on — including `--nx-bg-raised`, which is lighter than the panel and so is
+where the ramp binds. That is why the two figures above sit above their floors
+rather than on them: 4.82:1 and 3.19:1 on the panel are 4.54:1 and 3.00:1 on
+the raised surface, and the raised number is the one that had to clear.
+
 Every ratio quoted above is computed at build time from the resolved token
 values, including the comments in `tokens.css` itself. Each theme declares the
 floors it holds itself to in `tokens.json`, and the build fails if a colour
-moves past one:
+moves past one, naming the surface it failed on:
 
 ```
-hud-aa/grey-300 is 4.21:1, below the 4.5:1 floor for disabled text — WCAG 1.4.3.
+hud-aa/grey-300 is 4.25:1 on --nx-bg-raised (#11150F), below the 4.5:1 floor
+for disabled text — WCAG 1.4.3.
 ```
 
 That check is itself tested: `lib/build-tokens.test.mjs` feeds the generator a
@@ -251,16 +259,6 @@ decision, and `prefers-contrast: more`, because someone asking for more
 contrast should not be fighting a scanline overlay. Under
 `prefers-reduced-motion` the rolling refresh bar stops and is removed; the
 static scanlines stay, since they are texture rather than motion.
-
-## Claude Design
-
-`@nexus-cyberdeck/react` is wired to a [Claude Design](https://claude.ai/design)
-project through `.design-sync/`: `config.json` names the package and the
-provider, `previews/` holds one authored preview per component, and
-`conventions.md` is the usage guidance uploaded alongside the bundle so
-generated screens use real tokens and wrap the tree in `NexusProvider`. The
-sync tooling itself is staged into `.ds-sync/` and `ds-bundle/`, both
-git-ignored.
 
 ## Visual regression
 
