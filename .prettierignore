@@ -4,3 +4,7 @@ ds-bundle/
 .ds-sync/
 package-lock.json
 reference/preview.jsx
+packages/tokens/src/tokens.json
+packages/tokens/src/tokens.css
+packages/tokens/src/contrast.gen.ts
+packages/react/src/styles.css
