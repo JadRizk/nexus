@@ -18,18 +18,27 @@ function BlinkCursor({ char = "\u2588", style }) {
   return /* @__PURE__ */ React.createElement("span", { "aria-hidden": "true", className: "nx-blink", style }, char);
 }
 
-// packages/react/src/components/Button/Button.tsx
-function Button({ active = false, children, ...rest }) {
-  return /* @__PURE__ */ React.createElement("button", { type: "button", className: "nx-btn", "data-active": active ? "1" : "0", ...rest }, children);
-}
-
-// packages/react/src/components/CommandPalette/CommandPalette.tsx
-import { useEffect as useEffect3, useId, useMemo, useRef as useRef3, useState } from "react";
-
 // packages/react/src/className.ts
 function mergeClassName(base, className) {
   return className ? `${base} ${className}`.trim() : base;
 }
+
+// packages/react/src/components/Button/Button.tsx
+function Button({ active = false, className, children, ...rest }) {
+  return /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      type: "button",
+      className: mergeClassName("nx-btn", className),
+      "data-active": active ? "1" : "0",
+      ...rest
+    },
+    children
+  );
+}
+
+// packages/react/src/components/CommandPalette/CommandPalette.tsx
+import { useEffect as useEffect3, useId, useMemo, useRef as useRef3, useState } from "react";
 
 // packages/react/src/components/Panel/Panel.tsx
 function Panel({
@@ -155,22 +164,39 @@ function useFocusTrap(active, onDismiss) {
 
 // packages/react/src/hooks/useHotkey.ts
 import { useEffect as useEffect2, useRef as useRef2 } from "react";
+var MODIFIER_KEYWORDS = /* @__PURE__ */ new Set(["mod", "shift", "ctrl", "alt", "meta"]);
 function useHotkey(combo, handler) {
   const handlerRef = useRef2(handler);
   useEffect2(() => {
     handlerRef.current = handler;
   });
+  const parts = combo.toLowerCase().split("+");
+  const key = parts[parts.length - 1] ?? "";
+  const modifierParts = parts.slice(0, -1);
+  for (const part of modifierParts) {
+    if (!MODIFIER_KEYWORDS.has(part)) {
+      throw new Error(
+        `useHotkey: unrecognised combo part "${part}" in "${combo}". Expected one of mod, shift, ctrl, alt, meta before the trailing key.`
+      );
+    }
+  }
+  const wantMod = modifierParts.includes("mod");
+  const wantShift = modifierParts.includes("shift");
+  const wantCtrl = modifierParts.includes("ctrl");
+  const wantAlt = modifierParts.includes("alt");
+  const wantMeta = modifierParts.includes("meta");
   useEffect2(() => {
-    const parts = combo.toLowerCase().split("+");
-    const key = parts[parts.length - 1] ?? "";
-    const wantMod = parts.includes("mod");
-    const wantShift = parts.includes("shift");
     const on = (e) => {
-      const mod = e.metaKey || e.ctrlKey;
-      if (wantMod !== mod) return;
       if (wantShift !== e.shiftKey) return;
+      if (wantAlt !== e.altKey) return;
+      if (wantMod) {
+        if (!(e.metaKey || e.ctrlKey)) return;
+      } else {
+        if (wantCtrl !== e.ctrlKey) return;
+        if (wantMeta !== e.metaKey) return;
+      }
       if (e.key.toLowerCase() !== key) return;
-      if (!wantMod) {
+      if (!wantMod && !wantCtrl && !wantAlt && !wantMeta) {
         const t = e.target;
         const typing = !!t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable);
         if (typing) return;
@@ -180,7 +206,7 @@ function useHotkey(combo, handler) {
     };
     window.addEventListener("keydown", on);
     return () => window.removeEventListener("keydown", on);
-  }, [combo]);
+  }, [combo, key, wantMod, wantShift, wantCtrl, wantAlt, wantMeta]);
 }
 
 // packages/react/src/search/rankItems.ts
@@ -374,10 +400,9 @@ function Drawer({
       },
       title
     ), subtitle != null && /* @__PURE__ */ React.createElement("div", { className: "nx-drawer__subtitle" }, subtitle)), /* @__PURE__ */ React.createElement(
-      "button",
+      Button,
       {
-        type: "button",
-        className: "nx-btn nx-drawer__close",
+        className: "nx-drawer__close",
         onClick: onClose,
         "aria-label": "Close details"
       },
@@ -467,7 +492,7 @@ function MeterRow({ label, value, total, tone: tone2, colour, labelWidth }) {
 }
 
 // packages/react/src/components/NexusProvider/NexusProvider.tsx
-import { createContext, useContext, useEffect as useEffect4, useState as useState2 } from "react";
+import { createContext, useContext, useMemo as useMemo2, useState as useState2 } from "react";
 var Ctx = createContext({
   theme: "hud-aa",
   crt: true,
@@ -486,9 +511,11 @@ function NexusProvider({
 }) {
   const [t, setTheme] = useState2(theme);
   const [c, setCrt] = useState2(crt);
-  useEffect4(() => setTheme(theme), [theme]);
-  useEffect4(() => setCrt(crt), [crt]);
-  return /* @__PURE__ */ React.createElement(Ctx.Provider, { value: { theme: t, crt: c, setTheme, setCrt } }, /* @__PURE__ */ React.createElement("div", { className: mergeClassName("nx-root", className), "data-nx-theme": t, "data-nx-crt": c ? "on" : "off", ...rest }, children));
+  const value = useMemo2(
+    () => ({ theme: t, crt: c, setTheme, setCrt }),
+    [t, c]
+  );
+  return /* @__PURE__ */ React.createElement(Ctx.Provider, { value }, /* @__PURE__ */ React.createElement("div", { className: mergeClassName("nx-root", className), "data-nx-theme": t, "data-nx-crt": c ? "on" : "off", ...rest }, children));
 }
 
 // packages/react/src/components/Slider/Slider.tsx
@@ -794,8 +821,8 @@ const NX_CSS = `/* =============================================================
   --nx-fg-cat-lime:    var(--nx-lime);                   /* Categorical slot — carries no status meaning */
   --nx-fg-cat-violet:  var(--nx-violet);                 /* Categorical slot */
 
-  --nx-border-default:  var(--nx-grey-100);
-  --nx-border-strong:   var(--nx-grey-200);
+  --nx-border-default:  var(--nx-grey-100);              /* Decorative hairline */
+  --nx-border-strong:   var(--nx-grey-200);              /* UI boundary */
   --nx-border-accent:   var(--nx-fg-accent);
 
   --nx-split-r:  rgba(255, 46, 99, 0.33);
@@ -813,8 +840,8 @@ const NX_CSS = `/* =============================================================
 :root,
 [data-nx-theme="hud-aa"] {
   --nx-grey-100:    #2F382B;                             /* 1.61:1  Decorative hairline only */
-  --nx-grey-200:    #53624B;                             /* 3.01:1  UI boundary — target 3.0 for WCAG 1.4.11 */
-  --nx-grey-300:    #6B7F61;                             /* 4.52:1  Disabled text — target 4.5 for WCAG 1.4.3 */
+  --nx-grey-200:    #57664F;                             /* 3.19:1  UI boundary — target 3.0 for WCAG 1.4.11, on the raised surface */
+  --nx-grey-300:    #6F8465;                             /* 4.82:1  Disabled text — target 4.5 for WCAG 1.4.3, on the raised surface */
   --nx-grey-400:    #788E6D;                             /* 5.50:1 */
   --nx-grey-500:    #8DA084;                             /* 7.00:1  Target 7.0 — AAA body text */
   --nx-grey-600:    #B0BDA9;                             /* 10.00:1  Target 10.0 */

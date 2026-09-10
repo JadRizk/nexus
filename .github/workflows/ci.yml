@@ -6,13 +6,16 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 20
           cache: npm
@@ -37,6 +40,36 @@ jobs:
 
       - name: Build (packages + reference/preview.jsx)
         run: npm run build
+
+      # arethetypeswrong catches a package.json exports map that resolves
+      # correctly at runtime but lies to TypeScript's module resolution — the
+      # `import`/`require` conditions each need their own `types` entry
+      # (index.d.ts vs. index.d.cts) or node16-from-CJS consumers see the ESM
+      # types applied to the CommonJS build ("Masquerading as ESM"). `--pack`
+      # runs `npm pack` first, so this checks the tarball a consumer actually
+      # installs, not the working tree.
+      #
+      # tokens and react also export CSS/JSON asset subpaths, which attw always
+      # flags as unresolvable for lacking a .d.ts — a limitation of attw
+      # checking non-code assets, not a resolution bug. Those subpaths are
+      # excluded by name rather than by switching `no-resolution` off, because
+      # `--ignore-rules no-resolution` disables the rule for the WHOLE package:
+      # with it, an `.` entrypoint pointing at files that do not exist still
+      # reports "No problems found" and exits 0 — the exact bug class this gate
+      # exists to catch. `--exclude-entrypoints` keeps the rule live on `.`.
+      # graph exports only `.` and `./package.json`, so it needs no exclusion
+      # and is the control showing the rule passes fully enabled.
+      #
+      # Invoked as @arethetypeswrong/cli, not the bare `attw` bin name: `npx
+      # attw` falls through to a registry package of that name which is a
+      # dependency-confusion placeholder that prints an error and exits 0, so a
+      # tree missing the devDependency would silently pass this gate instead of
+      # failing it.
+      - name: Types are not wrong (attw --pack)
+        run: |
+          npx @arethetypeswrong/cli --pack packages/tokens --exclude-entrypoints tokens.css crt.css tokens.json
+          npx @arethetypeswrong/cli --pack packages/react --exclude-entrypoints styles.css
+          npx @arethetypeswrong/cli --pack packages/graph
 
       # The showcase is the only place the packages are consumed end to end, so
       # a build failure here is the earliest signal that an API change broke a
@@ -85,6 +118,19 @@ jobs:
       - name: Graph compiles against its declared three floor
         run: node scripts/check-peer-floor.mjs
 
+      # Every step above this one — typecheck, test, build, the showcase —
+      # installs only the @types/react@18 pinned in devDependencies, never the
+      # @types/react@19 half of the `react: "^18.3.0 || ^19.0.0"` peer range
+      # both packages declare. That gap is exactly how useFocusTrap shipped a
+      # `RefObject<T>` return type that was a real type error for a 19
+      # consumer (RefObject<T> is exact under 19's types, so it told them
+      # `current` could never be null): nothing here ever compiled against 19
+      # to catch it. This compiles packages/react and packages/graph's own
+      # source against @types/react@19 so a React-19-only type error fails
+      # the same pull request that introduced it, not a downstream consumer.
+      - name: React and graph compile against @types/react 19
+        run: node scripts/check-react19-types.mjs
+
       # A changeset is how a consumer finds out what changed. Asking for one on
       # the pull request is the only moment anybody remembers the reasoning; a
       # changelog reconstructed from commit messages at release time is written
@@ -104,7 +150,7 @@ jobs:
     outputs:
       version: ${{ steps.read.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - id: read
         run: |
           v=$(node -p "require('./package-lock.json').packages['node_modules/@playwright/test'].version")
@@ -123,9 +169,9 @@ jobs:
       options: --ipc=host
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 20
           cache: npm
@@ -137,7 +183,7 @@ jobs:
 
       - name: Upload diffs
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: visual-diff
           path: |
