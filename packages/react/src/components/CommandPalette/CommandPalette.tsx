@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties, ReactNode, RefObject } from "react";
 import { Panel } from "../Panel/index.js";
 import { HazardRule } from "../HazardRule/index.js";
 import { Glyph } from "../Glyph/index.js";
@@ -74,7 +74,11 @@ export function CommandPalette<T extends PaletteItem = PaletteItem>({
       }}
     >
       <div
-        ref={trapRef}
+        // See the cast in Drawer.tsx for why: useFocusTrap's RefObject<T | null>
+        // is correct for both halves of the React peer range but only
+        // structurally matches a DOM element's `ref` prop under @types/react
+        // 19's generic shape, not 18's.
+        ref={trapRef as RefObject<HTMLDivElement>}
         role="dialog"
         aria-modal="true"
         aria-label={placeholder}
