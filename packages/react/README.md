@@ -57,12 +57,17 @@ every component renders unstyled.
 | **Hooks**    | `useFocusTrap`, `useHotkey`                                        |
 | **Search**   | `rankItems`                                                        |
 
-`NexusProvider`, `Panel`, `Button`, `SectionHeading` and `Wordmark` extend
-their underlying element's props, so `className`, `style`, `aria-*` and event
-handlers pass straight through. The rest declare closed prop interfaces —
-`Stat` takes `label` and `value`, `Glyph` takes `shape` and a colour, and
-neither accepts `className`. Restyle those through their component tokens
-(below) rather than through a class.
+`NexusProvider`, `Panel`, `Button`, `SectionHeading`, `Wordmark`, and
+`HazardRule` extend their underlying element's props, so `className`, `style`,
+`aria-*` and event handlers pass straight through. The rest declare closed prop
+interfaces — `Stat` takes `label` and `value`, `Glyph` takes `shape` and a
+colour, and neither accepts `className`. Restyle those through their component
+tokens (below) rather than through a class.
+
+Closed components that compute dynamic values (position, colour from a prop)
+accept `style` to carry them; those that do not accept `style` do not expose it
+because the component's own styling is complete. See the `style` prop in each
+component's `Props` interface to confirm what is accepted.
 
 ### Colour
 

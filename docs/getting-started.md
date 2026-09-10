@@ -15,6 +15,27 @@ cd my-console
 npm install
 ```
 
+### App Router (Next.js 13+)
+
+The `react` and `graph` packages declare `"use client"` at the package level, so
+you can import them directly in Server Components. The packages are safe to
+render on the server — they bundle no runtime that speaks HTML.
+
+`GraphCanvas` is the exception. It touches the WebGL API at mount and cannot be
+server-rendered; import it via `dynamic()` with `ssr: false`:
+
+```tsx
+import dynamic from "next/dynamic";
+
+const GraphCanvas = dynamic(() => import("@nexus-cyberdeck/graph").then(m => m.GraphCanvas), {
+  ssr: false,
+});
+
+export default function Page() {
+  return <GraphCanvas nodes={[]} edges={[]} />;
+}
+```
+
 ## 2. Install the packages
 
 ```bash

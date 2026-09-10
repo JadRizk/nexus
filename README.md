@@ -73,6 +73,12 @@ on any element and the custom properties cascade.
 - **The graph is included.** Most systems stop at the panel. This one ships the
   canvas the panels were designed around.
 
+## Browser support
+
+Evergreen browsers (latest two versions of Chrome, Edge, Firefox, Safari). The
+`react` package requires Safari 15.4+ for `:focus-visible` support. The `graph`
+package requires WebGL2.
+
 ## Documentation
 
 - [Getting started](docs/getting-started.md): zero to a themed console, verified against a real install.
@@ -299,6 +305,21 @@ npx changeset      # pick packages, pick the bump, describe the change
 
 CI asks for one on any pull request that touches `packages/*/src`. The entry
 you write becomes the changelog verbatim, so write it for someone upgrading.
+
+### What counts as breaking
+
+A breaking change is any change to the code that could require a consuming
+application to update:
+
+- Removal or rename of an exported name (component, hook, type, constant, or function).
+- Addition or removal of a required prop on a public component.
+- Change to an existing prop's type or behaviour.
+- Removal of a CSS class in the form `nx-*` from a rendered element.
+- Removal of a CSS custom property in the form `--nx-*`.
+
+Changes to closed-component prop interfaces (components that declare their own
+`Props` type rather than extending HTML elements) and changes to internal
+implementations that do not touch the above do not require a major bump.
 
 `@nexus-cyberdeck/tokens` and `@nexus-cyberdeck/react` are versioned in
 **lockstep**, and `react` depends on an exact `tokens` version rather than a
