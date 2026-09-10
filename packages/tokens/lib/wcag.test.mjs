@@ -78,8 +78,21 @@ describe("the ratios this system ships", () => {
     expect(ratio2("#DFF5C7", SURFACE)).toBe(16.84); // phosphor
     expect(ratio2("#C6F135", SURFACE)).toBe(14.98); // acid
     expect(ratio2("#FF2E63", SURFACE)).toBe(5.44); // alarm
-    expect(ratio2("#6B7F61", SURFACE)).toBe(4.52); // grey-300, AA text floor
-    expect(ratio2("#53624B", SURFACE)).toBe(3.01); // grey-200, 1.4.11 floor
+    expect(ratio2("#6B7F61", SURFACE)).toBe(4.52); // grey-300 as first solved
+    expect(ratio2("#53624B", SURFACE)).toBe(3.01); // grey-200 as first solved
     expect(ratio2("#8DA084", SURFACE)).toBe(7); // grey-500, solved to exactly AAA
+  });
+
+  it("reproduces the figures for the two steps re-solved against the raised surface", () => {
+    // grey-300 and grey-200 no longer hold the values above: solved to exactly
+    // their floors against the panel, they came in at 4.25:1 and 2.83:1 on
+    // --nx-bg-raised (#11150F), which is where Drawer draws them. The two
+    // lines above stay as the original hand-measured anchor for the maths;
+    // these are what ships.
+    const RAISED = "#11150F";
+    expect(ratio2("#6F8465", SURFACE)).toBe(4.82); // grey-300, AA text floor
+    expect(ratio2("#6F8465", RAISED)).toBe(4.54);
+    expect(ratio2("#57664F", SURFACE)).toBe(3.19); // grey-200, 1.4.11 floor
+    expect(ratio2("#57664F", RAISED)).toBe(3);
   });
 });
