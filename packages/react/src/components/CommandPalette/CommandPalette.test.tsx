@@ -57,14 +57,24 @@ describe("CommandPalette", () => {
   });
 
   it("filters as the query changes and announces zero results", () => {
-    render(<CommandPalette open onClose={() => {}} items={ITEMS} onSelect={() => {}} emptyLabel="NO MATCH" />);
+    render(
+      <CommandPalette
+        open
+        onClose={() => {}}
+        items={ITEMS}
+        onSelect={() => {}}
+        emptyLabel="NO MATCH"
+      />,
+    );
     fireEvent.change(screen.getByRole("combobox"), { target: { value: "zzz" } });
     expect(screen.getByText("NO MATCH")).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("0 results");
   });
 
   it("renders nothing while closed", () => {
-    const { container } = render(<CommandPalette open={false} onClose={() => {}} items={ITEMS} onSelect={() => {}} />);
+    const { container } = render(
+      <CommandPalette open={false} onClose={() => {}} items={ITEMS} onSelect={() => {}} />,
+    );
     expect(container).toBeEmptyDOMElement();
   });
 });

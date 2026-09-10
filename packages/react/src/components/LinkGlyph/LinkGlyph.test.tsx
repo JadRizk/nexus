@@ -19,7 +19,10 @@ describe("LinkGlyph", () => {
   });
 
   it("is decorative unless given a title", () => {
-    expect(render(<LinkGlyph />).container.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
+    expect(render(<LinkGlyph />).container.querySelector("svg")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
     const titled = render(<LinkGlyph title="Cites" />).container.querySelector("svg")!;
     expect(titled).toHaveAttribute("role", "img");
     expect(titled).toHaveAccessibleName("Cites");

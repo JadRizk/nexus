@@ -5,8 +5,15 @@ export function Default() {
   const [scan, setScan] = useState(0.55);
   return (
     <div style={{ maxWidth: 260 }}>
-      <Slider label="scanlines" value={scan} min={0} max={1} step={0.02}
-        onChange={setScan} format={(v) => v.toFixed(2)} />
+      <Slider
+        label="scanlines"
+        value={scan}
+        min={0}
+        max={1}
+        step={0.02}
+        onChange={setScan}
+        format={(v) => v.toFixed(2)}
+      />
     </div>
   );
 }

@@ -28,10 +28,19 @@ export interface CommandPaletteProps<T extends PaletteItem = PaletteItem> {
  * announces the count so the update is not silent.
  */
 export function CommandPalette<T extends PaletteItem = PaletteItem>({
-  open, onClose, items, onSelect,
-  placeholder = "SEARCH", emptyLabel = "NO MATCH",
-  hint = [["↑↓", "MOVE"], ["↵", "SELECT"], ["ESC", "CLOSE"]] as const,
-  renderMeta, width = 520,
+  open,
+  onClose,
+  items,
+  onSelect,
+  placeholder = "SEARCH",
+  emptyLabel = "NO MATCH",
+  hint = [
+    ["↑↓", "MOVE"],
+    ["↵", "SELECT"],
+    ["ESC", "CLOSE"],
+  ] as const,
+  renderMeta,
+  width = 520,
 }: CommandPaletteProps<T>) {
   const [query, setQuery] = useState("");
   const [cursor, setCursor] = useState(0);
@@ -40,9 +49,18 @@ export function CommandPalette<T extends PaletteItem = PaletteItem>({
   const trapRef = useFocusTrap<HTMLDivElement>(open, onClose);
   const listId = useId();
 
-  useEffect(() => { if (open) { setQuery(""); setCursor(0); } }, [open]);
-  useEffect(() => { if (open) requestAnimationFrame(() => inputRef.current?.focus()); }, [open]);
-  useEffect(() => { setCursor(0); }, [query]);
+  useEffect(() => {
+    if (open) {
+      setQuery("");
+      setCursor(0);
+    }
+  }, [open]);
+  useEffect(() => {
+    if (open) requestAnimationFrame(() => inputRef.current?.focus());
+  }, [open]);
+  useEffect(() => {
+    setCursor(0);
+  }, [query]);
 
   const hits = useMemo(() => rankItems(items, query), [items, query]);
 
@@ -102,16 +120,28 @@ export function CommandPalette<T extends PaletteItem = PaletteItem>({
               aria-activedescendant={active ? `${listId}-${cursor}` : undefined}
               aria-label={placeholder}
               onKeyDown={(e) => {
-                if (e.key === "ArrowDown") { e.preventDefault(); setCursor((c) => Math.min(hits.length - 1, c + 1)); }
-                else if (e.key === "ArrowUp") { e.preventDefault(); setCursor((c) => Math.max(0, c - 1)); }
-                else if (e.key === "Home") { e.preventDefault(); setCursor(0); }
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setCursor((c) => Math.min(hits.length - 1, c + 1));
+                } else if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setCursor((c) => Math.max(0, c - 1));
+                } else if (e.key === "Home") {
+                  e.preventDefault();
+                  setCursor(0);
+                }
                 // Clamped to 0, not hits.length - 1, when hits is empty: an
                 // unclamped -1 would stick if results later populate for the
                 // same query (items updating async doesn't reset cursor, only
                 // a query change does), leaving Enter silently inert until an
                 // arrow key was pressed to pull cursor back into range.
-                else if (e.key === "End") { e.preventDefault(); setCursor(Math.max(0, hits.length - 1)); }
-                else if (e.key === "Enter" && active) { e.preventDefault(); onSelect(active); }
+                else if (e.key === "End") {
+                  e.preventDefault();
+                  setCursor(Math.max(0, hits.length - 1));
+                } else if (e.key === "Enter" && active) {
+                  e.preventDefault();
+                  onSelect(active);
+                }
               }}
             />
             <span aria-hidden="true" className="nx-palette__count">
@@ -134,7 +164,13 @@ export function CommandPalette<T extends PaletteItem = PaletteItem>({
               listbox holding a stray list item is not. */}
           {hits.length === 0 && <div className="nx-palette__empty">{emptyLabel}</div>}
 
-          <ul ref={listRef} id={listId} role="listbox" aria-label="Results" className="nx-palette__list">
+          <ul
+            ref={listRef}
+            id={listId}
+            role="listbox"
+            aria-label="Results"
+            className="nx-palette__list"
+          >
             {hits.map((it, i) => (
               <li
                 key={it.id}

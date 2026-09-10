@@ -24,12 +24,21 @@ export function Slider({ label, value, min, max, step = 1, onChange, format, sty
   return (
     <div className="nx-slider-field" style={style}>
       <div className="nx-slider-row">
-        <label htmlFor={id} className="nx-slider-label">{label}</label>
-        <span aria-hidden="true" className="nx-slider-value">{shown}</span>
+        <label htmlFor={id} className="nx-slider-label">
+          {label}
+        </label>
+        <span aria-hidden="true" className="nx-slider-value">
+          {shown}
+        </span>
       </div>
       <input
-        id={id} className="nx-slider" type="range"
-        min={min} max={max} step={step} value={value}
+        id={id}
+        className="nx-slider"
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
         aria-valuetext={shown}
         onChange={(e) => onChange(parseFloat(e.target.value))}
       />

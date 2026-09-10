@@ -3,8 +3,14 @@ import type { GlyphShape } from "../../types.js";
 import { iconA11y, resolveColour } from "../../colour.js";
 import type { ToneProps } from "../../colour.js";
 
-export const GLYPH_SHAPES: readonly GlyphShape[] =
-  ["circle", "hexagon", "diamond", "ring", "square", "triangle"] as const;
+export const GLYPH_SHAPES: readonly GlyphShape[] = [
+  "circle",
+  "hexagon",
+  "diamond",
+  "ring",
+  "square",
+  "triangle",
+] as const;
 
 const PATHS: Record<Exclude<GlyphShape, "ring">, ReactNode> = {
   circle: <circle cx="7" cy="7" r="4.3" />,
@@ -25,17 +31,28 @@ export interface GlyphProps extends ToneProps {
  * Six distinct silhouettes. This is what satisfies WCAG 1.4.1 — category is
  * never communicated by colour alone.
  */
-export function Glyph({ shape = "circle", tone, colour, muted = false, size = 13, title }: GlyphProps) {
+export function Glyph({
+  shape = "circle",
+  tone,
+  colour,
+  muted = false,
+  size = 13,
+  title,
+}: GlyphProps) {
   const c = resolveColour({ tone, colour, muted }, "var(--nx-fg-info)");
   return (
     <svg
-      width={size} height={size} viewBox="0 0 14 14"
+      width={size}
+      height={size}
+      viewBox="0 0 14 14"
       {...iconA11y(title)}
       style={{ flexShrink: 0, filter: muted ? "none" : `drop-shadow(0 0 4px ${c})` }}
     >
-      {shape === "ring"
-        ? <circle cx="7" cy="7" r="4.1" fill="none" strokeWidth="2.1" stroke={c} />
-        : <g fill={c}>{PATHS[shape]}</g>}
+      {shape === "ring" ? (
+        <circle cx="7" cy="7" r="4.1" fill="none" strokeWidth="2.1" stroke={c} />
+      ) : (
+        <g fill={c}>{PATHS[shape]}</g>
+      )}
     </svg>
   );
 }

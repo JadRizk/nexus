@@ -26,12 +26,12 @@ A comparable sample pack is several megabytes and needs a licence audit.
 Layering one real recording under a synth voice is often the best of both —
 transient realism from the sample, infinite variation from the synth.
 
-| source | licence | commercial | attribution | notes |
-|---|---|---|---|---|
-| **Freesound** (CC0 filter) | CC0 1.0 | yes | none | Best option. Use the licence filter. |
-| **Freesound** (CC-BY) | CC-BY 4.0 | yes | **required** | Site auto-generates an attribution list. |
-| **Pixabay** | Content License | yes | none | Post-Jan-2019 uploads are *not* CC0. |
-| **BBC Sound Effects** | RemArc | **no** | — | Research/education/personal only. |
+| source                     | licence         | commercial | attribution  | notes                                    |
+| -------------------------- | --------------- | ---------- | ------------ | ---------------------------------------- |
+| **Freesound** (CC0 filter) | CC0 1.0         | yes        | none         | Best option. Use the licence filter.     |
+| **Freesound** (CC-BY)      | CC-BY 4.0       | yes        | **required** | Site auto-generates an attribution list. |
+| **Pixabay**                | Content License | yes        | none         | Post-Jan-2019 uploads are _not_ CC0.     |
+| **BBC Sound Effects**      | RemArc          | **no**     | —            | Research/education/personal only.        |
 
 ### Freesound
 
@@ -50,7 +50,7 @@ Free commercial use, no attribution. Two catches worth knowing:
 - Content uploaded **after 9 January 2019** falls under the Pixabay Content
   License, not CC0. Only pre-2019 uploads are CC0.
 - The Content License **prohibits redistributing the raw files on a standalone
-  basis**. For a design system that matters: you may ship a sound *inside* your
+  basis**. For a design system that matters: you may ship a sound _inside_ your
   product, but you may not publish it as a downloadable asset in your package.
 - Pixabay offers **no indemnification**. If you need legal cover, that means a
   paid library instead.
@@ -82,16 +82,16 @@ For anything shipped in a product, this library is out.
 
 Each voice is written from the same physical story as its shader:
 
-| event | what is actually making the sound |
-|---|---|
-| `dropout` | oxide flaw: broadband crack, then AGC over-correction hiss |
-| `signal` | 60 Hz field buzz detuning downward, snow swelling behind |
-| `corrupt` | stepped square blips on a quantised grid — never a glissando |
-| `crash` | low thump, rising shriek, sustained tearing |
-| `degauss` | resonant coil thunk, 150→38 Hz. Smooth, no noise at all |
-| `scrub` | tape wow sweeping past playback speed |
-| `interference` | mains hum beating against its own second harmonic |
-| `boot` | relay click → HV whine spinning up to scan rate → degauss |
+| event          | what is actually making the sound                            |
+| -------------- | ------------------------------------------------------------ |
+| `dropout`      | oxide flaw: broadband crack, then AGC over-correction hiss   |
+| `signal`       | 60 Hz field buzz detuning downward, snow swelling behind     |
+| `corrupt`      | stepped square blips on a quantised grid — never a glissando |
+| `crash`        | low thump, rising shriek, sustained tearing                  |
+| `degauss`      | resonant coil thunk, 150→38 Hz. Smooth, no noise at all      |
+| `scrub`        | tape wow sweeping past playback speed                        |
+| `interference` | mains hum beating against its own second harmonic            |
+| `boot`         | relay click → HV whine spinning up to scan rate → degauss    |
 
 Change `MAINS` from 60 to 50 outside the Americas. It is a one-line constant
 and it is the difference between a sound that feels local and one that does not.

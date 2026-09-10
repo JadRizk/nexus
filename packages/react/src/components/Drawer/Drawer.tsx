@@ -17,7 +17,7 @@ const INERT_VALUE = inertAttr(reactVersion);
 // typed as boolean and widening it to string is simply wrong for their whole
 // codebase.
 const inertWhenClosed = (open: boolean): Record<string, boolean | string> =>
-  (open ? {} : { inert: INERT_VALUE });
+  open ? {} : { inert: INERT_VALUE };
 
 /* ============================================================================
    @nexus-cyberdeck/react — overlays
@@ -46,8 +46,16 @@ export interface DrawerProps extends ToneProps {
  * wanders into offscreen content.
  */
 export function Drawer({
-  open, onClose, title, subtitle, tone, colour,
-  icon, footer, width = 296, children,
+  open,
+  onClose,
+  title,
+  subtitle,
+  tone,
+  colour,
+  icon,
+  footer,
+  width = 296,
+  children,
 }: DrawerProps) {
   const trapRef = useFocusTrap<HTMLDivElement>(open, onClose);
   const titleId = useId();

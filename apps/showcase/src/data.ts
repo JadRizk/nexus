@@ -33,16 +33,49 @@ export interface RelationDef {
 
 export const RELATIONS: readonly RelationDef[] = [
   { key: "link", label: "Link", colour: "#3AC6D4", dashed: false, arrow: false, width: 1.2 },
-  { key: "cite", label: "Cite", colour: "var(--nx-fg-warning)", dashed: true, arrow: false, width: 1.2 },
-  { key: "conflict", label: "Conflict", colour: "var(--nx-fg-critical)", dashed: false, arrow: true, width: 1.4 },
+  {
+    key: "cite",
+    label: "Cite",
+    colour: "var(--nx-fg-warning)",
+    dashed: true,
+    arrow: false,
+    width: 1.2,
+  },
+  {
+    key: "conflict",
+    label: "Conflict",
+    colour: "var(--nx-fg-critical)",
+    dashed: false,
+    arrow: true,
+    width: 1.4,
+  },
 ];
 
 const NAMES = [
-  "tidal_aperture", "cold_relay", "atlas_prime", "signal_drift", "vector_null",
-  "amber_conduit", "dormant_shard", "quiet_relic", "static_bloom", "hollow_index",
-  "verdant_key", "brittle_choir", "opal_fracture", "wan_current", "grey_atlas",
-  "loose_thread", "far_signal", "narrow_vector", "faint_node", "steady_pulse",
-  "cracked_lens", "idle_relay", "sunken_glyph", "spare_vector",
+  "tidal_aperture",
+  "cold_relay",
+  "atlas_prime",
+  "signal_drift",
+  "vector_null",
+  "amber_conduit",
+  "dormant_shard",
+  "quiet_relic",
+  "static_bloom",
+  "hollow_index",
+  "verdant_key",
+  "brittle_choir",
+  "opal_fracture",
+  "wan_current",
+  "grey_atlas",
+  "loose_thread",
+  "far_signal",
+  "narrow_vector",
+  "faint_node",
+  "steady_pulse",
+  "cracked_lens",
+  "idle_relay",
+  "sunken_glyph",
+  "spare_vector",
 ];
 
 export const ITEMS: readonly PaletteItem[] = NAMES.map((label, i) => {

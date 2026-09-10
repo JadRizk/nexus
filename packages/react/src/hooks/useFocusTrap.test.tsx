@@ -58,7 +58,9 @@ describe("useFocusTrap", () => {
       });
       return (
         <div>
-          <button data-testid="opener" onClick={() => setOpen(true)}>open</button>
+          <button data-testid="opener" onClick={() => setOpen(true)}>
+            open
+          </button>
           {open && (
             <div ref={ref} tabIndex={-1} data-testid="trap">
               <button data-testid="inner">inner</button>

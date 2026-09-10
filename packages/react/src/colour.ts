@@ -36,10 +36,7 @@ export interface ToneProps {
 }
 
 /** `muted` wins over `tone`, which wins over `colour`; `fallback` applies when none apply. */
-export function resolveColour(
-  { tone, colour, muted }: ToneProps,
-  fallback: string,
-): string {
+export function resolveColour({ tone, colour, muted }: ToneProps, fallback: string): string {
   if (muted) return toneVar("disabled");
   if (tone) return toneVar(tone);
   return colour ?? fallback;

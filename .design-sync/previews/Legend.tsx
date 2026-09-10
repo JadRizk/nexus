@@ -7,7 +7,13 @@ const CLASSES = [
 ];
 const RELATIONS = [
   { key: "link", label: "Link", colour: "#3AC6D4", dashed: false, arrow: false },
-  { key: "conflict", label: "Conflict", colour: "var(--nx-fg-critical)", dashed: false, arrow: true },
+  {
+    key: "conflict",
+    label: "Conflict",
+    colour: "var(--nx-fg-critical)",
+    dashed: false,
+    arrow: true,
+  },
 ];
 
 const row = (key: string, icon: JSX.Element, label: string) => (
@@ -24,11 +30,27 @@ export function Grouped() {
         groups={[
           {
             title: "classes",
-            rows: <>{CLASSES.map((c) => row(c.key, <Glyph shape={c.shape} colour={c.colour} size={14} />, c.label))}</>,
+            rows: (
+              <>
+                {CLASSES.map((c) =>
+                  row(c.key, <Glyph shape={c.shape} colour={c.colour} size={14} />, c.label),
+                )}
+              </>
+            ),
           },
           {
             title: "relations",
-            rows: <>{RELATIONS.map((r) => row(r.key, <LinkGlyph colour={r.colour} dashed={r.dashed} arrow={r.arrow} size={14} />, r.label))}</>,
+            rows: (
+              <>
+                {RELATIONS.map((r) =>
+                  row(
+                    r.key,
+                    <LinkGlyph colour={r.colour} dashed={r.dashed} arrow={r.arrow} size={14} />,
+                    r.label,
+                  ),
+                )}
+              </>
+            ),
           },
         ]}
       />

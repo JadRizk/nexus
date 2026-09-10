@@ -11,7 +11,10 @@ export interface NexusContextValue {
 }
 
 const Ctx = createContext<NexusContextValue>({
-  theme: "hud-aa", crt: true, setTheme: () => {}, setCrt: () => {},
+  theme: "hud-aa",
+  crt: true,
+  setTheme: () => {},
+  setCrt: () => {},
 });
 
 export const useNexus = (): NexusContextValue => useContext(Ctx);
@@ -24,7 +27,11 @@ export interface NexusProviderProps extends HTMLAttributes<HTMLDivElement> {
 
 /** Root. Owns theme + CRT state and projects them as data attributes. */
 export function NexusProvider({
-  theme = "hud-aa", crt = true, children, className = "", ...rest
+  theme = "hud-aa",
+  crt = true,
+  children,
+  className = "",
+  ...rest
 }: NexusProviderProps) {
   const [t, setTheme] = useState<NexusTheme>(theme);
   const [c, setCrt] = useState<boolean>(crt);
@@ -33,7 +40,12 @@ export function NexusProvider({
 
   return (
     <Ctx.Provider value={{ theme: t, crt: c, setTheme, setCrt }}>
-      <div className={mergeClassName("nx-root", className)} data-nx-theme={t} data-nx-crt={c ? "on" : "off"} {...rest}>
+      <div
+        className={mergeClassName("nx-root", className)}
+        data-nx-theme={t}
+        data-nx-crt={c ? "on" : "off"}
+        {...rest}
+      >
         {children}
       </div>
     </Ctx.Provider>

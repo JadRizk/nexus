@@ -17,7 +17,11 @@ describe("Button", () => {
 
   it("forwards native button props, including disabled", () => {
     const onClick = vi.fn();
-    render(<Button disabled onClick={onClick}>Isolate</Button>);
+    render(
+      <Button disabled onClick={onClick}>
+        Isolate
+      </Button>,
+    );
     const button = screen.getByRole("button");
     expect(button).toBeDisabled();
     fireEvent.click(button);

@@ -87,9 +87,7 @@ for (const [route, name] of COMPONENTS) {
   test(`${name} has no axe violations`, async ({ page }) => {
     await gotoPage(page, route, "hud-aa");
     await expect(spec(page, name)).toBeVisible();
-    const { violations } = await audit(page)
-      .include(`[data-spec="${name}"]`)
-      .analyze();
+    const { violations } = await audit(page).include(`[data-spec="${name}"]`).analyze();
     expect(report(violations), report(violations)).toBe("");
   });
 }
@@ -132,17 +130,13 @@ test.describe("the contrast trade-off between themes", () => {
 
   test("hud-aa passes axe's colour-contrast rule", async ({ page }) => {
     await gotoPage(page, "primitives", "hud-aa");
-    const { violations } = await new AxeBuilder({ page })
-      .withRules(["color-contrast"])
-      .analyze();
+    const { violations } = await new AxeBuilder({ page }).withRules(["color-contrast"]).analyze();
     expect(report(violations), report(violations)).toBe("");
   });
 
   test("hud genuinely fails it — the documented trade-off, not an oversight", async ({ page }) => {
     await gotoPage(page, "primitives", "hud");
-    const { violations } = await new AxeBuilder({ page })
-      .withRules(["color-contrast"])
-      .analyze();
+    const { violations } = await new AxeBuilder({ page }).withRules(["color-contrast"]).analyze();
     expect(
       violations.length,
       "hud is documented as failing AA. If this passes, either the ramp was " +
@@ -178,13 +172,17 @@ test.describe("claims axe cannot make", () => {
       .evaluateAll((svgs) =>
         svgs.map((s) =>
           [...s.querySelectorAll("circle,polygon,rect,path")]
-            .map((el) => el.tagName + ":" + (el.getAttribute("points") ?? el.getAttribute("r") ?? ""))
+            .map(
+              (el) => el.tagName + ":" + (el.getAttribute("points") ?? el.getAttribute("r") ?? ""),
+            )
             .join(),
         ),
       );
     const distinct = new Set(shapes);
     expect(shapes.length).toBeGreaterThanOrEqual(6);
-    expect(distinct.size, `expected distinct silhouettes, got ${shapes.length}`).toBe(shapes.length);
+    expect(distinct.size, `expected distinct silhouettes, got ${shapes.length}`).toBe(
+      shapes.length,
+    );
   });
 
   test("the focus ring cannot be removed by a component (WCAG 2.4.7)", async ({ page }) => {

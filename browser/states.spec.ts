@@ -56,7 +56,7 @@ test.describe("focus rings", () => {
 
     const firstFocusable = await page.evaluate(() => {
       const SEL =
-        'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),' +
+        "a[href],button:not([disabled]),input:not([disabled]),select:not([disabled])," +
         'textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
       const el = document.querySelector<HTMLElement>(SEL);
       return el ? `${el.tagName}.${el.className}` : null;
@@ -107,7 +107,10 @@ test.describe("CRT layer", () => {
 
   test("off", async ({ page }) => {
     await gotoPage(page, "home");
-    await expect(page).toHaveScreenshot("crt-off.png", { fullPage: false, mask: versionMask(page) });
+    await expect(page).toHaveScreenshot("crt-off.png", {
+      fullPage: false,
+      mask: versionMask(page),
+    });
   });
 
   test("on", async ({ page }) => {
@@ -219,7 +222,7 @@ test.describe("component tokens", () => {
   });
 });
 
-test.describe("Panel corners=\"none\" suppression", () => {
+test.describe('Panel corners="none" suppression', () => {
   // Not a screenshot: the corner-tick variables default to transparent, so a
   // panel with the pseudo-element wrongly generated and one with it actually
   // suppressed render pixel-identical — a diff cannot tell them apart. That
@@ -231,9 +234,7 @@ test.describe("Panel corners=\"none\" suppression", () => {
     await gotoPage(page, "primitives");
     const header = banner(page);
     await expect(header).toHaveAttribute("data-nx-corners", "none");
-    const content = await header.evaluate(
-      (el) => getComputedStyle(el, "::before").content,
-    );
+    const content = await header.evaluate((el) => getComputedStyle(el, "::before").content);
     expect(content).toBe("none");
   });
 

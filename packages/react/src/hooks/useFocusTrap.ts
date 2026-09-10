@@ -19,7 +19,9 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
   // throw the result away, and a ref mutated on that discarded pass keeps the
   // stale value. The point of the ref is unchanged — it lets Escape reach the
   // latest onDismiss without re-running (and so re-arming) the trap effect.
-  useEffect(() => { onDismissRef.current = onDismiss; });
+  useEffect(() => {
+    onDismissRef.current = onDismiss;
+  });
 
   useEffect(() => {
     if (!active) return undefined;
@@ -27,12 +29,13 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
 
     const node = ref.current;
     const SEL =
-      'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),' +
+      "a[href],button:not([disabled]),input:not([disabled]),select:not([disabled])," +
       'textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
     const focusables = (): HTMLElement[] =>
-      Array.from(node?.querySelectorAll<HTMLElement>(SEL) ?? [])
-        .filter((el) => el.offsetParent !== null);
+      Array.from(node?.querySelectorAll<HTMLElement>(SEL) ?? []).filter(
+        (el) => el.offsetParent !== null,
+      );
 
     (focusables()[0] ?? node)?.focus?.();
 
@@ -44,7 +47,10 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
       }
       if (e.key !== "Tab") return;
       const list = focusables();
-      if (list.length === 0) { e.preventDefault(); return; }
+      if (list.length === 0) {
+        e.preventDefault();
+        return;
+      }
       const i = list.indexOf(document.activeElement as HTMLElement);
       if (e.shiftKey && i <= 0) {
         e.preventDefault();

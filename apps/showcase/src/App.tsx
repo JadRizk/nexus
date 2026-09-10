@@ -1,5 +1,13 @@
 import { useState } from "react";
-import { NexusProvider, Panel, Button, HazardRule, Wordmark, BlinkCursor, useNexus } from "@nexus-cyberdeck/react";
+import {
+  NexusProvider,
+  Panel,
+  Button,
+  HazardRule,
+  Wordmark,
+  BlinkCursor,
+  useNexus,
+} from "@nexus-cyberdeck/react";
 import type { NexusTheme } from "@nexus-cyberdeck/react";
 import { HomePage } from "./pages/HomePage.js";
 import { PrimitivesPage } from "./pages/PrimitivesPage.js";
@@ -32,46 +40,87 @@ function Shell() {
   const { theme, setTheme, crt, setCrt } = useNexus();
 
   return (
-    <div className={crt ? "nx-crt nx-crt--roll" : ""}
-      style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+    <div
+      className={crt ? "nx-crt nx-crt--roll" : ""}
+      style={{ display: "flex", flexDirection: "column", height: "100vh" }}
+    >
       {/* skip link — first tab stop, WCAG 2.4.1 */}
-      <a href="#main" className="nx-skip">Skip to content</a>
+      <a href="#main" className="nx-skip">
+        Skip to content
+      </a>
 
       {/* A banner landmark: screen-reader users can jump to it, and it gives
           the site chrome a name distinct from the theme controls the Home
           page renders in its own panel. */}
-      <Panel role="banner" corners="none" padded={false} style={{
-        flexShrink: 0, borderTop: 0, borderLeft: 0, borderRight: 0,
-      }}>
-        <div style={{
-          display: "flex", alignItems: "center", gap: "var(--nx-space-6)",
-          padding: "var(--nx-space-4) var(--nx-space-6)", flexWrap: "wrap",
-        }}>
+      <Panel
+        role="banner"
+        corners="none"
+        padded={false}
+        style={{
+          flexShrink: 0,
+          borderTop: 0,
+          borderLeft: 0,
+          borderRight: 0,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--nx-space-6)",
+            padding: "var(--nx-space-4) var(--nx-space-6)",
+            flexWrap: "wrap",
+          }}
+        >
           <div style={{ display: "flex", alignItems: "baseline", gap: "var(--nx-space-3)" }}>
             <Wordmark size="var(--nx-text-lg)">NEXUS</Wordmark>
-            <span style={{
-              color: "var(--nx-fg-tertiary)", fontSize: "var(--nx-text-2xs)",
-              letterSpacing: "var(--nx-track-wider)",
-            }}>DS v<span data-nx-version>{__NX_VERSION__}</span> <BlinkCursor /></span>
+            <span
+              style={{
+                color: "var(--nx-fg-tertiary)",
+                fontSize: "var(--nx-text-2xs)",
+                letterSpacing: "var(--nx-track-wider)",
+              }}
+            >
+              DS v<span data-nx-version>{__NX_VERSION__}</span> <BlinkCursor />
+            </span>
           </div>
 
           <nav aria-label="Sections" style={{ display: "flex", gap: "var(--nx-space-2)", flex: 1 }}>
             {ROUTES.map((r) => (
-              <Button key={r.id} active={route === r.id}
+              <Button
+                key={r.id}
+                active={route === r.id}
                 aria-current={route === r.id ? "page" : undefined}
-                onClick={() => setRoute(r.id)}>{r.label}</Button>
+                onClick={() => setRoute(r.id)}
+              >
+                {r.label}
+              </Button>
             ))}
           </nav>
 
           <div style={{ display: "flex", gap: "var(--nx-space-2)", alignItems: "center" }}>
-            <span style={{ color: "var(--nx-fg-tertiary)", fontSize: "var(--nx-text-2xs)", letterSpacing: "var(--nx-track-wide)" }}>
+            <span
+              style={{
+                color: "var(--nx-fg-tertiary)",
+                fontSize: "var(--nx-text-2xs)",
+                letterSpacing: "var(--nx-track-wide)",
+              }}
+            >
               THEME
             </span>
             {(["hud-aa", "hud"] as NexusTheme[]).map((t) => (
-              <Button key={t} active={theme === t} onClick={() => setTheme(t)}
-                aria-pressed={theme === t}>{t === "hud-aa" ? "AA" : "HUD"}</Button>
+              <Button
+                key={t}
+                active={theme === t}
+                onClick={() => setTheme(t)}
+                aria-pressed={theme === t}
+              >
+                {t === "hud-aa" ? "AA" : "HUD"}
+              </Button>
             ))}
-            <Button active={crt} onClick={() => setCrt(!crt)} aria-pressed={crt}>CRT</Button>
+            <Button active={crt} onClick={() => setCrt(!crt)} aria-pressed={crt}>
+              CRT
+            </Button>
           </div>
         </div>
         <HazardRule />
@@ -100,11 +149,17 @@ function Shell() {
       </main>
 
       {!FULL_BLEED.has(route) && (
-        <footer style={{
-          flexShrink: 0, padding: "var(--nx-space-6)", color: "var(--nx-fg-tertiary)",
-          fontSize: "var(--nx-text-2xs)", letterSpacing: "var(--nx-track-wider)",
-          textTransform: "uppercase", borderTop: "var(--nx-hairline) solid var(--nx-border-default)",
-        }}>
+        <footer
+          style={{
+            flexShrink: 0,
+            padding: "var(--nx-space-6)",
+            color: "var(--nx-fg-tertiary)",
+            fontSize: "var(--nx-text-2xs)",
+            letterSpacing: "var(--nx-track-wider)",
+            textTransform: "uppercase",
+            borderTop: "var(--nx-hairline) solid var(--nx-border-default)",
+          }}
+        >
           {`Zero runtime dependencies · ${__NX_TOKENS__} tokens · ${__NX_COMPONENTS__} components${route === "overlays" ? " · ⌘K opens the palette" : ""}`}
         </footer>
       )}

@@ -23,7 +23,11 @@
    still count toward the nearest scrollable ancestor's scroll area, the page
    kept growing an extra ~4.6x the container's height of empty scrollable
    space instead of clipping the bar out of view. */
-.nx-crt { position: relative; isolation: isolate; overflow: hidden; }
+.nx-crt {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
 
 /* Scanlines + aperture grille + vignette, all in one painted layer.
    pointer-events:none so it never intercepts interaction. */
@@ -35,26 +39,22 @@
   pointer-events: none;
   background:
     /* vignette */
-    radial-gradient(
-      ellipse at center,
-      transparent 40%,
-      rgba(0, 0, 0, 0.35) 100%
-    ),
+    radial-gradient(ellipse at center, transparent 40%, rgba(0, 0, 0, 0.35) 100%),
     /* horizontal scanlines */
     repeating-linear-gradient(
-      to bottom,
-      rgba(0, 0, 0, calc(0.26 * var(--nx-crt-scan-opacity))) 0,
-      rgba(0, 0, 0, calc(0.26 * var(--nx-crt-scan-opacity))) 1px,
-      transparent 1px,
-      transparent var(--nx-crt-scan-size)
-    ),
+        to bottom,
+        rgba(0, 0, 0, calc(0.26 * var(--nx-crt-scan-opacity))) 0,
+        rgba(0, 0, 0, calc(0.26 * var(--nx-crt-scan-opacity))) 1px,
+        transparent 1px,
+        transparent var(--nx-crt-scan-size)
+      ),
     /* vertical RGB aperture grille */
     repeating-linear-gradient(
-      to right,
-      rgba(255, 0, 0, calc(0.05 * var(--nx-crt-scan-opacity))) 0 1px,
-      rgba(0, 255, 0, calc(0.05 * var(--nx-crt-scan-opacity))) 1px 2px,
-      rgba(0, 0, 255, calc(0.05 * var(--nx-crt-scan-opacity))) 2px 3px
-    );
+        to right,
+        rgba(255, 0, 0, calc(0.05 * var(--nx-crt-scan-opacity))) 0 1px,
+        rgba(0, 255, 0, calc(0.05 * var(--nx-crt-scan-opacity))) 1px 2px,
+        rgba(0, 0, 255, calc(0.05 * var(--nx-crt-scan-opacity))) 2px 3px
+      );
 }
 
 /* Rolling refresh bar. Separate element so it can be disabled independently —
@@ -62,7 +62,8 @@
 .nx-crt--roll::before {
   content: "";
   position: absolute;
-  left: 0; right: 0;
+  left: 0;
+  right: 0;
   height: 22%;
   z-index: 1;
   pointer-events: none;
@@ -78,8 +79,12 @@
 }
 
 @keyframes nx-crt-roll {
-  from { transform: translateY(-120%); }
-  to   { transform: translateY(560%); }
+  from {
+    transform: translateY(-120%);
+  }
+  to {
+    transform: translateY(560%);
+  }
 }
 
 /* Static grain via inline SVG turbulence — no image request, no canvas. */
@@ -104,13 +109,15 @@
    pasted on top of a CRT surface — the PoC uses it on the graph labels. */
 .nx-crt-split {
   text-shadow:
-     1px 0 var(--nx-crt-r),
+    1px 0 var(--nx-crt-r),
     -1px 0 var(--nx-crt-b),
-     0 0 7px rgba(0, 0, 0, 0.98);
+    0 0 7px rgba(0, 0, 0, 0.98);
 }
 
 .nx-crt-glow {
-  text-shadow: 0 0 8px currentColor, 0 0 2px rgba(0, 0, 0, 0.9);
+  text-shadow:
+    0 0 8px currentColor,
+    0 0 2px rgba(0, 0, 0, 0.9);
 }
 
 /* ------------------------------------------------------------- opt out --
@@ -125,16 +132,28 @@
 [data-nx-crt="off"]::after,
 [data-nx-crt="off"]::before,
 [data-nx-crt="off"] .nx-crt::after,
-[data-nx-crt="off"] .nx-crt::before { display: none !important; }
+[data-nx-crt="off"] .nx-crt::before {
+  display: none !important;
+}
 
-[data-nx-crt="off"] .nx-crt-split { text-shadow: none; }
+[data-nx-crt="off"] .nx-crt-split {
+  text-shadow: none;
+}
 
 @media (prefers-reduced-motion: reduce) {
-  .nx-crt--roll::before { animation: none; display: none; }
+  .nx-crt--roll::before {
+    animation: none;
+    display: none;
+  }
 }
 
 /* Users who ask for more contrast should not be fighting a scanline overlay. */
 @media (prefers-contrast: more) {
-  .nx-crt::after, .nx-crt::before { display: none; }
-  .nx-crt-split { text-shadow: none; }
+  .nx-crt::after,
+  .nx-crt::before {
+    display: none;
+  }
+  .nx-crt-split {
+    text-shadow: none;
+  }
 }

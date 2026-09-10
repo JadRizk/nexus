@@ -14,11 +14,13 @@ export function HazardRule({ height, opacity, className = "", style }: HazardRul
     <div
       aria-hidden="true"
       className={mergeClassName("nx-hazard", className)}
-      style={{
-        ...(height != null ? { "--nx-hazard-height": `${height}px` } : null),
-        ...(opacity != null ? { "--nx-hazard-opacity": String(opacity) } : null),
-        ...style,
-      } as CSSProperties}
+      style={
+        {
+          ...(height != null ? { "--nx-hazard-height": `${height}px` } : null),
+          ...(opacity != null ? { "--nx-hazard-opacity": String(opacity) } : null),
+          ...style,
+        } as CSSProperties
+      }
     />
   );
 }

@@ -17,10 +17,12 @@ export function MeterRow({ label, value, total, tone, colour, labelWidth }: Mete
       className="nx-meter"
       // Colour and fill are computed; the label column is per-instance so a
       // caller can align several meters against a longer set of labels.
-      style={{
-        "--nx-meter-fg": resolveColour({ tone, colour }, "var(--nx-fg-info)"),
-        ...(labelWidth != null ? { "--nx-meter-label-width": `${labelWidth}px` } : null),
-      } as CSSProperties}
+      style={
+        {
+          "--nx-meter-fg": resolveColour({ tone, colour }, "var(--nx-fg-info)"),
+          ...(labelWidth != null ? { "--nx-meter-label-width": `${labelWidth}px` } : null),
+        } as CSSProperties
+      }
     >
       <span className="nx-meter__label">{label}</span>
       <div

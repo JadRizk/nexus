@@ -16,12 +16,14 @@ export function Tooltip({ x, y, tone, colour, children, style }: TooltipProps) {
       className="nx-tooltip"
       // Position follows a pointer and the accent follows the subject's
       // category: both are only knowable at render.
-      style={{
-        left: x,
-        top: y,
-        "--nx-tooltip-accent": resolveColour({ tone, colour }, "var(--nx-fg-info)"),
-        ...style,
-      } as CSSProperties}
+      style={
+        {
+          left: x,
+          top: y,
+          "--nx-tooltip-accent": resolveColour({ tone, colour }, "var(--nx-fg-info)"),
+          ...style,
+        } as CSSProperties
+      }
     >
       {children}
     </div>

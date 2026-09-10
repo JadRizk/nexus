@@ -17,8 +17,15 @@ import type { NexusTheme } from "./contrast.gen.js";
 
 /** Foreground roles. `critical` is the only route to the alarm colour. */
 export type Tone =
-  | "default" | "muted" | "subtle" | "tertiary" | "disabled"
-  | "accent" | "info" | "warning" | "critical";
+  | "default"
+  | "muted"
+  | "subtle"
+  | "tertiary"
+  | "disabled"
+  | "accent"
+  | "info"
+  | "warning"
+  | "critical";
 
 export type Surface = "canvas" | "surface" | "raised";
 export type BorderTone = "default" | "strong" | "accent";

@@ -35,7 +35,7 @@ on `main` (private repo, free tier) — review before merge is the only one.
 
 ## Policy
 
-- **Merge**: a PR merges automatically only if *all* of: its ticket's
+- **Merge**: a PR merges automatically only if _all_ of: its ticket's
   `severity` is `low` or `medium`, GitHub CI is green (`test`, `browser`,
   `playwright-version`), and the review pass posted no blocking findings.
   Otherwise — `high`/`blocker` severity, red CI, or any blocking finding — the
@@ -54,7 +54,7 @@ on `main` (private repo, free tier) — review before merge is the only one.
 - **NX-01** — claiming the npm org needs a human's own npm account. Never
   assign; if you reach it in the ready queue, skip it and say so in your
   summary.
-- **NX-20** — every task on it is fair game *except* "decide whether to
+- **NX-20** — every task on it is fair game _except_ "decide whether to
   rewrite the 26 commits' author email" (rewriting pushed history is hard to
   undo once anyone has pulled). Do the other four tasks; leave that one
   criterion unticked with a log note asking me to decide.
@@ -135,7 +135,7 @@ edit files outside what this ticket's tasks call for.
 
 The single most common way a PR looks done and isn't: a generated file drifts
 because you edited its source but never regenerated it, and only CI's drift
-check catches it. Don't rely on `npm run test` alone — run the *same sequence*
+check catches it. Don't rely on `npm run test` alone — run the _same sequence_
 `.github/workflows/ci.yml`'s `test` job runs, in this order, and treat a
 nonzero exit or a nonempty `git diff` at any step as not-done:
 
@@ -183,18 +183,18 @@ change and what they have to do about it>
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
 ```
 
-| gitmoji | code | type | use for |
-|---|---|---|---|
-| ✨ | `:sparkles:` | `feat` | a new prop, component, or capability |
-| 🐛 | `:bug:` | `fix` | a behavior that was wrong |
-| ♻️ | `:recycle:` | `refactor` | restructuring with no behavior change |
-| ✅ | `:white_check_mark:` | `test` | tests added/fixed, no source change |
-| 📝 | `:memo:` | `docs` | README/guide/comment changes only |
-| ♿️ | `:wheelchair:` | `fix` / `feat` | accessibility fixes |
-| 🔧 | `:wrench:` | `chore` | config, tooling, build scripts |
-| 👷 | `:construction_worker:` | `ci` | `.github/workflows/*` |
-| 💥 | `:boom:` | prefix, combine with the real type | breaking change — put this first when applicable, e.g. `💥 ✨ feat(react)!: ...` with a `!` before the colon |
-| 🎨 | `:art:` | `style` | pure CSS/structure, no logic change |
+| gitmoji | code                    | type                               | use for                                                                                                      |
+| ------- | ----------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| ✨      | `:sparkles:`            | `feat`                             | a new prop, component, or capability                                                                         |
+| 🐛      | `:bug:`                 | `fix`                              | a behavior that was wrong                                                                                    |
+| ♻️      | `:recycle:`             | `refactor`                         | restructuring with no behavior change                                                                        |
+| ✅      | `:white_check_mark:`    | `test`                             | tests added/fixed, no source change                                                                          |
+| 📝      | `:memo:`                | `docs`                             | README/guide/comment changes only                                                                            |
+| ♿️      | `:wheelchair:`          | `fix` / `feat`                     | accessibility fixes                                                                                          |
+| 🔧      | `:wrench:`              | `chore`                            | config, tooling, build scripts                                                                               |
+| 👷      | `:construction_worker:` | `ci`                               | `.github/workflows/*`                                                                                        |
+| 💥      | `:boom:`                | prefix, combine with the real type | breaking change — put this first when applicable, e.g. `💥 ✨ feat(react)!: ...` with a `!` before the colon |
+| 🎨      | `:art:`                 | `style`                            | pure CSS/structure, no logic change                                                                          |
 
 Scope is the package or area: `react`, `graph`, `tokens`, `docs`, `ci`,
 `release`. Example, matching what NX-06 actually did:
@@ -297,4 +297,7 @@ patch.
 ## Start
 
 Read the board now, then begin iteration 1.
+
+```
+
 ```

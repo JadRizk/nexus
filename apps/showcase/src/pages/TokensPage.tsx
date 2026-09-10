@@ -45,13 +45,21 @@ export function TokensPage() {
                   boxShadow: `0 0 12px var(--nx-${key})`,
                 }}
               />
-              <div style={{ marginTop: "var(--nx-space-2)", color: "var(--nx-fg-default)", fontSize: "var(--nx-text-2xs)" }}>
+              <div
+                style={{
+                  marginTop: "var(--nx-space-2)",
+                  color: "var(--nx-fg-default)",
+                  fontSize: "var(--nx-text-2xs)",
+                }}
+              >
                 {key}
               </div>
               <div style={{ color: "var(--nx-fg-tertiary)", fontSize: "var(--nx-text-2xs)" }}>
                 {c[key as keyof typeof c]}:1
               </div>
-              <div style={{ color: "var(--nx-fg-tertiary)", fontSize: "var(--nx-text-2xs)" }}>{alias}</div>
+              <div style={{ color: "var(--nx-fg-tertiary)", fontSize: "var(--nx-text-2xs)" }}>
+                {alias}
+              </div>
             </div>
           ))}
         </Row>
@@ -69,10 +77,18 @@ export function TokensPage() {
           {RAMP.map((step) => (
             <div key={step} style={{ width: 96 }}>
               <div style={{ height: 40, background: `var(--nx-${step})` }} />
-              <div style={{ marginTop: "var(--nx-space-2)", color: "var(--nx-fg-default)", fontSize: "var(--nx-text-2xs)" }}>
+              <div
+                style={{
+                  marginTop: "var(--nx-space-2)",
+                  color: "var(--nx-fg-default)",
+                  fontSize: "var(--nx-text-2xs)",
+                }}
+              >
                 {step}
               </div>
-              <div style={{ color: "var(--nx-fg-tertiary)", fontSize: "var(--nx-text-2xs)" }}>{c[step]}:1</div>
+              <div style={{ color: "var(--nx-fg-tertiary)", fontSize: "var(--nx-text-2xs)" }}>
+                {c[step]}:1
+              </div>
             </div>
           ))}
         </Row>

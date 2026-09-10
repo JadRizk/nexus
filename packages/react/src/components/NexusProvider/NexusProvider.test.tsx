@@ -26,7 +26,11 @@ describe("NexusProvider", () => {
   });
 
   it("defaults to the accessible theme with CRT on", () => {
-    const { container } = render(<NexusProvider><span>child</span></NexusProvider>);
+    const { container } = render(
+      <NexusProvider>
+        <span>child</span>
+      </NexusProvider>,
+    );
     const root = container.querySelector(".nx-root")!;
     expect(root).toHaveAttribute("data-nx-theme", "hud-aa");
     expect(root).toHaveAttribute("data-nx-crt", "on");
@@ -34,7 +38,9 @@ describe("NexusProvider", () => {
 
   it("merges a caller's className rather than replacing nx-root", () => {
     const { container } = render(
-      <NexusProvider className="app-shell"><span>child</span></NexusProvider>,
+      <NexusProvider className="app-shell">
+        <span>child</span>
+      </NexusProvider>,
     );
     expect(container.querySelector(".nx-root")).toHaveClass("app-shell");
   });
@@ -56,9 +62,15 @@ describe("NexusProvider", () => {
 
   it("re-syncs when the theme prop changes", () => {
     const { container, rerender } = render(
-      <NexusProvider theme="hud-aa"><span>child</span></NexusProvider>,
+      <NexusProvider theme="hud-aa">
+        <span>child</span>
+      </NexusProvider>,
     );
-    rerender(<NexusProvider theme="hud"><span>child</span></NexusProvider>);
+    rerender(
+      <NexusProvider theme="hud">
+        <span>child</span>
+      </NexusProvider>,
+    );
     expect(container.querySelector(".nx-root")).toHaveAttribute("data-nx-theme", "hud");
   });
 });
