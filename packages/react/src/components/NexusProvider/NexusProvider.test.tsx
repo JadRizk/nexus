@@ -8,6 +8,7 @@ function Probe() {
     <>
       <span data-testid="state">{`${theme}/${crt ? "on" : "off"}`}</span>
       <button onClick={() => setTheme("hud")}>to hud</button>
+      <button onClick={() => setCrt(true)}>crt on</button>
       <button onClick={() => setCrt(false)}>crt off</button>
     </>
   );
@@ -54,11 +55,40 @@ describe("NexusProvider", () => {
     expect(screen.getByTestId("state")).toHaveTextContent("hud/off");
   });
 
-  it("re-syncs when the theme prop changes", () => {
+  it("treats theme and crt as initial values only: a prop change on a live provider has no effect", () => {
     const { container, rerender } = render(
-      <NexusProvider theme="hud-aa"><span>child</span></NexusProvider>,
+      <NexusProvider theme="hud-aa" crt={false}><span>child</span></NexusProvider>,
     );
-    rerender(<NexusProvider theme="hud"><span>child</span></NexusProvider>);
-    expect(container.querySelector(".nx-root")).toHaveAttribute("data-nx-theme", "hud");
+    rerender(<NexusProvider theme="hud" crt><span>child</span></NexusProvider>);
+    const root = container.querySelector(".nx-root")!;
+    expect(root).toHaveAttribute("data-nx-theme", "hud-aa");
+    expect(root).toHaveAttribute("data-nx-crt", "off");
+  });
+
+  it("changes the live theme and crt only through useNexus().setTheme/setCrt, never through the props", () => {
+    const { container, rerender } = render(
+      <NexusProvider theme="hud-aa" crt={false}>
+        <Probe />
+      </NexusProvider>,
+    );
+    const root = container.querySelector(".nx-root")!;
+    expect(root).toHaveAttribute("data-nx-theme", "hud-aa");
+    expect(root).toHaveAttribute("data-nx-crt", "off");
+
+    // Re-rendering with new props does nothing...
+    rerender(
+      <NexusProvider theme="hud" crt>
+        <Probe />
+      </NexusProvider>,
+    );
+    expect(root).toHaveAttribute("data-nx-theme", "hud-aa");
+    expect(root).toHaveAttribute("data-nx-crt", "off");
+
+    // ...but the setters from useNexus() do.
+    fireEvent.click(screen.getByText("to hud"));
+    expect(root).toHaveAttribute("data-nx-theme", "hud");
+
+    fireEvent.click(screen.getByText("crt on"));
+    expect(root).toHaveAttribute("data-nx-crt", "on");
   });
 });
