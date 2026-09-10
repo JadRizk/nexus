@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
+import type { RefObject } from "react";
 import { useFocusTrap } from "./useFocusTrap.js";
 
 /* ============================================================================
@@ -19,8 +20,11 @@ function TrapHarness({ onDismiss }: { onDismiss: () => void }) {
   return (
     <div>
       <button data-testid="outside">outside</button>
+      {/* The cast below is for the same reason as the one in
+          Drawer.tsx/CommandPalette.tsx: RefObject<T | null> only structurally
+          matches a DOM ref prop under @types/react 19, not 18. */}
       {active && (
-        <div ref={ref} data-testid="trap" tabIndex={-1}>
+        <div ref={ref as RefObject<HTMLDivElement>} data-testid="trap" tabIndex={-1}>
           <button data-testid="first">first</button>
           <button data-testid="second">second</button>
         </div>
@@ -60,7 +64,7 @@ describe("useFocusTrap", () => {
         <div>
           <button data-testid="opener" onClick={() => setOpen(true)}>open</button>
           {open && (
-            <div ref={ref} tabIndex={-1} data-testid="trap">
+            <div ref={ref as RefObject<HTMLDivElement>} tabIndex={-1} data-testid="trap">
               <button data-testid="inner">inner</button>
             </div>
           )}
