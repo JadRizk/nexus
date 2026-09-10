@@ -45,6 +45,13 @@ export function App() {
 custom properties, the dark canvas and the global focus ring live; without it
 every component renders unstyled. `styles.css` requires `tokens.css` to be imported first, as it depends on the focus ring and reduced-motion rules defined in the tokens layer.
 
+`NexusProvider`'s `theme` and `crt` props are **initial values only** — they
+seed state on mount and are not re-read afterward, so changing either prop on
+a live provider does nothing. After mount, `useNexus().setTheme` and
+`useNexus().setCrt` are the only way to change them; there is no
+`onThemeChange` callback because the provider is uncontrolled by design, not
+also driven by its props.
+
 ## Components
 
 |              |                                                                    |

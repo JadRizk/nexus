@@ -30,4 +30,11 @@ describe("Button", () => {
     fireEvent.click(screen.getByRole("button"));
     expect(onClick).toHaveBeenCalledOnce();
   });
+
+  it("merges a caller className with nx-btn instead of replacing it", () => {
+    render(<Button className="x">Isolate</Button>);
+    const button = screen.getByRole("button");
+    expect(button).toHaveClass("nx-btn");
+    expect(button).toHaveClass("x");
+  });
 });
