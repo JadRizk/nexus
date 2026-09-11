@@ -85,6 +85,7 @@ export default function NexusCyberdeck() {
     }}>
       <GraphCanvas
         ref={controllerRef}
+        ariaLabel="Knowledge graph of Nexus Cyberdeck sample data"
         nodes={sampleGraph.nodes}
         edges={sampleGraph.edges}
         nodeCategories={NODE_CATEGORIES}

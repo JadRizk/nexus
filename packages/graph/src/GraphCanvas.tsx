@@ -620,11 +620,18 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
           const a = document.createElement("span");
           a.style.color = cat.color; a.textContent = nodes[idx]!.label;
           const b = document.createElement("span");
-          // AA grey-300 against the tooltip ground — the old #3D4C39 measured
-          // 2.17:1. See STYLING.md's rationale for why this stays a literal
-          // instead of a token: this package has no dependency on the tokens
-          // layer (FALLBACK_BG/FALLBACK_FG above are the same story).
-          b.style.color = "#6B7F61"; b.textContent = " · " + cat.code + " · " + degree[idx];
+          // The old #3D4C39 measured 2.17:1 against the tooltip ground — see
+          // GraphCanvas.contrast.test.ts. This tooltip's ground is
+          // rgba(8,10,9,.95) composited over whatever the canvas is drawing
+          // underneath it, so the worst case is a bright node colour behind
+          // a translucent panel, not the flat dark background: over a node
+          // as bright as #9EFF3D this literal measures 4.5184:1, clearing
+          // the 4.5 AA floor. Kept as a hardcoded literal rather than a
+          // token name on purpose — this package has no dependency on the
+          // tokens layer (FALLBACK_BG/FALLBACK_FG above are the same story),
+          // so naming a token here would go stale silently if that token's
+          // value ever moved again.
+          b.style.color = "#6F8465"; b.textContent = " · " + cat.code + " · " + degree[idx];
           tip.appendChild(a); tip.appendChild(b);
           tip.style.borderLeftColor = cat.color;
         }
@@ -1001,10 +1008,18 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
     );
   }
 
+  // role="img" is only meaningful paired with a name: an image role with no
+  // accessible name is itself a WCAG 2.0 A / axe "role-img-alt" violation —
+  // worse than the bare div this replaced, since a bare div at least isn't
+  // announced as a nameless image. So the role only appears when ariaLabel
+  // is actually supplied; omitting the prop leaves the root role-less, the
+  // same as before this feature existed.
+  const hasAriaLabel = Boolean(ariaLabel);
+
   return (
     <div
-      role="img"
-      aria-label={ariaLabel}
+      role={hasAriaLabel ? "img" : undefined}
+      aria-label={hasAriaLabel ? ariaLabel : undefined}
       style={{ position: "relative", width: "100%", height: "100%", background: FALLBACK_BG, overflow: "hidden", ...style }}
       className={className}
     >

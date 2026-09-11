@@ -160,7 +160,7 @@ state.
 | `selectedId`                                   | the selected node; update it from `onSelect`                                                                                            |
 | `running`                                      | run the physics solver; `false` pauses it (dragging still works). Default `true`                                                        |
 | `onSelect`, `onStats`, `onFatal`               | selection, per-frame stats, WebGL setup failure or context loss                                                                         |
-| `ariaLabel`                                    | accessible name for the canvas, exposed as `role="img"` + `aria-label`. The label pool and tooltip are `aria-hidden`, so this is the only name assistive tech gets |
+| `ariaLabel`                                    | accessible name for the canvas. When supplied, the root carries `role="img"` + `aria-label`; when omitted, the root carries neither, so a screen reader never meets a nameless image. The label pool and tooltip are always `aria-hidden`, so this prop is the only name assistive tech can get |
 
 ### Controller
 

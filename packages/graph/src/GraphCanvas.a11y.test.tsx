@@ -40,10 +40,27 @@ describe("GraphCanvas accessibility (static render)", () => {
     expect(html).toContain('aria-label="Knowledge graph of imported notes"');
   });
 
-  it("omits aria-label when no ariaLabel prop is given, but keeps role=img", () => {
+  // NX-13 rework: this replaces a prior version of this test that asserted
+  // "omits aria-label but keeps role=img" — i.e. it codified the violation
+  // as intended behaviour. role="img" with no accessible name is an axe
+  // "role-img-alt" failure (WCAG 2.0 A, serious): a screen reader announces
+  // "image" with nothing to say what it's an image of, which is worse than
+  // the plain, role-less div this component had before. This test asserts
+  // the opposite of the old one — the root must carry NEITHER role="img"
+  // NOR aria-label when the prop is omitted — and fails immediately if
+  // role="img" is restored unconditionally.
+  it("carries no role and no aria-label on the root when ariaLabel is omitted", () => {
     const html = renderRoot();
-    expect(html).toContain('role="img"');
+    expect(html).not.toContain('role="img"');
     expect(html).not.toContain("aria-label=");
+  });
+
+  it("also omits role when ariaLabel is the empty string", () => {
+    // An empty label is not a name either — guard the falsy-but-present case
+    // so `ariaLabel=""` can't slip a nameless role="img" through the same
+    // door as `undefined`.
+    const html = renderRoot("");
+    expect(html).not.toContain('role="img"');
   });
 
   it("hides the label layer from assistive tech", () => {
