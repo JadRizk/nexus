@@ -1,6 +1,11 @@
 /* ============================================================================
    CAMERA / CRT SCREEN MAPPING
 
+   Moved from closures inside the prototype's boot() function into real,
+   independently callable functions — same numerics, now parameterised
+   instead of closing over `W`/`H`/`cfgRef.current.curve`/`nRadius`/`camZoom`.
+   This is what makes them testable at all; nothing about the maths changed.
+
    The composite pass samples the scene through a barrel warp, so what is
    drawn at screen position p came from scene position warp(p). Any DOM
    overlay or hit-test that ignores this drifts by up to ~13px in the

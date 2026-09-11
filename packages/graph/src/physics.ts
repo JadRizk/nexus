@@ -1,9 +1,17 @@
 /* ============================================================================
    PHYSICS
 
-   Physics solver working with generic Float32Array-based graph structures.
-   Takes already-resolved per-node charge/mass and per-edge dist/strength,
-   computing graph-structural properties (e.g. degree) from the edge list.
+   The stepping numerics are byte-for-byte identical to the prototype this
+   was extracted from — the only real change is the input shape: the
+   prototype's `createPhysics(G)` read `NODE_TYPES[G.nodes[i].type]` and
+   `LINK_TYPES[G.edges[e].type]` directly from module-global lookup tables,
+   which made it silently coupled to one specific taxonomy despite already
+   being framework-agnostic (Float32Array-based) everywhere else. This
+   version takes already-resolved per-node charge/mass and per-edge
+   dist/strength instead, and computes `degree` itself from the edge list
+   (previously computed by the caller and passed in) rather than requiring
+   the consumer to precompute a graph-structural property the physics
+   already needs to derive for itself.
    ========================================================================== */
 
 export interface PhysicsNode {

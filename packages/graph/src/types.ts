@@ -3,10 +3,14 @@ import type { CSSProperties } from "react";
 /* ============================================================================
    Public types for @nexus-cyberdeck/graph.
 
-   Uses a generic category system: nodes/edges carry a `categoryId`, and the
-   caller supplies `nodeCategories`/`linkCategories` maps describing how each
-   category looks and behaves. Domain-specific vocabularies (e.g. ATLAS/TAG)
-   are sample data, not part of the package.
+   The prototype this was extracted from hardcoded one taxonomy (ATLAS/TAG/
+   UNRSLV/SOURCE/AGENT/NODE, refs/cites/tagged/mentions/contradicts) directly
+   into the engine via module-global `NODE_TYPES`/`LINK_TYPES` lookup tables
+   keyed by a `.type` string. Everything here replaces that with a generic
+   category system: nodes/edges carry a `categoryId`, and the caller supplies
+   `nodeCategories`/`linkCategories` maps describing how each category looks
+   and behaves. The showcase's ATLAS/TAG/etc. vocabulary becomes sample data
+   built from these types, not part of the package.
    ========================================================================== */
 
 /** Index into the six SDF node shapes the shader supports — same order @nexus-cyberdeck/react's `GLYPH_SHAPES` uses (circle, hexagon, diamond, ring, square, triangle). */
