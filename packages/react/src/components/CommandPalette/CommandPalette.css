@@ -1,7 +1,7 @@
 .nx-palette__scrim {
   position: fixed;
   inset: 0;
-  z-index: 40;
+  z-index: var(--nx-z-overlay);
   background: var(--nx-palette-scrim, var(--nx-scrim));
   backdrop-filter: blur(2px);
   display: flex;

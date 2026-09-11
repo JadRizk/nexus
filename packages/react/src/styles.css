@@ -79,7 +79,7 @@
 .nx-palette__scrim {
   position: fixed;
   inset: 0;
-  z-index: 40;
+  z-index: var(--nx-z-overlay);
   background: var(--nx-palette-scrim, var(--nx-scrim));
   backdrop-filter: blur(2px);
   display: flex;
@@ -218,6 +218,7 @@
 /* -------------------------------------------------------------------- Drawer */
 .nx-drawer {
   position: fixed;
+  z-index: var(--nx-z-drawer);
   top: var(--nx-drawer-inset, var(--nx-space-5));
   right: var(--nx-drawer-inset, var(--nx-space-5));
   bottom: var(--nx-drawer-inset, var(--nx-space-5));
@@ -667,11 +668,16 @@
 /* ------------------------------------------------------------------- Tooltip */
 .nx-tooltip {
   position: absolute;
-  z-index: 30;
+  z-index: var(--nx-z-tooltip);
   max-width: var(--nx-tooltip-max-width, 270px);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  /* Wraps instead of truncating: an ellipsis silently drops content a
+     sighted user can't recover (no hover-to-reveal-more for a tooltip) and
+     the same text is what aria-describedby exposes to assistive tech, so a
+     cut string was wrong on both counts. word-break: break-all because the
+     subjects are machine identifiers with no spaces to wrap on otherwise —
+     see Drawer.css's __title, which makes the same call. */
+  white-space: normal;
+  word-break: break-all;
   pointer-events: none;
   background: var(--nx-tooltip-bg, var(--nx-bg-surface));
   border: var(--nx-hairline) solid var(--nx-tooltip-border, var(--nx-border-default));

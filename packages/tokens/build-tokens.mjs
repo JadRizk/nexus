@@ -74,7 +74,7 @@ function cssName(path) {
   if (root === "primitive") {
     // Groups that are purely organisational collapse away; groups that are a
     // real prefix in the CSS keep their name.
-    const FLAT = new Set(["colour", "ramp", "motion", "effect", "crt", "scale", "shape"]);
+    const FLAT = new Set(["colour", "ramp", "motion", "effect", "crt", "scale", "shape", "z"]);
     return FLAT.has(group) ? `--nx-${leaf}` : `--nx-${group}-${leaf}`;
   }
   if (root === "semantic") {
@@ -421,6 +421,7 @@ ${THEMES.filter((t) => t !== DEFAULT_THEME)
     ["primitive.leading", null],
     ["primitive.space", "layout"],
     ["primitive.shape", null],
+    ["primitive.z", "stacking order"],
     ["primitive.motion", "motion"],
     ["primitive.effect", "elevation + scrim"],
     ["primitive.crt", "CRT layer"],
