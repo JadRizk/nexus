@@ -308,7 +308,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
         blendSrc: THREE.OneFactor, blendDst: THREE.OneFactor,
         uniforms: {
           uTime: { value: 0 }, uPx: { value: 1 }, uHlStart: { value: -999 },
-          uGlow: { value: opticsCfg.glow }, uFocus: { value: 0 },
+          uGlow: { value: opticsCfg.glow }, uFocus: { value: 0 }, uReduced: { value: 0 },
         },
       });
       const nodeMesh = new THREE.Mesh(nodeGeo, nodeMat);
@@ -320,7 +320,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
       const fadeMat = new THREE.RawShaderMaterial({
         vertexShader: FADE_VS, fragmentShader: FADE_FS,
         transparent: true, depthTest: false, depthWrite: false,
-        uniforms: { uColor: { value: new THREE.Vector3(vc.r, vc.g, vc.b) }, uAlpha: { value: 1 } },
+        uniforms: { uColor: { value: new THREE.Vector3(vc.r, vc.g, vc.b) }, uAlpha: { value: 1 }, uReduced: { value: 0 } },
       });
       const fadeMesh = new THREE.Mesh(fadeGeo, fadeMat);
       fadeMesh.frustumCulled = false; fadeMesh.renderOrder = -10; scene.add(fadeMesh);
@@ -347,6 +347,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
           uRes: { value: new THREE.Vector2(1, 1) }, uTime: { value: 0 },
           uScan: { value: opticsCfg.scan }, uAberr: { value: opticsCfg.aberr }, uCurve: { value: opticsCfg.curve },
           uGrain: { value: opticsCfg.grain }, uBloomAmt: { value: opticsCfg.bloom }, uGlitch: { value: 0 },
+          uReduced: { value: 0 },
         },
       });
       const fsQuad = new THREE.Mesh(fsGeo, compMat);
@@ -453,7 +454,26 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
         ver: renderer.capabilities.isWebGL2 ? 2 : 1,
       };
       const kick = (d: number) => { glitchUntil = clock + d; };
-      kick(0.8); // glitch flourish riding along with the intro pull-back
+
+      // prefers-reduced-motion. Read once here and tracked live, so flipping
+      // the OS setting while the canvas is up takes effect on the next frame
+      // without a remount. Guarded: jsdom and SSR have no matchMedia, and
+      // Safari before 14 has a MediaQueryList with addListener only. The flag
+      // reaches the GPU as `uReduced` (see shaders.ts for what it gates) and
+      // is mirrored onto the canvas as data-nx-reduced-motion so the state is
+      // observable from outside — the uniforms themselves are not.
+      const motionQuery = typeof window.matchMedia === "function"
+        ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
+      let reduced = motionQuery?.matches ?? false;
+      const applyReduced = () => { renderer.domElement.dataset.nxReducedMotion = String(reduced); };
+      const onMotionChange = (ev: MediaQueryListEvent) => { reduced = ev.matches; applyReduced(); };
+      if (motionQuery) {
+        if (typeof motionQuery.addEventListener === "function") motionQuery.addEventListener("change", onMotionChange);
+        else motionQuery.addListener(onMotionChange);
+      }
+      applyReduced();
+
+      if (!reduced) kick(0.8); // glitch flourish riding along with the intro pull-back
 
       function refilter() {
         const hiddenNode = new Set(hiddenNodeRef.current ?? []);
@@ -732,9 +752,16 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
         edgeMat.uniforms.uOpacity!.value = c.edgeOpacity;
         edgeMat.uniforms.uFlowSpeed!.value = c.flowSpeed;
         fadeMat.uniforms.uAlpha!.value = 1 - c.trails * 0.94;
+        const uReduced = reduced ? 1 : 0;
+        nodeMat.uniforms.uReduced!.value = uReduced;
+        fadeMat.uniforms.uReduced!.value = uReduced;
+        compMat.uniforms.uReduced!.value = uReduced;
 
-        if (c.glitch > 0 && clock > glitchUntil && Math.random() < 0.0022 * c.glitch) kick(0.10 + Math.random() * 0.22);
-        const gActive = clock < glitchUntil ? c.glitch : 0;
+        // The composite shader already gates the bands on uReduced; not
+        // scheduling bursts at all just keeps the uniform at zero instead of
+        // handing the GPU a value it is going to multiply away.
+        if (!reduced && c.glitch > 0 && clock > glitchUntil && Math.random() < 0.0022 * c.glitch) kick(0.10 + Math.random() * 0.22);
+        const gActive = !reduced && clock < glitchUntil ? c.glitch : 0;
 
         renderer.setRenderTarget(sceneRT);
         renderer.render(scene, camera);
@@ -870,6 +897,10 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
       return function cleanup() {
         cancelAnimationFrame(raf);
         ro.disconnect();
+        if (motionQuery) {
+          if (typeof motionQuery.removeEventListener === "function") motionQuery.removeEventListener("change", onMotionChange);
+          else motionQuery.removeListener(onMotionChange);
+        }
         el.removeEventListener("pointermove", onMove);
         el.removeEventListener("pointerdown", onDown);
         window.removeEventListener("pointerup", onUp);

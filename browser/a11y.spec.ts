@@ -222,6 +222,29 @@ test.describe("claims axe cannot make", () => {
     expect(state.opacity).toBe("1");
   });
 
+  test("prefers-reduced-motion stills the graph's glitch, grain, roll bar and trails", async ({ page }) => {
+    // The graph's CRT pass is WebGL, not CSS, so the stylesheet rule above
+    // cannot reach it: the canvas reads the media query itself and carries the
+    // answer to the GPU as the `uReduced` uniform. The uniform is not
+    // observable from outside a WebGL context, so GraphCanvas mirrors the
+    // flag onto the canvas element, and this asserts that mirror — the unit
+    // test in packages/graph asserts the uniforms behind it. Flipping the
+    // emulation after mount covers the live listener, not just the read at
+    // boot: the OS setting can change while the canvas is up.
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await gotoPage(page, "graph");
+
+    const canvas = page.locator("canvas").first();
+    await expect(canvas).toBeAttached();
+    await expect(canvas).toHaveAttribute("data-nx-reduced-motion", "true");
+
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await expect(canvas).toHaveAttribute("data-nx-reduced-motion", "false");
+
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await expect(canvas).toHaveAttribute("data-nx-reduced-motion", "true");
+  });
+
   test("prefers-contrast: more switches the CRT layer off", async ({ page }) => {
     // The README offers this as an escape hatch: someone asking for more
     // contrast should not be fighting a scanline overlay. Nothing asserted it

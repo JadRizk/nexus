@@ -13,10 +13,11 @@ import { expect } from "@playwright/test";
 export const THEMES = ["hud-aa", "hud"] as const;
 export type Theme = (typeof THEMES)[number];
 
-export type Route = "home" | "primitives" | "overlays" | "tokens";
+export type Route = "home" | "graph" | "primitives" | "overlays" | "tokens";
 
 const NAV_LABEL: Record<Route, string> = {
   home: "Home",
+  graph: "Graph",
   primitives: "Primitives",
   overlays: "Overlays",
   tokens: "Tokens",
