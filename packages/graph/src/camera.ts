@@ -1,7 +1,7 @@
 /* ============================================================================
    CAMERA / CRT SCREEN MAPPING
 
-   Moved from closures inside NexusCyberdeck.jsx's boot() function into real,
+   Moved from closures inside the prototype's boot() function into real,
    independently callable functions — same numerics, now parameterised
    instead of closing over `W`/`H`/`cfgRef.current.curve`/`nRadius`/`camZoom`.
    This is what makes them testable at all; nothing about the maths changed.

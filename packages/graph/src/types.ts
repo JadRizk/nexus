@@ -3,10 +3,10 @@ import type { CSSProperties } from "react";
 /* ============================================================================
    Public types for @nexus-cyberdeck/graph.
 
-   The original NexusCyberdeck.jsx hardcoded one taxonomy (ATLAS/TAG/UNRSLV/
-   SOURCE/AGENT/NODE, refs/cites/tagged/mentions/contradicts) directly into
-   the engine via module-global `NODE_TYPES`/`LINK_TYPES` lookup tables keyed
-   by a `.type` string. Everything here replaces that with a generic
+   The prototype this was extracted from hardcoded one taxonomy (ATLAS/TAG/
+   UNRSLV/SOURCE/AGENT/NODE, refs/cites/tagged/mentions/contradicts) directly
+   into the engine via module-global `NODE_TYPES`/`LINK_TYPES` lookup tables
+   keyed by a `.type` string. Everything here replaces that with a generic
    category system: nodes/edges carry a `categoryId`, and the caller supplies
    `nodeCategories`/`linkCategories` maps describing how each category looks
    and behaves. The showcase's ATLAS/TAG/etc. vocabulary becomes sample data

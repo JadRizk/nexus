@@ -1,9 +1,9 @@
 /* ============================================================================
    PHYSICS
 
-   Moved from NexusCyberdeck.jsx. The stepping numerics are byte-for-byte
-   identical to the original — the only real change is the input shape:
-   the original `createPhysics(G)` read `NODE_TYPES[G.nodes[i].type]` and
+   The stepping numerics are byte-for-byte identical to the prototype this
+   was extracted from — the only real change is the input shape: the
+   prototype's `createPhysics(G)` read `NODE_TYPES[G.nodes[i].type]` and
    `LINK_TYPES[G.edges[e].type]` directly from module-global lookup tables,
    which made it silently coupled to one specific taxonomy despite already
    being framework-agnostic (Float32Array-based) everywhere else. This
