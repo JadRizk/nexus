@@ -43,8 +43,11 @@ export interface DrawerProps extends ToneProps {
  * the motion reads as one object moving instead of two objects swapping.
  *
  * Focus is trapped while open and restored to whatever opened it on close.
- * When closed the subtree is `aria-hidden` and inert, so a screen reader never
- * wanders into offscreen content.
+ * A scrim behind the panel blocks pointer interaction with the page while it
+ * is open, so a click outside cannot land on anything; the shared trap pulls
+ * focus back inside if it escapes by any other route. When closed the subtree
+ * is `aria-hidden` and inert, so a screen reader never wanders into offscreen
+ * content.
  */
 export function Drawer({
   open, onClose, title, subtitle, tone, colour,
@@ -55,58 +58,74 @@ export function Drawer({
   const accent = resolveColour({ tone, colour }, "var(--nx-fg-info)");
 
   return (
-    <div
-      // @types/react 18's `RefObject<T>` already bakes `| null` into `current`,
-      // so a plain HTML element's `ref` prop wants `RefObject<T>` there; 19
-      // moved the `| null` onto the ref prop itself and made `RefObject<T>`
-      // exact, so it wants `RefObject<T | null>` instead. useFocusTrap returns
-      // the honest `RefObject<T | null>` for 19's sake (see its own comment),
-      // which 18's stricter generic-variance check then rejects here even
-      // though the underlying object is identical either way — hence the cast.
-      ref={trapRef as RefObject<HTMLDivElement>}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={titleId}
-      aria-hidden={open ? undefined : true}
-      {...inertWhenClosed(open)}
-      tabIndex={-1}
-      className="nx-drawer"
-      data-open={open ? "1" : "0"}
-      // Width is per-instance, and the closed transform is derived from it —
-      // the panel has to travel its own width plus the gutter to clear the
-      // edge, which the stylesheet cannot know.
-      style={{ "--nx-drawer-width": `${width}px` } as CSSProperties}
-    >
-      <Panel padded={false} raised className="nx-drawer__panel">
-        <header className="nx-drawer__header">
-          <div className="nx-drawer__head">
-            {icon && <div className="nx-drawer__icon">{icon}</div>}
-            <div className="nx-drawer__titles">
-              <h2
-                id={titleId}
-                className="nx-drawer__title"
-                style={{ "--nx-drawer-accent": accent } as CSSProperties}
+    <>
+      <div
+        className="nx-drawer__scrim"
+        data-open={open ? "1" : "0"}
+        aria-hidden="true"
+        // A mousedown on a non-focusable element moves focus to <body>, and
+        // no focusin fires for that, so the trap's document guard could not
+        // recover it: the keyboard would be dead until the user tabbed back
+        // in, and Escape would stop reaching the dialog. Refusing the
+        // default keeps focus exactly where it was. Clicking the scrim does
+        // not close the drawer — Escape and the close button do — because a
+        // stray click discarding a detail panel is the failure mode a scrim
+        // exists to prevent, not one it should introduce.
+        onMouseDown={(e) => e.preventDefault()}
+      />
+      <div
+        // @types/react 18's `RefObject<T>` already bakes `| null` into `current`,
+        // so a plain HTML element's `ref` prop wants `RefObject<T>` there; 19
+        // moved the `| null` onto the ref prop itself and made `RefObject<T>`
+        // exact, so it wants `RefObject<T | null>` instead. useFocusTrap returns
+        // the honest `RefObject<T | null>` for 19's sake (see its own comment),
+        // which 18's stricter generic-variance check then rejects here even
+        // though the underlying object is identical either way — hence the cast.
+        ref={trapRef as RefObject<HTMLDivElement>}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-hidden={open ? undefined : true}
+        {...inertWhenClosed(open)}
+        tabIndex={-1}
+        className="nx-drawer"
+        data-open={open ? "1" : "0"}
+        // Width is per-instance, and the closed transform is derived from it —
+        // the panel has to travel its own width plus the gutter to clear the
+        // edge, which the stylesheet cannot know.
+        style={{ "--nx-drawer-width": `${width}px` } as CSSProperties}
+      >
+        <Panel padded={false} raised className="nx-drawer__panel">
+          <header className="nx-drawer__header">
+            <div className="nx-drawer__head">
+              {icon && <div className="nx-drawer__icon">{icon}</div>}
+              <div className="nx-drawer__titles">
+                <h2
+                  id={titleId}
+                  className="nx-drawer__title"
+                  style={{ "--nx-drawer-accent": accent } as CSSProperties}
+                >
+                  {title}
+                </h2>
+                {subtitle != null && <div className="nx-drawer__subtitle">{subtitle}</div>}
+              </div>
+              <Button
+                className="nx-drawer__close"
+                onClick={onClose}
+                aria-label="Close details"
               >
-                {title}
-              </h2>
-              {subtitle != null && <div className="nx-drawer__subtitle">{subtitle}</div>}
+                ✕
+              </Button>
             </div>
-            <Button
-              className="nx-drawer__close"
-              onClick={onClose}
-              aria-label="Close details"
-            >
-              ✕
-            </Button>
-          </div>
-        </header>
+          </header>
 
-        <HazardRule className="nx-drawer__rule" />
+          <HazardRule className="nx-drawer__rule" />
 
-        <div className="nx-drawer__body">{children}</div>
+          <div className="nx-drawer__body">{children}</div>
 
-        {footer && <div className="nx-drawer__footer">{footer}</div>}
-      </Panel>
-    </div>
+          {footer && <div className="nx-drawer__footer">{footer}</div>}
+        </Panel>
+      </div>
+    </>
   );
 }

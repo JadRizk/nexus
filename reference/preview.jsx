@@ -117,6 +117,7 @@ function Glyph({ shape = "circle", tone: tone2, colour, muted = false, size = 13
 
 // packages/react/src/hooks/useFocusTrap.ts
 import { useEffect, useRef } from "react";
+var activeTraps = [];
 function useFocusTrap(active, onDismiss) {
   const ref = useRef(null);
   const restoreTo = useRef(null);
@@ -128,8 +129,23 @@ function useFocusTrap(active, onDismiss) {
     if (!active) return void 0;
     restoreTo.current = document.activeElement;
     const node = ref.current;
+    const token = {};
+    activeTraps.push(token);
     const SEL = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
     const focusables = () => Array.from(node?.querySelectorAll(SEL) ?? []).filter((el) => el.offsetParent !== null);
+    let lastInside = null;
+    const onFocusIn = (e) => {
+      if (activeTraps[activeTraps.length - 1] !== token) return;
+      const target = e.target;
+      if (!node || !(target instanceof Element)) return;
+      if (node.contains(target)) {
+        lastInside = target;
+        return;
+      }
+      const back = lastInside?.isConnected ? lastInside : focusables()[0] ?? node;
+      back.focus();
+    };
+    document.addEventListener("focusin", onFocusIn);
     (focusables()[0] ?? node)?.focus?.();
     const onKey = (e) => {
       if (e.key === "Escape") {
@@ -154,6 +170,9 @@ function useFocusTrap(active, onDismiss) {
     };
     node?.addEventListener("keydown", onKey);
     return () => {
+      document.removeEventListener("focusin", onFocusIn);
+      const i = activeTraps.indexOf(token);
+      if (i !== -1) activeTraps.splice(i, 1);
       node?.removeEventListener("keydown", onKey);
       const el = restoreTo.current;
       if (el && typeof el.focus === "function") el.focus();
@@ -377,7 +396,15 @@ function Drawer({
   const trapRef = useFocusTrap(open, onClose);
   const titleId = useId2();
   const accent = resolveColour({ tone: tone2, colour }, "var(--nx-fg-info)");
-  return /* @__PURE__ */ React.createElement(
+  return /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(
+    "div",
+    {
+      className: "nx-drawer__scrim",
+      "data-open": open ? "1" : "0",
+      "aria-hidden": "true",
+      onMouseDown: (e) => e.preventDefault()
+    }
+  ), /* @__PURE__ */ React.createElement(
     "div",
     {
       ref: trapRef,
@@ -408,7 +435,7 @@ function Drawer({
       },
       "\u2715"
     ))), /* @__PURE__ */ React.createElement(HazardRule, { className: "nx-drawer__rule" }), /* @__PURE__ */ React.createElement("div", { className: "nx-drawer__body" }, children), footer && /* @__PURE__ */ React.createElement("div", { className: "nx-drawer__footer" }, footer))
-  );
+  ));
 }
 
 // packages/react/src/components/KeyValue/KeyValue.tsx
@@ -1321,6 +1348,30 @@ html, body {
 
 .nx-drawer[data-open="1"] {
   transform: translateX(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Full-viewport scrim behind the open drawer. Blocking pointer interaction
+   with the page underneath is half of what makes the dialog modal; the trap's
+   document-level focus guard is the other half. It fades rather than mounting,
+   for the same reason the drawer slides. No z-index on either: they are
+   fixed-position siblings painted in DOM order, scrim first, so the drawer is
+   always above its own scrim without either having to out-number the rest of
+   the page. */
+.nx-drawer__scrim {
+  position: fixed;
+  inset: 0;
+  background: var(--nx-drawer-scrim, var(--nx-scrim));
+  transition: opacity var(--nx-dur-fade) linear;
+}
+
+.nx-drawer__scrim[data-open="0"] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.nx-drawer__scrim[data-open="1"] {
   opacity: 1;
   pointer-events: auto;
 }
