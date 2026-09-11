@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { useState } from "react";
+import { createRef, useState } from "react";
 import { TabStrip } from "./TabStrip.js";
 
 function Harness() {
@@ -49,5 +49,19 @@ describe("TabStrip", () => {
     expect(screen.getByRole("tab", { name: "C" })).toHaveAttribute("aria-selected", "true");
     fireEvent.keyDown(screen.getByRole("tab", { name: "C" }), { key: "Home" });
     expect(screen.getByRole("tab", { name: "A" })).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("forwards a ref to the tablist", () => {
+    const ref = createRef<HTMLDivElement>();
+    render(
+      <TabStrip
+        ref={ref}
+        value="a"
+        onChange={() => {}}
+        tabs={[{ value: "a", label: "A" }]}
+      />,
+    );
+    expect(ref.current).toBeInstanceOf(HTMLDivElement);
+    expect(ref.current).toBe(screen.getByRole("tablist"));
   });
 });

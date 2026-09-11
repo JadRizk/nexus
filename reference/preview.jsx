@@ -14,9 +14,16 @@
    ========================================================================== */
 
 // packages/react/src/components/BlinkCursor/BlinkCursor.tsx
-function BlinkCursor({ char = "\u2588", style }) {
-  return /* @__PURE__ */ React.createElement("span", { "aria-hidden": "true", className: "nx-blink", style }, char);
-}
+import { forwardRef } from "react";
+var BlinkCursor = forwardRef(
+  function BlinkCursor2({ char = "\u2588", style }, ref) {
+    return /* @__PURE__ */ React.createElement("span", { ref, "aria-hidden": "true", className: "nx-blink", style }, char);
+  }
+);
+BlinkCursor.displayName = "BlinkCursor";
+
+// packages/react/src/components/Button/Button.tsx
+import { forwardRef as forwardRef2 } from "react";
 
 // packages/react/src/className.ts
 function mergeClassName(base, className) {
@@ -24,59 +31,69 @@ function mergeClassName(base, className) {
 }
 
 // packages/react/src/components/Button/Button.tsx
-function Button({ active = false, className, children, ...rest }) {
-  return /* @__PURE__ */ React.createElement(
-    "button",
-    {
-      type: "button",
-      className: mergeClassName("nx-btn", className),
-      "data-active": active ? "1" : "0",
-      ...rest
-    },
-    children
-  );
-}
+var Button = forwardRef2(
+  function Button2({ active = false, className, children, ...rest }, ref) {
+    return /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        ref,
+        type: "button",
+        className: mergeClassName("nx-btn", className),
+        "data-active": active ? "1" : "0",
+        ...rest
+      },
+      children
+    );
+  }
+);
+Button.displayName = "Button";
 
 // packages/react/src/components/CommandPalette/CommandPalette.tsx
-import { useEffect as useEffect3, useId, useMemo, useRef as useRef3, useState } from "react";
+import { forwardRef as forwardRef6, useEffect as useEffect3, useId, useMemo, useRef as useRef3, useState } from "react";
 
 // packages/react/src/components/Panel/Panel.tsx
-function Panel({
-  corners = ["tl", "br"],
-  padded = true,
-  raised = false,
-  className = "",
-  children,
-  ...rest
-}) {
-  return /* @__PURE__ */ React.createElement(
-    "div",
-    {
-      className: mergeClassName("nx-panel", className),
-      "data-nx-corners": corners === "none" ? "none" : corners.join(" "),
-      "data-nx-padded": padded ? "1" : "0",
-      "data-nx-raised": raised ? "1" : "0",
-      ...rest
-    },
-    children
-  );
-}
+import { forwardRef as forwardRef3 } from "react";
+var Panel = forwardRef3(
+  function Panel2({ corners = ["tl", "br"], padded = true, raised = false, className = "", children, ...rest }, ref) {
+    return /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        ref,
+        className: mergeClassName("nx-panel", className),
+        "data-nx-corners": corners === "none" ? "none" : corners.join(" "),
+        "data-nx-padded": padded ? "1" : "0",
+        "data-nx-raised": raised ? "1" : "0",
+        ...rest
+      },
+      children
+    );
+  }
+);
+Panel.displayName = "Panel";
 
 // packages/react/src/components/HazardRule/HazardRule.tsx
-function HazardRule({ height, opacity, className = "", style }) {
-  return /* @__PURE__ */ React.createElement(
-    "div",
-    {
-      "aria-hidden": "true",
-      className: mergeClassName("nx-hazard", className),
-      style: {
-        ...height != null ? { "--nx-hazard-height": `${height}px` } : null,
-        ...opacity != null ? { "--nx-hazard-opacity": String(opacity) } : null,
-        ...style
+import { forwardRef as forwardRef4 } from "react";
+var HazardRule = forwardRef4(
+  function HazardRule2({ height, opacity, className = "", style }, ref) {
+    return /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        ref,
+        "aria-hidden": "true",
+        className: mergeClassName("nx-hazard", className),
+        style: {
+          ...height != null ? { "--nx-hazard-height": `${height}px` } : null,
+          ...opacity != null ? { "--nx-hazard-opacity": String(opacity) } : null,
+          ...style
+        }
       }
-    }
-  );
-}
+    );
+  }
+);
+HazardRule.displayName = "HazardRule";
+
+// packages/react/src/components/Glyph/Glyph.tsx
+import { forwardRef as forwardRef5 } from "react";
 
 // packages/tokens/src/index.ts
 var tone = (t) => `var(--nx-fg-${t})`;
@@ -100,20 +117,24 @@ var PATHS = {
   square: /* @__PURE__ */ React.createElement("rect", { x: "3.2", y: "3.2", width: "7.6", height: "7.6" }),
   triangle: /* @__PURE__ */ React.createElement("polygon", { points: "7,2.3 11.6,10.6 2.4,10.6" })
 };
-function Glyph({ shape = "circle", tone: tone2, colour, muted = false, size = 13, title }) {
-  const c = resolveColour({ tone: tone2, colour, muted }, "var(--nx-fg-info)");
-  return /* @__PURE__ */ React.createElement(
-    "svg",
-    {
-      width: size,
-      height: size,
-      viewBox: "0 0 14 14",
-      ...iconA11y(title),
-      style: { flexShrink: 0, filter: muted ? "none" : `drop-shadow(0 0 4px ${c})` }
-    },
-    shape === "ring" ? /* @__PURE__ */ React.createElement("circle", { cx: "7", cy: "7", r: "4.1", fill: "none", strokeWidth: "2.1", stroke: c }) : /* @__PURE__ */ React.createElement("g", { fill: c }, PATHS[shape])
-  );
-}
+var Glyph = forwardRef5(
+  function Glyph2({ shape = "circle", tone: tone2, colour, muted = false, size = 13, title }, ref) {
+    const c = resolveColour({ tone: tone2, colour, muted }, "var(--nx-fg-info)");
+    return /* @__PURE__ */ React.createElement(
+      "svg",
+      {
+        ref,
+        width: size,
+        height: size,
+        viewBox: "0 0 14 14",
+        ...iconA11y(title),
+        style: { flexShrink: 0, filter: muted ? "none" : `drop-shadow(0 0 4px ${c})` }
+      },
+      shape === "ring" ? /* @__PURE__ */ React.createElement("circle", { cx: "7", cy: "7", r: "4.1", fill: "none", strokeWidth: "2.1", stroke: c }) : /* @__PURE__ */ React.createElement("g", { fill: c }, PATHS[shape])
+    );
+  }
+);
+Glyph.displayName = "Glyph";
 
 // packages/react/src/hooks/useFocusTrap.ts
 import { useEffect, useRef } from "react";
@@ -229,8 +250,18 @@ function rankItems(items, query, limit = 40) {
   return scored.slice(0, limit).map(([, it]) => it);
 }
 
+// packages/react/src/refs.ts
+function mergeRefs(...refs) {
+  return (node) => {
+    for (const ref of refs) {
+      if (typeof ref === "function") ref(node);
+      else if (ref) ref.current = node;
+    }
+  };
+}
+
 // packages/react/src/components/CommandPalette/CommandPalette.tsx
-function CommandPalette({
+function CommandPaletteInner({
   open,
   onClose,
   items,
@@ -240,7 +271,7 @@ function CommandPalette({
   hint = [["\u2191\u2193", "MOVE"], ["\u21B5", "SELECT"], ["ESC", "CLOSE"]],
   renderMeta,
   width = 520
-}) {
+}, ref) {
   const [query, setQuery] = useState("");
   const [cursor, setCursor] = useState(0);
   const inputRef = useRef3(null);
@@ -280,7 +311,7 @@ function CommandPalette({
     /* @__PURE__ */ React.createElement(
       "div",
       {
-        ref: trapRef,
+        ref: mergeRefs(trapRef, ref),
         role: "dialog",
         "aria-modal": "true",
         "aria-label": placeholder,
@@ -350,9 +381,11 @@ function CommandPalette({
     )
   );
 }
+var CommandPalette = forwardRef6(CommandPaletteInner);
+CommandPalette.displayName = "CommandPalette";
 
 // packages/react/src/components/Drawer/Drawer.tsx
-import { useId as useId2, version as reactVersion } from "react";
+import { forwardRef as forwardRef7, useId as useId2, version as reactVersion } from "react";
 
 // packages/react/src/components/Drawer/inert.ts
 function inertAttr(reactVersion2) {
@@ -362,7 +395,7 @@ function inertAttr(reactVersion2) {
 // packages/react/src/components/Drawer/Drawer.tsx
 var INERT_VALUE = inertAttr(reactVersion);
 var inertWhenClosed = (open) => open ? {} : { inert: INERT_VALUE };
-function Drawer({
+var Drawer = forwardRef7(function Drawer2({
   open,
   onClose,
   title,
@@ -373,14 +406,14 @@ function Drawer({
   footer,
   width = 296,
   children
-}) {
+}, ref) {
   const trapRef = useFocusTrap(open, onClose);
   const titleId = useId2();
   const accent = resolveColour({ tone: tone2, colour }, "var(--nx-fg-info)");
   return /* @__PURE__ */ React.createElement(
     "div",
     {
-      ref: trapRef,
+      ref: mergeRefs(trapRef, ref),
       role: "dialog",
       "aria-modal": "true",
       "aria-labelledby": titleId,
@@ -409,90 +442,106 @@ function Drawer({
       "\u2715"
     ))), /* @__PURE__ */ React.createElement(HazardRule, { className: "nx-drawer__rule" }), /* @__PURE__ */ React.createElement("div", { className: "nx-drawer__body" }, children), footer && /* @__PURE__ */ React.createElement("div", { className: "nx-drawer__footer" }, footer))
   );
-}
+});
+Drawer.displayName = "Drawer";
 
 // packages/react/src/components/KeyValue/KeyValue.tsx
-function KeyValue({ label, value, style }) {
-  return /* @__PURE__ */ React.createElement("div", { className: "nx-kv", style }, /* @__PURE__ */ React.createElement("span", { className: "nx-kv__label" }, label), /* @__PURE__ */ React.createElement("span", { className: "nx-kv__value" }, value));
-}
-
-// packages/react/src/components/SectionHeading/SectionHeading.tsx
-function SectionHeading({ children, className = "", ...rest }) {
-  return /* @__PURE__ */ React.createElement("div", { className: mergeClassName("nx-heading", className), ...rest }, children);
-}
+import { forwardRef as forwardRef8 } from "react";
+var KeyValue = forwardRef8(
+  function KeyValue2({ label, value, style }, ref) {
+    return /* @__PURE__ */ React.createElement("div", { ref, className: "nx-kv", style }, /* @__PURE__ */ React.createElement("span", { className: "nx-kv__label" }, label), /* @__PURE__ */ React.createElement("span", { className: "nx-kv__value" }, value));
+  }
+);
+KeyValue.displayName = "KeyValue";
 
 // packages/react/src/components/Legend/Legend.tsx
-function Legend({ groups, style }) {
-  return /* @__PURE__ */ React.createElement("div", { className: "nx-legend", style }, groups.map((group) => /* @__PURE__ */ React.createElement("fieldset", { key: group.title, className: "nx-legend__group" }, /* @__PURE__ */ React.createElement("legend", { className: "nx-legend__title" }, /* @__PURE__ */ React.createElement(SectionHeading, null, "/// ", group.title)), group.rows)));
-}
+import { forwardRef as forwardRef10 } from "react";
+
+// packages/react/src/components/SectionHeading/SectionHeading.tsx
+import { forwardRef as forwardRef9 } from "react";
+var SectionHeading = forwardRef9(
+  function SectionHeading2({ children, className = "", ...rest }, ref) {
+    return /* @__PURE__ */ React.createElement("div", { ref, className: mergeClassName("nx-heading", className), ...rest }, children);
+  }
+);
+SectionHeading.displayName = "SectionHeading";
+
+// packages/react/src/components/Legend/Legend.tsx
+var Legend = forwardRef10(
+  function Legend2({ groups, style }, ref) {
+    return /* @__PURE__ */ React.createElement("div", { ref, className: "nx-legend", style }, groups.map((group) => /* @__PURE__ */ React.createElement("fieldset", { key: group.title, className: "nx-legend__group" }, /* @__PURE__ */ React.createElement("legend", { className: "nx-legend__title" }, /* @__PURE__ */ React.createElement(SectionHeading, null, "/// ", group.title)), group.rows)));
+  }
+);
+Legend.displayName = "Legend";
 
 // packages/react/src/components/LinkGlyph/LinkGlyph.tsx
-function LinkGlyph({
-  tone: tone2,
-  colour,
-  dashed = false,
-  arrow = false,
-  width = 1.2,
-  muted = false,
-  size = 13,
-  title
-}) {
-  const c = resolveColour({ tone: tone2, colour, muted }, "var(--nx-fg-info)");
-  return /* @__PURE__ */ React.createElement(
-    "svg",
-    {
-      width: size,
-      height: size,
-      viewBox: "0 0 14 14",
-      ...iconA11y(title),
-      style: { flexShrink: 0 }
-    },
-    /* @__PURE__ */ React.createElement(
-      "path",
+import { forwardRef as forwardRef11 } from "react";
+var LinkGlyph = forwardRef11(
+  function LinkGlyph2({ tone: tone2, colour, dashed = false, arrow = false, width = 1.2, muted = false, size = 13, title }, ref) {
+    const c = resolveColour({ tone: tone2, colour, muted }, "var(--nx-fg-info)");
+    return /* @__PURE__ */ React.createElement(
+      "svg",
       {
-        d: "M1 9.5 Q7 2 13 9.5",
-        fill: "none",
-        stroke: c,
-        strokeWidth: width,
-        strokeDasharray: dashed ? "2.2 1.9" : void 0,
-        strokeLinecap: "round"
-      }
-    ),
-    arrow && /* @__PURE__ */ React.createElement("polygon", { points: "13,9.5 10,7.8 10.7,10.9", fill: c })
-  );
-}
+        ref,
+        width: size,
+        height: size,
+        viewBox: "0 0 14 14",
+        ...iconA11y(title),
+        style: { flexShrink: 0 }
+      },
+      /* @__PURE__ */ React.createElement(
+        "path",
+        {
+          d: "M1 9.5 Q7 2 13 9.5",
+          fill: "none",
+          stroke: c,
+          strokeWidth: width,
+          strokeDasharray: dashed ? "2.2 1.9" : void 0,
+          strokeLinecap: "round"
+        }
+      ),
+      arrow && /* @__PURE__ */ React.createElement("polygon", { points: "13,9.5 10,7.8 10.7,10.9", fill: c })
+    );
+  }
+);
+LinkGlyph.displayName = "LinkGlyph";
 
 // packages/react/src/components/MeterRow/MeterRow.tsx
-function MeterRow({ label, value, total, tone: tone2, colour, labelWidth }) {
-  const pct = total > 0 ? Math.min(100, Math.max(0, value / total * 100)) : 0;
-  return /* @__PURE__ */ React.createElement(
-    "div",
-    {
-      className: "nx-meter",
-      style: {
-        "--nx-meter-fg": resolveColour({ tone: tone2, colour }, "var(--nx-fg-info)"),
-        ...labelWidth != null ? { "--nx-meter-label-width": `${labelWidth}px` } : null
-      }
-    },
-    /* @__PURE__ */ React.createElement("span", { className: "nx-meter__label" }, label),
-    /* @__PURE__ */ React.createElement(
+import { forwardRef as forwardRef12 } from "react";
+var MeterRow = forwardRef12(
+  function MeterRow2({ label, value, total, tone: tone2, colour, labelWidth }, ref) {
+    const pct = total > 0 ? Math.min(100, Math.max(0, value / total * 100)) : 0;
+    return /* @__PURE__ */ React.createElement(
       "div",
       {
-        className: "nx-meter__track",
-        role: "meter",
-        "aria-valuenow": value,
-        "aria-valuemin": 0,
-        "aria-valuemax": total,
-        "aria-label": `${label}: ${value} of ${total}`
+        ref,
+        className: "nx-meter",
+        style: {
+          "--nx-meter-fg": resolveColour({ tone: tone2, colour }, "var(--nx-fg-info)"),
+          ...labelWidth != null ? { "--nx-meter-label-width": `${labelWidth}px` } : null
+        }
       },
-      /* @__PURE__ */ React.createElement("div", { className: "nx-meter__fill", style: { width: `${pct}%` } })
-    ),
-    /* @__PURE__ */ React.createElement("span", { className: "nx-meter__value" }, value)
-  );
-}
+      /* @__PURE__ */ React.createElement("span", { className: "nx-meter__label" }, label),
+      /* @__PURE__ */ React.createElement(
+        "div",
+        {
+          className: "nx-meter__track",
+          role: "meter",
+          "aria-valuenow": value,
+          "aria-valuemin": 0,
+          "aria-valuemax": total,
+          "aria-label": `${label}: ${value} of ${total}`
+        },
+        /* @__PURE__ */ React.createElement("div", { className: "nx-meter__fill", style: { width: `${pct}%` } })
+      ),
+      /* @__PURE__ */ React.createElement("span", { className: "nx-meter__value" }, value)
+    );
+  }
+);
+MeterRow.displayName = "MeterRow";
 
 // packages/react/src/components/NexusProvider/NexusProvider.tsx
-import { createContext, useContext, useMemo as useMemo2, useState as useState2 } from "react";
+import { createContext, forwardRef as forwardRef13, useContext, useMemo as useMemo2, useState as useState2 } from "react";
 var Ctx = createContext({
   theme: "hud-aa",
   crt: true,
@@ -502,65 +551,75 @@ var Ctx = createContext({
   }
 });
 var useNexus = () => useContext(Ctx);
-function NexusProvider({
-  theme = "hud-aa",
-  crt = true,
-  children,
-  className = "",
-  ...rest
-}) {
-  const [t, setTheme] = useState2(theme);
-  const [c, setCrt] = useState2(crt);
-  const value = useMemo2(
-    () => ({ theme: t, crt: c, setTheme, setCrt }),
-    [t, c]
-  );
-  return /* @__PURE__ */ React.createElement(Ctx.Provider, { value }, /* @__PURE__ */ React.createElement("div", { className: mergeClassName("nx-root", className), "data-nx-theme": t, "data-nx-crt": c ? "on" : "off", ...rest }, children));
-}
+var NexusProvider = forwardRef13(
+  function NexusProvider2({ theme = "hud-aa", crt = true, children, className = "", ...rest }, ref) {
+    const [t, setTheme] = useState2(theme);
+    const [c, setCrt] = useState2(crt);
+    const value = useMemo2(
+      () => ({ theme: t, crt: c, setTheme, setCrt }),
+      [t, c]
+    );
+    return /* @__PURE__ */ React.createElement(Ctx.Provider, { value }, /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        ref,
+        className: mergeClassName("nx-root", className),
+        "data-nx-theme": t,
+        "data-nx-crt": c ? "on" : "off",
+        ...rest
+      },
+      children
+    ));
+  }
+);
+NexusProvider.displayName = "NexusProvider";
 
 // packages/react/src/components/Slider/Slider.tsx
-import { useId as useId3 } from "react";
-function Slider({ label, value, min, max, step = 1, onChange, format, style }) {
-  const id = useId3();
-  const shown = format ? format(value) : String(value);
-  return /* @__PURE__ */ React.createElement("div", { className: "nx-slider-field", style }, /* @__PURE__ */ React.createElement("div", { className: "nx-slider-row" }, /* @__PURE__ */ React.createElement("label", { htmlFor: id, className: "nx-slider-label" }, label), /* @__PURE__ */ React.createElement("span", { "aria-hidden": "true", className: "nx-slider-value" }, shown)), /* @__PURE__ */ React.createElement(
-    "input",
-    {
-      id,
-      className: "nx-slider",
-      type: "range",
-      min,
-      max,
-      step,
-      value,
-      "aria-valuetext": shown,
-      onChange: (e) => onChange(parseFloat(e.target.value))
-    }
-  ));
-}
+import { forwardRef as forwardRef14, useId as useId3 } from "react";
+var Slider = forwardRef14(
+  function Slider2({ label, value, min, max, step = 1, onChange, format, style }, ref) {
+    const id = useId3();
+    const shown = format ? format(value) : String(value);
+    return /* @__PURE__ */ React.createElement("div", { className: "nx-slider-field", style }, /* @__PURE__ */ React.createElement("div", { className: "nx-slider-row" }, /* @__PURE__ */ React.createElement("label", { htmlFor: id, className: "nx-slider-label" }, label), /* @__PURE__ */ React.createElement("span", { "aria-hidden": "true", className: "nx-slider-value" }, shown)), /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        ref,
+        id,
+        className: "nx-slider",
+        type: "range",
+        min,
+        max,
+        step,
+        value,
+        "aria-valuetext": shown,
+        onChange: (e) => onChange(parseFloat(e.target.value))
+      }
+    ));
+  }
+);
+Slider.displayName = "Slider";
 
 // packages/react/src/components/Stat/Stat.tsx
-function Stat({ label, value, tone: tone2, colour, style }) {
-  return /* @__PURE__ */ React.createElement(
-    "div",
-    {
-      className: "nx-stat",
-      style: { "--nx-stat-value-fg": resolveColour({ tone: tone2, colour }, "var(--nx-fg-default)"), ...style }
-    },
-    /* @__PURE__ */ React.createElement("div", { className: "nx-stat__label" }, label),
-    /* @__PURE__ */ React.createElement("div", { className: "nx-stat__value" }, value)
-  );
-}
+import { forwardRef as forwardRef15 } from "react";
+var Stat = forwardRef15(
+  function Stat2({ label, value, tone: tone2, colour, style }, ref) {
+    return /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        ref,
+        className: "nx-stat",
+        style: { "--nx-stat-value-fg": resolveColour({ tone: tone2, colour }, "var(--nx-fg-default)"), ...style }
+      },
+      /* @__PURE__ */ React.createElement("div", { className: "nx-stat__label" }, label),
+      /* @__PURE__ */ React.createElement("div", { className: "nx-stat__value" }, value)
+    );
+  }
+);
+Stat.displayName = "Stat";
 
 // packages/react/src/components/TabStrip/TabStrip.tsx
-import { useRef as useRef4 } from "react";
-function TabStrip({
-  tabs,
-  value,
-  onChange,
-  label = "View",
-  style
-}) {
+import { forwardRef as forwardRef16, useRef as useRef4 } from "react";
+function TabStripInner({ tabs, value, onChange, label = "View", style }, ref) {
   const refs = useRef4([]);
   const idx = tabs.findIndex((t) => t.value === value);
   const move = (delta) => {
@@ -573,6 +632,7 @@ function TabStrip({
   return /* @__PURE__ */ React.createElement(
     "div",
     {
+      ref,
       role: "tablist",
       "aria-label": label,
       className: "nx-tabstrip",
@@ -621,49 +681,58 @@ function TabStrip({
     ))
   );
 }
+var TabStrip = forwardRef16(TabStripInner);
+TabStrip.displayName = "TabStrip";
 
 // packages/react/src/components/ToggleRow/ToggleRow.tsx
-function ToggleRow({ checked, onChange, icon, label, meta, style }) {
-  return /* @__PURE__ */ React.createElement("label", { className: "nx-row", "data-checked": checked ? "1" : "0", style }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", className: "nx-sr", checked, onChange: (e) => onChange(e.target.checked) }), icon, /* @__PURE__ */ React.createElement("span", { className: "nx-row__label" }, label), meta != null && /* @__PURE__ */ React.createElement("span", { className: "nx-row__meta" }, meta));
-}
+import { forwardRef as forwardRef17 } from "react";
+var ToggleRow = forwardRef17(
+  function ToggleRow2({ checked, onChange, icon, label, meta, style }, ref) {
+    return /* @__PURE__ */ React.createElement("label", { ref, className: "nx-row", "data-checked": checked ? "1" : "0", style }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", className: "nx-sr", checked, onChange: (e) => onChange(e.target.checked) }), icon, /* @__PURE__ */ React.createElement("span", { className: "nx-row__label" }, label), meta != null && /* @__PURE__ */ React.createElement("span", { className: "nx-row__meta" }, meta));
+  }
+);
+ToggleRow.displayName = "ToggleRow";
 
 // packages/react/src/components/Tooltip/Tooltip.tsx
-function Tooltip({ x, y, tone: tone2, colour, children, style }) {
-  return /* @__PURE__ */ React.createElement(
-    "div",
-    {
-      role: "tooltip",
-      className: "nx-tooltip",
-      style: {
-        left: x,
-        top: y,
-        "--nx-tooltip-accent": resolveColour({ tone: tone2, colour }, "var(--nx-fg-info)"),
-        ...style
-      }
-    },
-    children
-  );
-}
+import { forwardRef as forwardRef18 } from "react";
+var Tooltip = forwardRef18(
+  function Tooltip2({ x, y, tone: tone2, colour, children, style }, ref) {
+    return /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        ref,
+        role: "tooltip",
+        className: "nx-tooltip",
+        style: {
+          left: x,
+          top: y,
+          "--nx-tooltip-accent": resolveColour({ tone: tone2, colour }, "var(--nx-fg-info)"),
+          ...style
+        }
+      },
+      children
+    );
+  }
+);
+Tooltip.displayName = "Tooltip";
 
 // packages/react/src/components/Wordmark/Wordmark.tsx
-function Wordmark({
-  children,
-  size,
-  skew = -9,
-  className = "",
-  style,
-  ...rest
-}) {
-  return /* @__PURE__ */ React.createElement(
-    "span",
-    {
-      className: mergeClassName("nx-wordmark", className),
-      style: { "--nx-wordmark-size": size, "--nx-wordmark-skew": `${skew}deg`, ...style },
-      ...rest
-    },
-    children
-  );
-}
+import { forwardRef as forwardRef19 } from "react";
+var Wordmark = forwardRef19(
+  function Wordmark2({ children, size, skew = -9, className = "", style, ...rest }, ref) {
+    return /* @__PURE__ */ React.createElement(
+      "span",
+      {
+        ref,
+        className: mergeClassName("nx-wordmark", className),
+        style: { "--nx-wordmark-size": size, "--nx-wordmark-skew": `${skew}deg`, ...style },
+        ...rest
+      },
+      children
+    );
+  }
+);
+Wordmark.displayName = "Wordmark";
 export {
   BlinkCursor,
   Button,

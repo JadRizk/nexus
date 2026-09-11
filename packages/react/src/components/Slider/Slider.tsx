@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { forwardRef, useId } from "react";
 import type { CSSProperties } from "react";
 
 export interface SliderProps {
@@ -17,22 +17,30 @@ export interface SliderProps {
  * A restyled native `<input type="range">`. Keeping the native element means
  * keyboard support, touch targets and value announcement come free — a custom
  * div slider would have to rebuild all three and usually gets one wrong.
+ *
+ * The forwarded ref resolves to the `<input>` itself, not the wrapping field
+ * — that's the element a consumer means by "the slider".
  */
-export function Slider({ label, value, min, max, step = 1, onChange, format, style }: SliderProps) {
-  const id = useId();
-  const shown = format ? format(value) : String(value);
-  return (
-    <div className="nx-slider-field" style={style}>
-      <div className="nx-slider-row">
-        <label htmlFor={id} className="nx-slider-label">{label}</label>
-        <span aria-hidden="true" className="nx-slider-value">{shown}</span>
+export const Slider = forwardRef<HTMLInputElement, SliderProps>(
+  function Slider({ label, value, min, max, step = 1, onChange, format, style }, ref) {
+    const id = useId();
+    const shown = format ? format(value) : String(value);
+    return (
+      <div className="nx-slider-field" style={style}>
+        <div className="nx-slider-row">
+          <label htmlFor={id} className="nx-slider-label">{label}</label>
+          <span aria-hidden="true" className="nx-slider-value">{shown}</span>
+        </div>
+        <input
+          ref={ref}
+          id={id} className="nx-slider" type="range"
+          min={min} max={max} step={step} value={value}
+          aria-valuetext={shown}
+          onChange={(e) => onChange(parseFloat(e.target.value))}
+        />
       </div>
-      <input
-        id={id} className="nx-slider" type="range"
-        min={min} max={max} step={step} value={value}
-        aria-valuetext={shown}
-        onChange={(e) => onChange(parseFloat(e.target.value))}
-      />
-    </div>
-  );
-}
+    );
+  },
+);
+
+Slider.displayName = "Slider";

@@ -1,8 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { render } from "@testing-library/react";
+import { createRef } from "react";
 import { LinkGlyph } from "./LinkGlyph.js";
 
 describe("LinkGlyph", () => {
+  it("forwards a ref to the svg", () => {
+    const ref = createRef<SVGSVGElement>();
+    const { container } = render(<LinkGlyph ref={ref} />);
+    expect(ref.current).toBeInstanceOf(SVGSVGElement);
+    expect(ref.current).toBe(container.querySelector("svg"));
+  });
+
   it("encodes relation type by dash pattern and arrowhead, not colour alone", () => {
     const solid = render(<LinkGlyph />).container;
     expect(solid.querySelector("path")).not.toHaveAttribute("stroke-dasharray");

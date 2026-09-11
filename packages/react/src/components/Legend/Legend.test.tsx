@@ -1,8 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { createRef } from "react";
 import { Legend } from "./Legend.js";
 
 describe("Legend", () => {
+  it("forwards a ref to the container", () => {
+    const ref = createRef<HTMLDivElement>();
+    const { container } = render(<Legend ref={ref} groups={[]} />);
+    expect(ref.current).toBeInstanceOf(HTMLDivElement);
+    expect(ref.current).toBe(container.firstElementChild);
+  });
+
   it("binds each group heading to its rows with a real fieldset", () => {
     // A heading that merely sits above a set of checkboxes is not associated
     // with them; a fieldset/legend pair is what a screen reader announces as

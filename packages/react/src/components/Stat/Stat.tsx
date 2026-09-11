@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { resolveColour } from "../../colour.js";
 import type { ToneProps } from "../../colour.js";
@@ -8,15 +9,20 @@ export interface StatProps extends ToneProps {
   style?: CSSProperties;
 }
 
-export function Stat({ label, value, tone, colour, style }: StatProps) {
-  return (
-    <div
-      className="nx-stat"
-      // Computed from props, so it cannot live in the stylesheet.
-      style={{ "--nx-stat-value-fg": resolveColour({ tone, colour }, "var(--nx-fg-default)"), ...style } as CSSProperties}
-    >
-      <div className="nx-stat__label">{label}</div>
-      <div className="nx-stat__value">{value}</div>
-    </div>
-  );
-}
+export const Stat = forwardRef<HTMLDivElement, StatProps>(
+  function Stat({ label, value, tone, colour, style }, ref) {
+    return (
+      <div
+        ref={ref}
+        className="nx-stat"
+        // Computed from props, so it cannot live in the stylesheet.
+        style={{ "--nx-stat-value-fg": resolveColour({ tone, colour }, "var(--nx-fg-default)"), ...style } as CSSProperties}
+      >
+        <div className="nx-stat__label">{label}</div>
+        <div className="nx-stat__value">{value}</div>
+      </div>
+    );
+  },
+);
+
+Stat.displayName = "Stat";

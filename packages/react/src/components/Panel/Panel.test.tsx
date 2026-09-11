@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { createRef } from "react";
 import { Panel } from "./Panel.js";
 
 /* ============================================================================
@@ -58,5 +59,12 @@ describe("Panel", () => {
   it("forwards arbitrary props, so a caller can give it a role or a label", () => {
     render(<Panel role="region" aria-label="Inspector">body</Panel>);
     expect(screen.getByRole("region", { name: "Inspector" })).toBeInTheDocument();
+  });
+
+  it("forwards a ref to the panel div", () => {
+    const ref = createRef<HTMLDivElement>();
+    render(<Panel ref={ref}>body</Panel>);
+    expect(ref.current).toBeInstanceOf(HTMLDivElement);
+    expect(ref.current).toBe(screen.getByText("body"));
   });
 });

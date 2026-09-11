@@ -1,8 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { render } from "@testing-library/react";
+import { createRef } from "react";
 import { HazardRule } from "./HazardRule.js";
 
 describe("HazardRule", () => {
+  it("forwards a ref to the div", () => {
+    const ref = createRef<HTMLDivElement>();
+    const { container } = render(<HazardRule ref={ref} />);
+    expect(ref.current).toBeInstanceOf(HTMLDivElement);
+    expect(ref.current).toBe(container.firstElementChild);
+  });
+
   it("is purely decorative and says so", () => {
     const { container } = render(<HazardRule />);
     expect(container.firstElementChild).toHaveAttribute("aria-hidden", "true");

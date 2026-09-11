@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
+import { createRef } from "react";
 import { NexusProvider, useNexus } from "./NexusProvider.js";
 
 function Probe() {
@@ -15,6 +16,17 @@ function Probe() {
 }
 
 describe("NexusProvider", () => {
+  it("forwards a ref to the root", () => {
+    const ref = createRef<HTMLDivElement>();
+    const { container } = render(
+      <NexusProvider ref={ref}>
+        <span>child</span>
+      </NexusProvider>,
+    );
+    expect(ref.current).toBeInstanceOf(HTMLDivElement);
+    expect(ref.current).toBe(container.querySelector(".nx-root"));
+  });
+
   it("projects theme and CRT as data attributes for CSS to key off", () => {
     const { container } = render(
       <NexusProvider theme="hud" crt={false}>

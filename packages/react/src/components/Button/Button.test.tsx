@@ -1,8 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
+import { createRef } from "react";
 import { Button } from "./Button.js";
 
 describe("Button", () => {
+  it("forwards a ref to the button", () => {
+    const ref = createRef<HTMLButtonElement>();
+    render(<Button ref={ref}>Isolate</Button>);
+    expect(ref.current).toBeInstanceOf(HTMLButtonElement);
+    expect(ref.current).toBe(screen.getByRole("button"));
+  });
+
   it('defaults to type="button" so it never submits a surrounding form by accident', () => {
     render(<Button>Isolate</Button>);
     expect(screen.getByRole("button")).toHaveAttribute("type", "button");

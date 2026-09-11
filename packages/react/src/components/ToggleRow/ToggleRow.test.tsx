@@ -1,8 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
+import { createRef } from "react";
 import { ToggleRow } from "./ToggleRow.js";
 
 describe("ToggleRow", () => {
+  it("forwards a ref to the label", () => {
+    const ref = createRef<HTMLLabelElement>();
+    render(<ToggleRow ref={ref} checked onChange={() => {}} label="ATLAS" />);
+    expect(ref.current).toBeInstanceOf(HTMLLabelElement);
+    expect(ref.current).toBe(screen.getByRole("checkbox").closest("label"));
+  });
+
   it("is a real checkbox, visually hidden but reachable and announced", () => {
     render(<ToggleRow checked onChange={() => {}} label="ATLAS" />);
     const box = screen.getByRole("checkbox", { name: "ATLAS" });
