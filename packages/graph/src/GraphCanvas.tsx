@@ -140,29 +140,63 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
   useEffect(() => {
     const mount = mountRef.current, lab = labelRef.current;
     if (!mount || !lab) return;
-    let dispose = () => { };
-    try { dispose = boot(mount, lab); }
+    // Everything boot() creates registers its teardown here the moment it
+    // exists, so a throw part-way through setup — after the renderer, its
+    // canvas, the label pool and the ResizeObserver are live — releases what
+    // was already built instead of leaving it alive until GC. A completed
+    // boot hands the same list to the effect's cleanup; drained in reverse
+    // so later resources (the frame loop, listeners) go before the renderer
+    // they draw through.
+    const disposables: Array<() => void> = [];
+    const dispose = () => {
+      while (disposables.length > 0) {
+        try { disposables.pop()!(); } catch (e) { console.error(e); }
+      }
+      api.current = {};
+    };
+    try { boot(mount, lab); }
     catch (err) {
+      dispose();
       const message = String((err as Error)?.message ?? err);
       console.error(err);
       setFatal(message);
       onFatalRef.current?.(message);
     }
-    return () => { try { dispose(); } catch (e) { console.error(e); } };
+    return dispose;
 
     function boot(mountEl: HTMLDivElement, labelEl: HTMLDivElement) {
       const n = nodes.length, m = edges.length;
-      const idToIndex = new Map<unknown, number>(nodes.map((node, i) => [node.id, i]));
+      // Validated before anything that needs tearing down exists. An edge to
+      // an unknown node used to survive as index -1 until the adjacency
+      // build deep inside setup, where it died as an opaque TypeError with
+      // the renderer, canvas and label pool already live; a category id
+      // missing from the maps died the same way in the solver setup.
+      const show = (id: unknown) => JSON.stringify(id);
+      const idToIndex = new Map<unknown, number>();
+      for (let i = 0; i < n; i++) {
+        const node = nodes[i]!;
+        if (idToIndex.has(node.id)) throw new Error(`GraphCanvas: nodes[${i}] duplicates id ${show(node.id)}`);
+        if (nodeCategories[node.categoryId] === undefined) {
+          throw new Error(`GraphCanvas: nodes[${i}] has categoryId ${show(node.categoryId)}, which is not in nodeCategories`);
+        }
+        idToIndex.set(node.id, i);
+      }
+      const eA = new Int32Array(m), eB = new Int32Array(m);
+      for (let e = 0; e < m; e++) {
+        const edge = edges[e]!;
+        const a = idToIndex.get(edge.a), b = idToIndex.get(edge.b);
+        if (a === undefined) throw new Error(`GraphCanvas: edges[${e}].a references unknown node id ${show(edge.a)}`);
+        if (b === undefined) throw new Error(`GraphCanvas: edges[${e}].b references unknown node id ${show(edge.b)}`);
+        if (linkCategories[edge.categoryId] === undefined) {
+          throw new Error(`GraphCanvas: edges[${e}] has categoryId ${show(edge.categoryId)}, which is not in linkCategories`);
+        }
+        eA[e] = a; eB[e] = b;
+      }
       idToIndexRef.current = idToIndex;
 
       const nCategoryId = nodes.map((node) => node.categoryId);
       const eCategoryId = edges.map((edge) => edge.categoryId);
       const linkCategoryIds = Object.keys(linkCategories);
-      const eA = new Int32Array(m), eB = new Int32Array(m);
-      for (let e = 0; e < m; e++) {
-        eA[e] = idToIndex.get(edges[e]!.a) ?? -1;
-        eB[e] = idToIndex.get(edges[e]!.b) ?? -1;
-      }
       const degree = computeDegree(
         Array.from({ length: m }, (_, e) => ({ a: eA[e]!, b: eB[e]! })),
         n,
@@ -201,6 +235,15 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
       mountEl.appendChild(renderer.domElement);
       renderer.domElement.style.cssText =
         "display:block;touch-action:none;width:100%;height:100%";
+      disposables.push(() => {
+        renderer.dispose();
+        // dispose() alone leaves the GL context alive until the canvas is
+        // collected; under StrictMode, HMR or a list of graphs that is
+        // enough to hit the browser's context cap. Losing it explicitly
+        // gives it back now.
+        renderer.forceContextLoss();
+        renderer.domElement.remove();
+      });
 
       const scene = new THREE.Scene();
       const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, -10, 10);
@@ -354,6 +397,9 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
       fsQuad.frustumCulled = false;
       const postScene = new THREE.Scene(); postScene.add(fsQuad);
       const postCam = new THREE.Camera();
+      disposables.push(() => [sceneRT, bloomA, bloomB].forEach((rt) => rt.dispose()));
+      disposables.push(() => [nodeMat, edgeMat, fadeMat, blurMat, compMat].forEach((mm) => mm.dispose()));
+      disposables.push(() => [nodeGeo, edgeGeo, fadeGeo, fsGeo].forEach((g) => g.dispose()));
 
       /* --------------------------------------------------------- label pool */
       const POOL = 60;
@@ -368,6 +414,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
         labelEl.appendChild(el);
         labels.push(el);
       }
+      disposables.push(() => labels.forEach((l) => l.remove()));
       const LAB_H = 11;
 
       // Measure once per node instead of guessing from character count — the
@@ -397,6 +444,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
         "text-transform:uppercase;opacity:0;transition:opacity .1s;" +
         "transform:translate3d(-9999px,-9999px,0);will-change:transform;z-index:5";
       labelEl.appendChild(tip);
+      disposables.push(() => tip.remove());
 
       let W = 1, H = 1, px = 1;
       const bufSize = new THREE.Vector2();
@@ -424,6 +472,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
       resize();
       const ro = new ResizeObserver(resize);
       ro.observe(mountEl);
+      disposables.push(() => ro.disconnect());
       // Intro animation: land on the usual density-based framing, but arrive
       // there from a wide pull-back instead of snapping straight to rest —
       // this is also what a reseed sees, since that remounts the whole scene.
@@ -472,6 +521,11 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
         else motionQuery.addListener(onMotionChange);
       }
       applyReduced();
+      disposables.push(() => {
+        if (!motionQuery) return;
+        if (typeof motionQuery.removeEventListener === "function") motionQuery.removeEventListener("change", onMotionChange);
+        else motionQuery.removeListener(onMotionChange);
+      });
 
       if (!reduced) kick(0.8); // glitch flourish riding along with the intro pull-back
 
@@ -705,6 +759,14 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
       el.addEventListener("pointerleave", onLeave);
       el.addEventListener("wheel", onWheel, { passive: false });
       el.style.cursor = "grab";
+      disposables.push(() => {
+        el.removeEventListener("pointermove", onMove);
+        el.removeEventListener("pointerdown", onDown);
+        window.removeEventListener("pointerup", onUp);
+        el.removeEventListener("click", onClick);
+        el.removeEventListener("pointerleave", onLeave);
+        el.removeEventListener("wheel", onWheel);
+      });
 
       let raf = 0, last = performance.now(), accum = 0, dirty = true;
       let fA = 0, fN = 0, fT = 0;
@@ -893,29 +955,22 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
         }
       }
       raf = requestAnimationFrame(frame);
+      disposables.push(() => cancelAnimationFrame(raf));
 
-      return function cleanup() {
+      // A lost context can't be drawn to. No preventDefault here, so the
+      // browser isn't asked to restore it: the frame loop stops and the
+      // failure surfaces the same way a thrown boot does, through the halt
+      // panel and onFatal. Unmount still drains everything above. Registered
+      // last so it is the first thing removed on teardown — the
+      // forceContextLoss() in cleanup fires this very event.
+      const onContextLost = () => {
         cancelAnimationFrame(raf);
-        ro.disconnect();
-        if (motionQuery) {
-          if (typeof motionQuery.removeEventListener === "function") motionQuery.removeEventListener("change", onMotionChange);
-          else motionQuery.removeListener(onMotionChange);
-        }
-        el.removeEventListener("pointermove", onMove);
-        el.removeEventListener("pointerdown", onDown);
-        window.removeEventListener("pointerup", onUp);
-        el.removeEventListener("click", onClick);
-        el.removeEventListener("pointerleave", onLeave);
-        el.removeEventListener("wheel", onWheel);
-        labels.forEach((l) => l.remove());
-        tip.remove();
-        [nodeGeo, edgeGeo, fadeGeo, fsGeo].forEach((g) => g.dispose());
-        [nodeMat, edgeMat, fadeMat, blurMat, compMat].forEach((mm) => mm.dispose());
-        [sceneRT, bloomA, bloomB].forEach((rt) => rt.dispose());
-        renderer.dispose();
-        if (el.parentNode) el.parentNode.removeChild(el);
-        api.current = {};
+        const message = "WebGL context lost";
+        setFatal(message);
+        onFatalRef.current?.(message);
       };
+      el.addEventListener("webglcontextlost", onContextLost);
+      disposables.push(() => el.removeEventListener("webglcontextlost", onContextLost));
     }
     // Deliberate: this effect builds and tears down the entire WebGL scene, so
     // it may only re-run when the graph data itself changes. Optics, callbacks
