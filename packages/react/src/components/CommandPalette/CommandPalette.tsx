@@ -14,6 +14,18 @@ export interface CommandPaletteProps<T extends PaletteItem = PaletteItem> {
   items: readonly T[];
   onSelect: (item: T) => void;
   placeholder?: string;
+  /**
+   * Accessible name for the dialog itself, separate from the input's
+   * placeholder. Defaults to `placeholder`, so the dialog's name is
+   * unchanged unless this is set explicitly.
+   */
+  label?: string;
+  /**
+   * The live-region announcement made as results change. A string is
+   * announced verbatim; a function receives the result count and formats
+   * its own text. Default: `` `${count} result${count === 1 ? "" : "s"}` ``.
+   */
+  resultsLabel?: string | ((count: number) => string);
   emptyLabel?: string;
   hint?: ReadonlyArray<readonly [string, string]>;
   /** Extra content on the right of a result row, e.g. a degree count. */
@@ -28,7 +40,8 @@ export interface CommandPaletteProps<T extends PaletteItem = PaletteItem> {
 function CommandPaletteInner<T extends PaletteItem = PaletteItem>(
   {
     open, onClose, items, onSelect,
-    placeholder = "SEARCH", emptyLabel = "NO MATCH",
+    placeholder = "SEARCH", label, resultsLabel,
+    emptyLabel = "NO MATCH",
     hint = [["↑↓", "MOVE"], ["↵", "SELECT"], ["ESC", "CLOSE"]] as const,
     renderMeta, width = 520,
   }: CommandPaletteProps<T>,
@@ -46,6 +59,17 @@ function CommandPaletteInner<T extends PaletteItem = PaletteItem>(
   useEffect(() => { setCursor(0); }, [query]);
 
   const hits = useMemo(() => rankItems(items, query), [items, query]);
+
+  // The dialog's own accessible name, distinct from the input's placeholder.
+  // Falls back to `placeholder` so the default reads exactly as it did
+  // before `label` existed.
+  const dialogLabel = label ?? placeholder;
+
+  const announceResults = (count: number): string => {
+    if (typeof resultsLabel === "function") return resultsLabel(count);
+    if (typeof resultsLabel === "string") return resultsLabel;
+    return `${count} result${count === 1 ? "" : "s"}`;
+  };
 
   // Re-clamps whenever the result set itself changes size, not only when the
   // query does. `items` is a plain prop with no contract that it stay stable
@@ -83,7 +107,7 @@ function CommandPaletteInner<T extends PaletteItem = PaletteItem>(
         ref={mergeRefs(trapRef, ref)}
         role="dialog"
         aria-modal="true"
-        aria-label={placeholder}
+        aria-label={dialogLabel}
         tabIndex={-1}
         className="nx-palette"
         // Per-instance: a palette over a short list wants to be narrower than
@@ -128,7 +152,7 @@ function CommandPaletteInner<T extends PaletteItem = PaletteItem>(
           <HazardRule className="nx-palette__rule" />
 
           <div className="nx-sr" role="status" aria-live="polite">
-            {hits.length} result{hits.length === 1 ? "" : "s"}
+            {announceResults(hits.length)}
           </div>
 
           {/* The empty message sits outside the listbox, not inside it as an

@@ -74,4 +74,15 @@ describe("Drawer", () => {
     expect(ref.current).toBeInstanceOf(HTMLDivElement);
     expect(ref.current).toBe(screen.getByRole("dialog"));
   });
+
+  it("defaults the close button's accessible name to \"Close details\"", () => {
+    render(<DrawerHarness />);
+    expect(screen.getByRole("button", { name: "Close details" })).toBeInTheDocument();
+  });
+
+  it("takes closeLabel as the close button's accessible name", () => {
+    render(<Drawer open onClose={() => {}} title="Inspector" closeLabel="Dismiss inspector" />);
+    expect(screen.getByRole("button", { name: "Dismiss inspector" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Close details" })).not.toBeInTheDocument();
+  });
 });
