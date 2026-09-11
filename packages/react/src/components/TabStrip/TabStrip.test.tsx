@@ -51,6 +51,23 @@ describe("TabStrip", () => {
     expect(screen.getByRole("tab", { name: "A" })).toHaveAttribute("aria-selected", "true");
   });
 
+  it("defaults the tablist's accessible name to \"View\"", () => {
+    render(<Harness />);
+    expect(screen.getByRole("tablist")).toHaveAccessibleName("View");
+  });
+
+  it("takes label as the tablist's accessible name", () => {
+    render(
+      <TabStrip
+        label="Panels"
+        value="a"
+        onChange={() => {}}
+        tabs={[{ value: "a", label: "A" }]}
+      />,
+    );
+    expect(screen.getByRole("tablist")).toHaveAccessibleName("Panels");
+  });
+
   it("forwards a ref to the tablist", () => {
     const ref = createRef<HTMLDivElement>();
     render(

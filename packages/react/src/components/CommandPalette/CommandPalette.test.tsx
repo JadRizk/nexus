@@ -43,6 +43,54 @@ describe("CommandPalette", () => {
     expect(screen.getByRole("status")).toHaveTextContent("3 results");
   });
 
+  it("defaults the dialog's accessible name to the placeholder", () => {
+    render(<CommandPalette open onClose={() => {}} items={ITEMS} onSelect={() => {}} />);
+    expect(screen.getByRole("dialog")).toHaveAccessibleName("SEARCH");
+  });
+
+  it("takes label as the dialog's accessible name, independent of placeholder", () => {
+    render(
+      <CommandPalette
+        open
+        onClose={() => {}}
+        items={ITEMS}
+        onSelect={() => {}}
+        placeholder="FIND NODE"
+        label="Node search"
+      />,
+    );
+    expect(screen.getByRole("dialog")).toHaveAccessibleName("Node search");
+    // The input's own accessible name is still driven by the placeholder,
+    // not by `label` — the two are deliberately independent.
+    expect(screen.getByRole("combobox")).toHaveAccessibleName("FIND NODE");
+  });
+
+  it("takes resultsLabel as a fixed string for the live-region announcement", () => {
+    render(
+      <CommandPalette
+        open
+        onClose={() => {}}
+        items={ITEMS}
+        onSelect={() => {}}
+        resultsLabel="Matches updated"
+      />,
+    );
+    expect(screen.getByRole("status")).toHaveTextContent("Matches updated");
+  });
+
+  it("takes resultsLabel as a formatter called with the result count", () => {
+    render(
+      <CommandPalette
+        open
+        onClose={() => {}}
+        items={ITEMS}
+        onSelect={() => {}}
+        resultsLabel={(count) => `${count} matches found`}
+      />,
+    );
+    expect(screen.getByRole("status")).toHaveTextContent("3 matches found");
+  });
+
   it("moves aria-activedescendant with ArrowDown and selects that option on Enter", () => {
     const onSelect = vi.fn();
     render(<CommandPalette open onClose={() => {}} items={ITEMS} onSelect={onSelect} />);

@@ -267,6 +267,8 @@ function CommandPaletteInner({
   items,
   onSelect,
   placeholder = "SEARCH",
+  label,
+  resultsLabel,
   emptyLabel = "NO MATCH",
   hint = [["\u2191\u2193", "MOVE"], ["\u21B5", "SELECT"], ["ESC", "CLOSE"]],
   renderMeta,
@@ -291,6 +293,12 @@ function CommandPaletteInner({
     setCursor(0);
   }, [query]);
   const hits = useMemo(() => rankItems(items, query), [items, query]);
+  const dialogLabel = label ?? placeholder;
+  const announceResults = (count) => {
+    if (typeof resultsLabel === "function") return resultsLabel(count);
+    if (typeof resultsLabel === "string") return resultsLabel;
+    return `${count} result${count === 1 ? "" : "s"}`;
+  };
   useEffect3(() => {
     setCursor((c) => Math.min(c, Math.max(0, hits.length - 1)));
   }, [hits.length]);
@@ -314,7 +322,7 @@ function CommandPaletteInner({
         ref: mergeRefs(trapRef, ref),
         role: "dialog",
         "aria-modal": "true",
-        "aria-label": placeholder,
+        "aria-label": dialogLabel,
         tabIndex: -1,
         className: "nx-palette",
         style: { "--nx-palette-width": `${width}px` }
@@ -352,7 +360,7 @@ function CommandPaletteInner({
             }
           }
         }
-      ), /* @__PURE__ */ React.createElement("span", { "aria-hidden": "true", className: "nx-palette__count" }, hits.length)), /* @__PURE__ */ React.createElement(HazardRule, { className: "nx-palette__rule" }), /* @__PURE__ */ React.createElement("div", { className: "nx-sr", role: "status", "aria-live": "polite" }, hits.length, " result", hits.length === 1 ? "" : "s"), hits.length === 0 && /* @__PURE__ */ React.createElement("div", { className: "nx-palette__empty" }, emptyLabel), /* @__PURE__ */ React.createElement("ul", { ref: listRef, id: listId, role: "listbox", "aria-label": "Results", className: "nx-palette__list" }, hits.map((it, i) => /* @__PURE__ */ React.createElement(
+      ), /* @__PURE__ */ React.createElement("span", { "aria-hidden": "true", className: "nx-palette__count" }, hits.length)), /* @__PURE__ */ React.createElement(HazardRule, { className: "nx-palette__rule" }), /* @__PURE__ */ React.createElement("div", { className: "nx-sr", role: "status", "aria-live": "polite" }, announceResults(hits.length)), hits.length === 0 && /* @__PURE__ */ React.createElement("div", { className: "nx-palette__empty" }, emptyLabel), /* @__PURE__ */ React.createElement("ul", { ref: listRef, id: listId, role: "listbox", "aria-label": "Results", className: "nx-palette__list" }, hits.map((it, i) => /* @__PURE__ */ React.createElement(
         "li",
         {
           key: it.id,
@@ -405,6 +413,7 @@ var Drawer = forwardRef7(function Drawer2({
   icon,
   footer,
   width = 296,
+  closeLabel = "Close details",
   children
 }, ref) {
   const trapRef = useFocusTrap(open, onClose);
@@ -437,7 +446,7 @@ var Drawer = forwardRef7(function Drawer2({
       {
         className: "nx-drawer__close",
         onClick: onClose,
-        "aria-label": "Close details"
+        "aria-label": closeLabel
       },
       "\u2715"
     ))), /* @__PURE__ */ React.createElement(HazardRule, { className: "nx-drawer__rule" }), /* @__PURE__ */ React.createElement("div", { className: "nx-drawer__body" }, children), footer && /* @__PURE__ */ React.createElement("div", { className: "nx-drawer__footer" }, footer))

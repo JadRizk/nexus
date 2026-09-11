@@ -36,6 +36,8 @@ export interface DrawerProps extends ToneProps {
   icon?: ReactNode;
   footer?: ReactNode;
   width?: number;
+  /** Accessible name for the close button. Default: `"Close details"`. */
+  closeLabel?: string;
   children?: ReactNode;
 }
 
@@ -50,7 +52,7 @@ export interface DrawerProps extends ToneProps {
 export const Drawer = forwardRef<HTMLDivElement, DrawerProps>(function Drawer(
   {
     open, onClose, title, subtitle, tone, colour,
-    icon, footer, width = 296, children,
+    icon, footer, width = 296, closeLabel = "Close details", children,
   },
   ref,
 ) {
@@ -95,7 +97,7 @@ export const Drawer = forwardRef<HTMLDivElement, DrawerProps>(function Drawer(
             <Button
               className="nx-drawer__close"
               onClick={onClose}
-              aria-label="Close details"
+              aria-label={closeLabel}
             >
               ✕
             </Button>

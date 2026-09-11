@@ -118,6 +118,17 @@ real renderer — for the things jsdom cannot see.
 - The focus ring is global and cannot be removed per component (WCAG 2.4.7).
 - `prefers-reduced-motion` and `prefers-contrast` are honoured.
 
+Every accessible name below an app localises has a prop rather than a
+hardcoded string, defaulted to the current English copy so existing output is
+unchanged:
+
+| Component        | Prop           | Names                          | Default                                         |
+| ----------------- | -------------- | ------------------------------- | ------------------------------------------------ |
+| `Drawer`          | `closeLabel`   | the close button                | `"Close details"`                                 |
+| `CommandPalette`  | `label`        | the dialog (separate from `placeholder`, which still names the input) | `placeholder` |
+| `CommandPalette`  | `resultsLabel` | the live-region result count | string or `(count) => string`, defaulting to `` `${count} result${count === 1 ? "" : "s"}` `` |
+| `TabStrip`        | `label`        | the tablist                     | `"View"`                                          |
+
 ## Related
 
 - [`@nexus-cyberdeck/tokens`](https://github.com/JadRizk/nexus/blob/main/packages/tokens/README.md): the CSS custom properties this package renders with.
