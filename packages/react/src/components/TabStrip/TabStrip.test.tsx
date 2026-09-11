@@ -81,4 +81,59 @@ describe("TabStrip", () => {
     expect(ref.current).toBeInstanceOf(HTMLDivElement);
     expect(ref.current).toBe(screen.getByRole("tablist"));
   });
+
+  it("binds a tabpanel to a tab via aria-labelledby/aria-controls", () => {
+    // TabStrip is a controlled, single-panel pattern: the caller swaps one
+    // tabpanel's content rather than mounting one per tab, so every tab's
+    // aria-controls points at that one panel id, and the panel's
+    // aria-labelledby points back at whichever tab is currently active —
+    // both ends of the binding a screen reader needs to announce "tab A,
+    // selected, 1 of 2" and treat the panel below as that tab's content.
+    function Harness() {
+      const [value, setValue] = useState("a");
+      return (
+        <>
+          <TabStrip
+            id="view-tabs"
+            panelId="view-panel"
+            value={value}
+            onChange={setValue}
+            tabs={[{ value: "a", label: "A" }, { value: "b", label: "B" }]}
+          />
+          <div id="view-panel" role="tabpanel" aria-labelledby={`view-tabs-${value}`}>
+            {value}
+          </div>
+        </>
+      );
+    }
+    render(<Harness />);
+
+    const tabA = screen.getByRole("tab", { name: "A" });
+    const tabB = screen.getByRole("tab", { name: "B" });
+    const panel = screen.getByRole("tabpanel");
+
+    expect(tabA).toHaveAttribute("id", "view-tabs-a");
+    expect(tabA).toHaveAttribute("aria-controls", "view-panel");
+    expect(tabB).toHaveAttribute("aria-controls", "view-panel");
+    expect(panel).toHaveAttribute("id", "view-panel");
+    expect(panel).toHaveAttribute("aria-labelledby", tabA.id);
+
+    fireEvent.click(tabB);
+    expect(screen.getByRole("tabpanel")).toHaveAttribute("aria-labelledby", tabB.id);
+  });
+
+  it("derives each tab's id from useId() when no id prop is given", () => {
+    render(
+      <TabStrip
+        value="a"
+        onChange={() => {}}
+        tabs={[{ value: "a", label: "A" }]}
+      />,
+    );
+    // No `id` prop was passed, so the base comes from useId() — the exact
+    // string is React's own implementation detail, but every tab still gets
+    // a real, non-empty id built from it.
+    const tab = screen.getByRole("tab", { name: "A" });
+    expect(tab.id).toMatch(/.+-a$/);
+  });
 });

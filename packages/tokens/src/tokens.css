@@ -79,6 +79,11 @@
   --nx-radius:    0;
   --nx-tick:      9px;
 
+  /* stacking order */
+  --nx-z-drawer:   0;
+  --nx-z-tooltip:  30;
+  --nx-z-overlay:  40;
+
   /* motion */
   --nx-dur-micro:  100ms;
   --nx-dur-fade:   180ms;

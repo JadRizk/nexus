@@ -1,8 +1,13 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { createRef, useState, version as reactVersion } from "react";
 import { Drawer } from "./Drawer.js";
 import { inertAttr } from "./inert.js";
+
+const here = dirname(fileURLToPath(import.meta.url));
 
 /* ============================================================================
    Drawer — role=dialog, hidden from assistive tech while closed, Escape
@@ -84,5 +89,16 @@ describe("Drawer", () => {
     render(<Drawer open onClose={() => {}} title="Inspector" closeLabel="Dismiss inspector" />);
     expect(screen.getByRole("button", { name: "Dismiss inspector" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Close details" })).not.toBeInTheDocument();
+  });
+
+  it("declares a z-index from the shared stacking-order token, not a hardcoded number", () => {
+    // jsdom applies no stylesheet, so this reads Drawer.css directly rather
+    // than measuring a computed style — same approach as Tooltip.test.tsx.
+    // Fixed-position with no z-index at all is what let Drawer's stacking
+    // order fall out of whatever the DOM happened to do around it.
+    const css = readFileSync(join(here, "Drawer.css"), "utf8");
+    const rule = css.match(/\.nx-drawer\s*\{([^}]*)\}/)?.[1];
+    expect(rule, ".nx-drawer rule not found in Drawer.css").toBeTruthy();
+    expect(rule).toMatch(/z-index\s*:\s*var\(--nx-z-drawer\)\s*;/);
   });
 });

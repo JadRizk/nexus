@@ -101,6 +101,27 @@ Component tokens are named `--nx-<component>-<part>`. See
 [STYLING.md](https://github.com/JadRizk/nexus/blob/main/packages/react/STYLING.md)
 for the rule and the trap it avoids.
 
+### Overlay stacking
+
+`Drawer`, `CommandPalette` and `Tooltip` are `position: fixed` or `absolute`
+and each carries a `--nx-z-*` token — `--nx-z-drawer`, `--nx-z-tooltip`,
+`--nx-z-overlay` (CommandPalette's scrim and panel) — rather than a
+hardcoded number, lowest to highest in that order: a tooltip pointing at
+something inside an open Drawer has to outrank it, and the modal palette
+outranks everything.
+
+These numbers are only meaningful relative to one another, and only when
+nothing between the overlay and the viewport has created its own stacking
+context. `position: fixed` positions against the *initial containing
+block* — normally the viewport — but an ancestor with a `transform`,
+`filter`, `perspective`, `contain: layout|paint|content|strict`, or
+`opacity` below `1` becomes that containing block instead. Wrap a `Drawer`
+or `CommandPalette` inside an ancestor carrying any of those (a
+CSS-animated panel is the usual way this happens) and the overlay stops
+tracking the viewport and gets clipped to that ancestor's box, `--nx-z-*`
+notwithstanding. Render overlays outside any such ancestor — a portal at
+the document root is the reliable fix if one can't be avoided.
+
 ## Accessibility
 
 Every claim below is asserted by a test in this repository: unit tests for

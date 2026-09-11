@@ -627,8 +627,10 @@ var Stat = forwardRef15(
 Stat.displayName = "Stat";
 
 // packages/react/src/components/TabStrip/TabStrip.tsx
-import { forwardRef as forwardRef16, useRef as useRef4 } from "react";
-function TabStripInner({ tabs, value, onChange, label = "View", style }, ref) {
+import { forwardRef as forwardRef16, useId as useId4, useRef as useRef4 } from "react";
+function TabStripInner({ tabs, value, onChange, label = "View", style, id, panelId }, ref) {
+  const generatedId = useId4();
+  const baseId = id ?? generatedId;
   const refs = useRef4([]);
   const idx = tabs.findIndex((t) => t.value === value);
   const move = (delta) => {
@@ -642,6 +644,7 @@ function TabStripInner({ tabs, value, onChange, label = "View", style }, ref) {
     "div",
     {
       ref,
+      id: baseId,
       role: "tablist",
       "aria-label": label,
       className: "nx-tabstrip",
@@ -678,9 +681,11 @@ function TabStripInner({ tabs, value, onChange, label = "View", style }, ref) {
         ref: (el) => {
           refs.current[k] = el;
         },
+        id: `${baseId}-${t.value}`,
         role: "tab",
         type: "button",
         "aria-selected": t.value === value,
+        "aria-controls": panelId,
         tabIndex: t.value === value ? 0 : -1,
         className: "nx-tab",
         "data-active": t.value === value ? "1" : "0",
@@ -705,11 +710,12 @@ ToggleRow.displayName = "ToggleRow";
 // packages/react/src/components/Tooltip/Tooltip.tsx
 import { forwardRef as forwardRef18 } from "react";
 var Tooltip = forwardRef18(
-  function Tooltip2({ x, y, tone: tone2, colour, children, style }, ref) {
+  function Tooltip2({ x, y, tone: tone2, colour, children, style, id }, ref) {
     return /* @__PURE__ */ React.createElement(
       "div",
       {
         ref,
+        id,
         role: "tooltip",
         className: "nx-tooltip",
         style: {
@@ -852,6 +858,11 @@ const NX_CSS = `/* =============================================================
   --nx-hairline:  1px;
   --nx-radius:    0;
   --nx-tick:      9px;
+
+  /* stacking order */
+  --nx-z-drawer:   0;
+  --nx-z-tooltip:  30;
+  --nx-z-overlay:  40;
 
   /* motion */
   --nx-dur-micro:  100ms;
@@ -1238,7 +1249,7 @@ html, body {
 .nx-palette__scrim {
   position: fixed;
   inset: 0;
-  z-index: 40;
+  z-index: var(--nx-z-overlay);
   background: var(--nx-palette-scrim, var(--nx-scrim));
   backdrop-filter: blur(2px);
   display: flex;
@@ -1377,6 +1388,7 @@ html, body {
 /* -------------------------------------------------------------------- Drawer */
 .nx-drawer {
   position: fixed;
+  z-index: var(--nx-z-drawer);
   top: var(--nx-drawer-inset, var(--nx-space-5));
   right: var(--nx-drawer-inset, var(--nx-space-5));
   bottom: var(--nx-drawer-inset, var(--nx-space-5));
@@ -1826,11 +1838,16 @@ html, body {
 /* ------------------------------------------------------------------- Tooltip */
 .nx-tooltip {
   position: absolute;
-  z-index: 30;
+  z-index: var(--nx-z-tooltip);
   max-width: var(--nx-tooltip-max-width, 270px);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  /* Wraps instead of truncating: an ellipsis silently drops content a
+     sighted user can't recover (no hover-to-reveal-more for a tooltip) and
+     the same text is what aria-describedby exposes to assistive tech, so a
+     cut string was wrong on both counts. word-break: break-all because the
+     subjects are machine identifiers with no spaces to wrap on otherwise —
+     see Drawer.css's __title, which makes the same call. */
+  white-space: normal;
+  word-break: break-all;
   pointer-events: none;
   background: var(--nx-tooltip-bg, var(--nx-bg-surface));
   border: var(--nx-hairline) solid var(--nx-tooltip-border, var(--nx-border-default));
@@ -2236,7 +2253,7 @@ function Shell() {
       <footer style={{ padding: "var(--nx-space-6)", color: "var(--nx-fg-tertiary)",
         fontSize: "var(--nx-text-2xs)", letterSpacing: "var(--nx-track-wider)", textTransform: "uppercase",
         borderTop: "var(--nx-hairline) solid var(--nx-border-default)" }}>
-        Zero runtime dependencies · 83 tokens · 19 components · ⌘K opens the palette anywhere
+        Zero runtime dependencies · 86 tokens · 19 components · ⌘K opens the palette anywhere
       </footer>
     </div>
   );

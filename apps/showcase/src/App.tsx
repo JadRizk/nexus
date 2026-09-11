@@ -105,7 +105,9 @@ function Shell() {
           fontSize: "var(--nx-text-2xs)", letterSpacing: "var(--nx-track-wider)",
           textTransform: "uppercase", borderTop: "var(--nx-hairline) solid var(--nx-border-default)",
         }}>
-          {`Zero runtime dependencies · ${__NX_TOKENS__} tokens · ${__NX_COMPONENTS__} components${route === "overlays" ? " · ⌘K opens the palette" : ""}`}
+          Zero runtime dependencies · <span data-nx-figure>{__NX_TOKENS__}</span> tokens ·{" "}
+          <span data-nx-figure>{__NX_COMPONENTS__}</span> components
+          {route === "overlays" ? " · ⌘K opens the palette" : ""}
         </footer>
       )}
     </div>

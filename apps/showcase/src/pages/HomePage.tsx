@@ -67,9 +67,9 @@ export function HomePage() {
             padding: "var(--nx-space-4) var(--nx-space-5) 0",
             display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1px var(--nx-space-4)",
           }}>
-            <KeyValue label="TOKENS" value={String(__NX_TOKENS__)} />
+            <KeyValue label="TOKENS" value={<span data-nx-figure>{__NX_TOKENS__}</span>} />
             <KeyValue label="THEMES" value="2" />
-            <KeyValue label="COMPS" value={String(__NX_COMPONENTS__)} />
+            <KeyValue label="COMPS" value={<span data-nx-figure>{__NX_COMPONENTS__}</span>} />
             <KeyValue label="DEPS" value="0" />
           </div>
 
