@@ -860,7 +860,7 @@ const NX_CSS = `/* =============================================================
   --nx-tick:      9px;
 
   /* stacking order */
-  --nx-z-drawer:   20;
+  --nx-z-drawer:   0;
   --nx-z-tooltip:  30;
   --nx-z-overlay:  40;
 
