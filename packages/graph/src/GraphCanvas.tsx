@@ -62,6 +62,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
     hiddenNodeCategories, hiddenLinkCategories, isolateId = null, selectedId = null,
     running = true,
     onSelect, onStats, onFatal,
+    ariaLabel,
     className, style,
   } = props;
 
@@ -411,6 +412,10 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
           `font:600 9.5px/1 ${MONO};letter-spacing:.09em;text-transform:uppercase;` +
           "text-shadow:1px 0 rgba(255,46,99,.4),-1px 0 rgba(23,226,229,.4),0 0 7px rgba(0,0,0,.98);" +
           "transform:translate3d(-9999px,-9999px,0);will-change:transform;opacity:0;transition:opacity .1s";
+        // The pool is a rotating subset of node names driven straight by
+        // layout math, not by anything a screen reader should announce —
+        // aria-hidden keeps this decorative, same as the tooltip below.
+        el.setAttribute("aria-hidden", "true");
         labelEl.appendChild(el);
         labels.push(el);
       }
@@ -443,6 +448,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
         "border-left-width:2px;padding:4px 7px;font:600 9px/1.4 " + MONO + ";letter-spacing:.11em;" +
         "text-transform:uppercase;opacity:0;transition:opacity .1s;" +
         "transform:translate3d(-9999px,-9999px,0);will-change:transform;z-index:5";
+      tip.setAttribute("aria-hidden", "true");
       labelEl.appendChild(tip);
       disposables.push(() => tip.remove());
 
@@ -614,7 +620,18 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
           const a = document.createElement("span");
           a.style.color = cat.color; a.textContent = nodes[idx]!.label;
           const b = document.createElement("span");
-          b.style.color = "#3D4C39"; b.textContent = " · " + cat.code + " · " + degree[idx];
+          // The old #3D4C39 measured 2.17:1 against the tooltip ground — see
+          // GraphCanvas.contrast.test.ts. This tooltip's ground is
+          // rgba(8,10,9,.95) composited over whatever the canvas is drawing
+          // underneath it, so the worst case is a bright node colour behind
+          // a translucent panel, not the flat dark background: over a node
+          // as bright as #9EFF3D this literal measures 4.5184:1, clearing
+          // the 4.5 AA floor. Kept as a hardcoded literal rather than a
+          // token name on purpose — this package has no dependency on the
+          // tokens layer (FALLBACK_BG/FALLBACK_FG above are the same story),
+          // so naming a token here would go stale silently if that token's
+          // value ever moved again.
+          b.style.color = "#6F8465"; b.textContent = " · " + cat.code + " · " + degree[idx];
           tip.appendChild(a); tip.appendChild(b);
           tip.style.borderLeftColor = cat.color;
         }
@@ -991,10 +1008,27 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
     );
   }
 
+  // role="img" is only meaningful paired with a name: an image role with no
+  // accessible name is itself a WCAG 2.0 A / axe "role-img-alt" violation —
+  // worse than the bare div this replaced, since a bare div at least isn't
+  // announced as a nameless image. So the role only appears when ariaLabel
+  // is actually supplied; omitting the prop leaves the root role-less, the
+  // same as before this feature existed.
+  const hasAriaLabel = Boolean(ariaLabel);
+
   return (
-    <div style={{ position: "relative", width: "100%", height: "100%", background: FALLBACK_BG, overflow: "hidden", ...style }} className={className}>
+    <div
+      role={hasAriaLabel ? "img" : undefined}
+      aria-label={hasAriaLabel ? ariaLabel : undefined}
+      style={{ position: "relative", width: "100%", height: "100%", background: FALLBACK_BG, overflow: "hidden", ...style }}
+      className={className}
+    >
       <div ref={mountRef} style={{ position: "absolute", inset: 0 }} />
-      <div ref={labelRef} style={{ position: "absolute", inset: 0, pointerEvents: "none" }} />
+      {/* Rotating label pool + tooltip are placement-driven decoration, not
+          content — aria-hidden here backstops the same attribute set on each
+          element as it's created in boot(), so the whole layer reads as
+          hidden even before the canvas mounts. */}
+      <div ref={labelRef} aria-hidden="true" style={{ position: "absolute", inset: 0, pointerEvents: "none" }} />
     </div>
   );
 });

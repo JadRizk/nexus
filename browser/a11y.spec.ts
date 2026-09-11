@@ -49,7 +49,11 @@ function report(violations: Awaited<ReturnType<AxeBuilder["analyze"]>>["violatio
 
 /* ---------------------------------------------------------------- by route */
 
-const ROUTES: Route[] = ["home", "primitives", "overlays", "tokens"];
+// "graph" mounts GraphCanvas's WebGL scene (NX-13): the root's role/name,
+// the label pool's aria-hidden, and the tooltip's contrast are all only
+// live once boot() actually runs against a real GPU, which is exactly what
+// this route's axe pass now covers alongside the other four.
+const ROUTES: Route[] = ["home", "graph", "primitives", "overlays", "tokens"];
 
 for (const route of ROUTES) {
   test(`${route} has no axe violations`, async ({ page }) => {
