@@ -158,7 +158,7 @@ export interface GraphCanvasProps {
   /** Fires when the user clicks a node (or clicks empty space, with `null`) — update `selectedId` in response. */
   onSelect?: (node: GraphNodeSnapshot | null) => void;
   onStats?: (stats: GraphStats) => void;
-  /** Called once if WebGL setup throws — the canvas renders nothing further after this. */
+  /** Called once if WebGL setup throws (including an invalid graph: an edge to an unknown node id, a duplicate node id, or a category id missing from the maps) or the WebGL context is lost — the canvas renders nothing further after this. */
   onFatal?: (message: string) => void;
   className?: string;
   style?: CSSProperties;
