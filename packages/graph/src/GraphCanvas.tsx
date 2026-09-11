@@ -80,6 +80,20 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
   const hiddenLinkRef = useRef(hiddenLinkCategories); hiddenLinkRef.current = hiddenLinkCategories;
   const isolateRef = useRef(isolateId); isolateRef.current = isolateId;
 
+  // onSelect/onStats/onFatal are read inside the mount effect's boot(), which
+  // only re-runs when the graph data changes (see the comment on that effect's
+  // dependency array below) — so they have to come from refs kept current in
+  // their own effect, not from the closure, or a handler that closes over
+  // state sees the first render's callback forever.
+  const onSelectRef = useRef(onSelect);
+  const onStatsRef = useRef(onStats);
+  const onFatalRef = useRef(onFatal);
+  useEffect(() => {
+    onSelectRef.current = onSelect;
+    onStatsRef.current = onStats;
+    onFatalRef.current = onFatal;
+  }, [onSelect, onStats, onFatal]);
+
   useImperativeHandle(ref, () => ({
     fit: () => api.current.fit?.(),
     focus: (id) => {
@@ -132,7 +146,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
       const message = String((err as Error)?.message ?? err);
       console.error(err);
       setFatal(message);
-      onFatal?.(message);
+      onFatalRef.current?.(message);
     }
     return () => { try { dispose(); } catch (e) { console.error(e); } };
 
@@ -645,7 +659,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
         const w = toWorld(ev.clientX - rc.left, ev.clientY - rc.top);
         const idx = pickNode(w.x, w.y);
         const next = idx >= 0 && idx !== selIdx ? idx : -1;
-        onSelect?.(next >= 0 ? describe(next) : null);
+        onSelectRef.current?.(next >= 0 ? describe(next) : null);
       };
       const onWheel = (ev: WheelEvent) => {
         ev.preventDefault();
@@ -847,7 +861,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
             frameMs: +(performance.now() - t0).toFixed(2), settled: sim.isSettled(),
             drawnEdges: drawnLinks, vertexAttribs: glCaps.attribs, webglVersion: glCaps.ver as 1 | 2,
           };
-          onStats?.(stats);
+          onStatsRef.current?.(stats);
           fA = 0; fN = 0; fT = 0;
         }
       }
