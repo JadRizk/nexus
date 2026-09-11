@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 /* ============================================================================
@@ -50,9 +53,28 @@ function compositeOver(fg: RGB, alpha: number, bg: RGB): RGB {
   return fg.map((c, i) => c * alpha + bg[i]! * (1 - alpha)) as RGB;
 }
 
-// The tooltip panel's own background, from GraphCanvas.tsx's `tip.style.cssText`.
-const TOOLTIP_BG: RGB = [8, 10, 9]; // rgba(8,10,9,.95)
-const TOOLTIP_ALPHA = 0.95;
+// Both literals are read out of GraphCanvas.tsx rather than restated here, so
+// this file measures the colour that actually ships: reinstating #6B7F61 (or
+// any other value) in showTip() fails the floor assertion below instead of
+// leaving a test that only ever checked its own constants.
+const SOURCE = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "GraphCanvas.tsx"), "utf8");
+
+function literal(re: RegExp, what: string): string {
+  const m = SOURCE.match(re);
+  if (!m?.[1]) throw new Error(`${what} not found in GraphCanvas.tsx — the regex in this test needs updating alongside showTip()`);
+  return m[1];
+}
+
+/** The secondary span's colour, from showTip(): `b.style.color = "#xxxxxx"`. */
+const SHIPPED_TEXT_HEX = literal(/b\.style\.color = "(#[0-9a-fA-F]{6})"/, "tooltip secondary-text colour");
+
+// The tooltip panel's own background, from `tip.style.cssText`: rgba(r,g,b,a).
+const [, r, g, b, a] = literal(
+  /tip\.style\.cssText =[\s\S]*?background:(rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*[\d.]+\s*\))/,
+  "tooltip background",
+).match(/rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\)/)!;
+const TOOLTIP_BG: RGB = [Number(r), Number(g), Number(b)];
+const TOOLTIP_ALPHA = Number(a);
 
 // The canvas's own resting background (FALLBACK_BG / the tooltip's least
 // bright possible ground) and the brightest sample node colour in this
@@ -80,8 +102,9 @@ describe("tooltip secondary-text contrast (composited, worst case)", () => {
     expect(contrastRatio([0, 0, 0], [255, 255, 255])).toBeCloseTo(21, 5);
   });
 
-  it("current colour (#6F8465) meets the 4.5 AA floor even over the brightest node", () => {
-    const worstCase = tooltipTextContrast("#6F8465", BRIGHT_NODE_GROUND);
+  it("the shipped colour meets the 4.5 AA floor even over the brightest node", () => {
+    expect(SHIPPED_TEXT_HEX.toUpperCase()).toBe("#6F8465"); // NX-16 grey-300
+    const worstCase = tooltipTextContrast(SHIPPED_TEXT_HEX, BRIGHT_NODE_GROUND);
     expect(worstCase).toBeGreaterThanOrEqual(AA_TEXT_FLOOR);
     // Pinned to the measured value (see GraphCanvas.tsx's showTip comment)
     // so a future colour change that happens to still clear 4.5 is still
@@ -90,7 +113,7 @@ describe("tooltip secondary-text contrast (composited, worst case)", () => {
   });
 
   it("also clears the floor over the flat dark canvas background", () => {
-    expect(tooltipTextContrast("#6F8465", CANVAS_DARK_GROUND)).toBeGreaterThanOrEqual(AA_TEXT_FLOOR);
+    expect(tooltipTextContrast(SHIPPED_TEXT_HEX, CANVAS_DARK_GROUND)).toBeGreaterThanOrEqual(AA_TEXT_FLOOR);
   });
 
   it("regression: fails if the PR #14 colour (#6B7F61) is reinstated", () => {
