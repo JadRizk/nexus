@@ -1,5 +1,5 @@
-import { useRef } from "react";
-import type { CSSProperties, ReactNode } from "react";
+import { forwardRef, useRef } from "react";
+import type { CSSProperties, ForwardedRef, ReactNode } from "react";
 
 export interface Tab<V extends string = string> {
   value: V;
@@ -14,10 +14,14 @@ export interface TabStripProps<V extends string = string> {
   style?: CSSProperties;
 }
 
-/** WAI-ARIA tabs pattern: roving tabindex, arrow/Home/End navigation. */
-export function TabStrip<V extends string = string>({
-  tabs, value, onChange, label = "View", style,
-}: TabStripProps<V>) {
+// forwardRef's own type isn't generic, so a component generic over its value
+// type has to be written as a plain function first and cast back to a
+// generic call signature afterward — see CommandPalette.tsx, which shares
+// this exact shape.
+function TabStripInner<V extends string = string>(
+  { tabs, value, onChange, label = "View", style }: TabStripProps<V>,
+  ref: ForwardedRef<HTMLDivElement>,
+) {
   const refs = useRef<Array<HTMLButtonElement | null>>([]);
   const idx = tabs.findIndex((t) => t.value === value);
 
@@ -31,6 +35,7 @@ export function TabStrip<V extends string = string>({
 
   return (
     <div
+      ref={ref}
       role="tablist"
       aria-label={label}
       className="nx-tabstrip"
@@ -60,3 +65,10 @@ export function TabStrip<V extends string = string>({
     </div>
   );
 }
+
+/** WAI-ARIA tabs pattern: roving tabindex, arrow/Home/End navigation. */
+export const TabStrip = forwardRef(TabStripInner) as (<V extends string = string>(
+  props: TabStripProps<V> & { ref?: ForwardedRef<HTMLDivElement> },
+) => ReturnType<typeof TabStripInner>) & { displayName?: string };
+
+(TabStrip as { displayName?: string }).displayName = "TabStrip";

@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import type { CSSProperties, ReactNode } from "react";
 
 export interface KeyValueProps {
@@ -14,11 +15,15 @@ export interface KeyValueProps {
  * sizes to content unless told otherwise — and the ellipsis on each span is
  * what makes the shrunken state readable instead of cut mid-character.
  */
-export function KeyValue({ label, value, style }: KeyValueProps) {
-  return (
-    <div className="nx-kv" style={style}>
-      <span className="nx-kv__label">{label}</span>
-      <span className="nx-kv__value">{value}</span>
-    </div>
-  );
-}
+export const KeyValue = forwardRef<HTMLDivElement, KeyValueProps>(
+  function KeyValue({ label, value, style }, ref) {
+    return (
+      <div ref={ref} className="nx-kv" style={style}>
+        <span className="nx-kv__label">{label}</span>
+        <span className="nx-kv__value">{value}</span>
+      </div>
+    );
+  },
+);
+
+KeyValue.displayName = "KeyValue";

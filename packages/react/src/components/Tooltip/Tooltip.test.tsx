@@ -1,8 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { createRef } from "react";
 import { Tooltip } from "./Tooltip.js";
 
 describe("Tooltip", () => {
+  it("forwards a ref to the tooltip", () => {
+    const ref = createRef<HTMLDivElement>();
+    render(<Tooltip ref={ref} x={0} y={0}>tidal_aperture</Tooltip>);
+    expect(ref.current).toBeInstanceOf(HTMLDivElement);
+    expect(ref.current).toBe(screen.getByRole("tooltip"));
+  });
+
   it("has a tooltip role and sits where it is told", () => {
     render(<Tooltip x={40} y={12}>tidal_aperture</Tooltip>);
     const tip = screen.getByRole("tooltip");

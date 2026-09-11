@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
+import { createRef } from "react";
 import { CommandPalette } from "./CommandPalette.js";
 
 const ITEMS = [
@@ -66,5 +67,12 @@ describe("CommandPalette", () => {
   it("renders nothing while closed", () => {
     const { container } = render(<CommandPalette open={false} onClose={() => {}} items={ITEMS} onSelect={() => {}} />);
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it("forwards a ref to the dialog surface", () => {
+    const ref = createRef<HTMLDivElement>();
+    render(<CommandPalette ref={ref} open onClose={() => {}} items={ITEMS} onSelect={() => {}} />);
+    expect(ref.current).toBeInstanceOf(HTMLDivElement);
+    expect(ref.current).toBe(screen.getByRole("dialog"));
   });
 });
