@@ -17,3 +17,36 @@ test-results/
 
 # codebase analysis dump
 codebase-analysis-docs/
+
+# ---------------------------------------------------------------------------
+# Release board — personal maintainer tooling, not part of this project.
+#
+# The board is how I drive agents against this repo; it is not something a
+# contributor needs or a published package should carry. Live ticket state also
+# changes on every claim, so committing it would bury the real history anyway.
+# Backups live outside the repo entirely, under
+# ~/.local/state/claude-board/<project>/ — see ticket-store.mjs snapshot.
+#
+# The loop prompts that used to live here (RELEASE-PIPELINE.md, REVIEWER-LOOP.md)
+# are now user-level skills: ~/.claude/skills/board-implement and board-review.
+# Project-specific conventions they read live in BOARD-PROJECT.md, below.
+#
+# NOTE: .claude/release-board.html is ALREADY TRACKED (baa6024) — a dead export
+# of the retired hosted board. Untrack with `git rm --cached` when convenient;
+# it stays in history either way, as RELEASE-PIPELINE.md does.
+# ---------------------------------------------------------------------------
+.claude/tickets/
+.claude/worktrees/
+.claude/ticket-store.mjs
+.claude/ticket-store.test.mjs
+.claude/board-server.mjs
+.claude/board-local.html
+.claude/board.config.json
+.claude/board-snapshot.json
+.claude/BOARD.md
+.claude/BOARD-PROJECT.md
+.claude/RUNBOOK.md
+.claude/RUNBOOK.html
+.claude/release-board.html
+.claude/loops/
+.claude/MIGRATION.md
