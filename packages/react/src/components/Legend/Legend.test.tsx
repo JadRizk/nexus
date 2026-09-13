@@ -29,6 +29,18 @@ describe("Legend", () => {
     expect(groups[1]).toHaveAccessibleName(/relation/i);
   });
 
+  it("keeps each legend's content to phrasing content", () => {
+    // <legend> accepts phrasing content only. A <div> in there is invalid
+    // HTML, and a parser that acts on that moves the title out of the legend
+    // — which takes the group's accessible name with it.
+    const { container } = render(
+      <Legend groups={[{ title: "entity class", rows: <input type="checkbox" aria-label="ATLAS" /> }]} />,
+    );
+    const legend = container.querySelector("legend")!;
+    expect(legend.querySelectorAll("div")).toHaveLength(0);
+    expect(legend.querySelector("span.nx-heading")).not.toBeNull();
+  });
+
   it("renders nothing but an empty container when given no groups", () => {
     const { container } = render(<Legend groups={[]} />);
     expect(container.querySelectorAll("fieldset")).toHaveLength(0);

@@ -15,8 +15,11 @@ export const Legend = forwardRef<HTMLDivElement, LegendProps>(
       <div ref={ref} className="nx-legend" style={style}>
         {groups.map((group) => (
           <fieldset key={group.title} className="nx-legend__group">
+            {/* `as="span"`: <legend> takes phrasing content only, and a <div>
+                inside one is invalid HTML — browsers differ on whether they
+                keep it there. */}
             <legend className="nx-legend__title">
-              <SectionHeading>/// {group.title}</SectionHeading>
+              <SectionHeading as="span">/// {group.title}</SectionHeading>
             </legend>
             {group.rows}
           </fieldset>

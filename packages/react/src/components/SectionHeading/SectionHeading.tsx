@@ -4,6 +4,13 @@ import { mergeClassName } from "../../className.js";
 
 export interface SectionHeadingProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
+  /**
+   * Element to render. `"span"` for the places that only accept phrasing
+   * content — `<legend>` is the one in this library — where a `<div>` is
+   * invalid HTML and gets reparented by the parser. Appearance is unchanged:
+   * `.nx-heading` sets `display: block` so either tag lays out the same.
+   */
+  as?: "div" | "span";
 }
 
 /**
@@ -12,11 +19,11 @@ export interface SectionHeadingProps extends HTMLAttributes<HTMLDivElement> {
  * up with them.
  */
 export const SectionHeading = forwardRef<HTMLDivElement, SectionHeadingProps>(
-  function SectionHeading({ children, className = "", ...rest }, ref) {
+  function SectionHeading({ as: Tag = "div", children, className = "", ...rest }, ref) {
     return (
-      <div ref={ref} className={mergeClassName("nx-heading", className)} {...rest}>
+      <Tag ref={ref} className={mergeClassName("nx-heading", className)} {...rest}>
         {children}
-      </div>
+      </Tag>
     );
   },
 );

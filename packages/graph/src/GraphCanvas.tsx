@@ -42,6 +42,9 @@ const DEFAULT_OPTICS: OpticsConfig = {
   scan: 0.55, aberr: 1.0, curve: 0.55, grain: 0.45, bloom: 0.85, glitch: 0.5,
 };
 
+/** Device-pixel-ratio ceiling for the CRT pass; see the note where it is applied. */
+const MAX_DPR = 1.6;
+
 const hex4 = (i: number): string => (((i * 2654435761) >>> 0) % 65536).toString(16).toUpperCase().padStart(4, "0");
 
 interface InternalController {
@@ -129,9 +132,18 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
     physicsCfg.damping, physicsCfg.cursorForce, physicsCfg.settle,
   ]);
 
+  // Compared by content, not by identity. `hiddenNodeCategories={["tag"]}`
+  // written inline — the obvious way to write it — is a new array on every
+  // render, and an identity comparison would refilter and fire the glitch
+  // kick on every single one, including renders that have nothing to do with
+  // the graph. The refs above are refreshed every render regardless, so the
+  // refilter that does run always reads the current arrays. Absent and empty
+  // mean the same thing, so they hash the same.
+  const hiddenNodeKey = JSON.stringify(hiddenNodeCategories ?? []);
+  const hiddenLinkKey = JSON.stringify(hiddenLinkCategories ?? []);
   useEffect(() => {
     api.current.refilterInternal?.();
-  }, [hiddenNodeCategories, hiddenLinkCategories, isolateId]);
+  }, [hiddenNodeKey, hiddenLinkKey, isolateId]);
 
   useEffect(() => {
     const idx = selectedId === null ? -1 : (idToIndexRef.current.get(selectedId) ?? -1);
@@ -229,8 +241,9 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
 
       const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
       // Four full-screen passes at dpr 2 is a lot of fill for little gain;
-      // the CRT grille and grain hide the difference anyway.
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.6));
+      // the CRT grille and grain hide the difference anyway. resize() re-reads
+      // devicePixelRatio and re-applies this cap on every observed resize.
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, MAX_DPR));
       renderer.setClearColor(new THREE.Color(FALLBACK_BG), 1);
       renderer.autoClear = false;
       mountEl.appendChild(renderer.domElement);
@@ -459,6 +472,12 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
       function resize() {
         W = mountEl.clientWidth || 1; H = mountEl.clientHeight || 1;
         viewport.width = W; viewport.height = H;
+        // Re-read rather than trusting the value boot() sampled: devicePixelRatio
+        // changes when the window is dragged to a display with a different
+        // density, or when the page is zoomed, and a ResizeObserver callback is
+        // exactly when that shows up. Sampling once at mount left the canvas
+        // rendering at the old density until something remounted it.
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, MAX_DPR));
         // updateStyle must stay on: with it off three sets canvas.width = W*dpr
         // but no CSS size, so the element lays out at W*dpr and every DOM
         // overlay is in a coordinate space half the size of the canvas.
@@ -501,13 +520,6 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
 
       let selIdx = -1, hoverIdx = -1, clock = 0, glitchUntil = -1, drawnLinks = m;
 
-      // If the edge program ever fails to link again, this makes it obvious
-      // instead of silent: compare slots used against what the driver allows.
-      const glc = renderer.getContext();
-      const glCaps = {
-        attribs: glc.getParameter(glc.MAX_VERTEX_ATTRIBS) as number,
-        ver: renderer.capabilities.isWebGL2 ? 2 : 1,
-      };
       const kick = (d: number) => { glitchUntil = clock + d; };
 
       // prefers-reduced-motion. Read once here and tracked live, so flipping
@@ -787,7 +799,22 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
 
       let raf = 0, last = performance.now(), accum = 0, dirty = true;
       let fA = 0, fN = 0, fT = 0;
-      const boxes: Array<[number, number, number]> = [];
+
+      /* Label placement runs every frame over every visible node, so its
+         working set is allocated once here and refilled in place rather than
+         rebuilt per frame. The old version built a fresh `cand` array of
+         `[score, index]` tuples and a `boxes` array of `[x, y, w]` tuples each
+         time: at 60fps on a few hundred nodes that is tens of thousands of
+         short-lived arrays a second, all of it garbage the collector has to
+         walk during the animation it is trying not to interrupt.
+
+         `candOrder` is sorted by score through a subarray view of the first
+         `candN` entries — one view object per frame instead of one array per
+         candidate. */
+      const candScore = new Float64Array(n);
+      const candOrder = new Int32Array(n);
+      const boxX = new Float64Array(POOL), boxY = new Float64Array(POOL), boxW = new Float64Array(POOL);
+      let boxN = 0;
       const screenPos = new Map<number, [number, number, number, number]>();
 
       function frame(now: number) {
@@ -871,13 +898,13 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
            Anchored via project(), so the label sits at the node's *drawn*
            position and its gap is a constant number of pixels at any zoom.
            A leader tick makes the association explicit when nodes crowd.   */
-        boxes.length = 0; screenPos.clear();
+        boxN = 0; screenPos.clear();
         const mode = labelModeRef.current;
         if (mode !== "off") {
           const cx = camera.position.x, cy = camera.position.y;
           const hw = W / 2 * px * 1.15, hh = H / 2 * px * 1.15;
           const focused = selIdx >= 0 || hoverIdx >= 0;
-          const cand: Array<[number, number]> = [];
+          let candN = 0;
           for (let i = 0; i < n; i++) {
             if (nHide[i]) continue;
             const x = pos[i * 2]!, y = pos[i * 2 + 1]!;
@@ -904,11 +931,13 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
             if (inFlow) sc += nDepth[i] === 1 ? 70 : 30;
             if (i === hoverIdx) sc += 1e4;
             if (i === selIdx) sc += 2e4;
-            cand.push([sc, i]);
+            candScore[i] = sc; candOrder[candN++] = i;
           }
-          cand.sort((a, b) => b[0] - a[0]);
-          for (let k = 0; k < cand.length && screenPos.size < POOL; k++) {
-            const i = cand[k]![1]!;
+          // Sorts the live prefix in place — a subarray is a view on the same
+          // buffer, not a copy, so nothing here is reallocated per frame.
+          candOrder.subarray(0, candN).sort((a, b) => candScore[b]! - candScore[a]!);
+          for (let k = 0; k < candN && screenPos.size < POOL; k++) {
+            const i = candOrder[k]!;
             const sp2 = project(pos[i * 2]!, pos[i * 2 + 1]!, camZoom, cx, cy, viewport, OUT);
             const sx = sp2[0], sy = sp2[1];
             if (sx < -60 || sx > W + 60 || sy < -24 || sy > H + 24) continue;
@@ -916,9 +945,9 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
             const by = sy - LAB_H * 0.5;
             const bw = labelWidth(i);
             let hit = false;
-            for (let q = 0; q < boxes.length; q++) {
-              const p = boxes[q]!;
-              if (bx < p[0] + p[2] && bx + bw > p[0] && by < p[1] + LAB_H && by + LAB_H > p[1]) { hit = true; break; }
+            for (let q = 0; q < boxN; q++) {
+              const qx = boxX[q]!, qy = boxY[q]!, qw = boxW[q]!;
+              if (bx < qx + qw && bx + bw > qx && by < qy + LAB_H && by + LAB_H > qy) { hit = true; break; }
             }
             if (hit) continue;
             const cat2 = nodeCategories[nCategoryId[i]!]!;
@@ -926,7 +955,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
               : nDepth[i]! >= 0 ? 0.92
                 : (selIdx >= 0 || hoverIdx >= 0) ? 0.28     // landmark, holding position
                   : cat2.tier === 0 ? 0.82 : 0.52;
-            boxes.push([bx, by, bw]);
+            boxX[boxN] = bx; boxY[boxN] = by; boxW[boxN] = bw; boxN++;
             screenPos.set(i, [bx, by, op, cat2.tier === 0 ? 1 : 0]);
           }
         }
@@ -965,7 +994,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
           const stats: GraphStats = {
             fps: Math.round(fA / fN), nodes: n, edges: m,
             frameMs: +(performance.now() - t0).toFixed(2), settled: sim.isSettled(),
-            drawnEdges: drawnLinks, vertexAttribs: glCaps.attribs, webglVersion: glCaps.ver as 1 | 2,
+            drawnEdges: drawnLinks,
           };
           onStatsRef.current?.(stats);
           fA = 0; fN = 0; fT = 0;

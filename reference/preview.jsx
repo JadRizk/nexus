@@ -32,7 +32,7 @@ function mergeClassName(base, className) {
 
 // packages/react/src/components/Button/Button.tsx
 var Button = forwardRef2(
-  function Button2({ active = false, className, children, ...rest }, ref) {
+  function Button2({ active, className, children, ...rest }, ref) {
     return /* @__PURE__ */ React.createElement(
       "button",
       {
@@ -40,6 +40,7 @@ var Button = forwardRef2(
         type: "button",
         className: mergeClassName("nx-btn", className),
         "data-active": active ? "1" : "0",
+        "aria-pressed": active,
         ...rest
       },
       children
@@ -469,8 +470,8 @@ import { forwardRef as forwardRef10 } from "react";
 // packages/react/src/components/SectionHeading/SectionHeading.tsx
 import { forwardRef as forwardRef9 } from "react";
 var SectionHeading = forwardRef9(
-  function SectionHeading2({ children, className = "", ...rest }, ref) {
-    return /* @__PURE__ */ React.createElement("div", { ref, className: mergeClassName("nx-heading", className), ...rest }, children);
+  function SectionHeading2({ as: Tag = "div", children, className = "", ...rest }, ref) {
+    return /* @__PURE__ */ React.createElement(Tag, { ref, className: mergeClassName("nx-heading", className), ...rest }, children);
   }
 );
 SectionHeading.displayName = "SectionHeading";
@@ -478,7 +479,7 @@ SectionHeading.displayName = "SectionHeading";
 // packages/react/src/components/Legend/Legend.tsx
 var Legend = forwardRef10(
   function Legend2({ groups, style }, ref) {
-    return /* @__PURE__ */ React.createElement("div", { ref, className: "nx-legend", style }, groups.map((group) => /* @__PURE__ */ React.createElement("fieldset", { key: group.title, className: "nx-legend__group" }, /* @__PURE__ */ React.createElement("legend", { className: "nx-legend__title" }, /* @__PURE__ */ React.createElement(SectionHeading, null, "/// ", group.title)), group.rows)));
+    return /* @__PURE__ */ React.createElement("div", { ref, className: "nx-legend", style }, groups.map((group) => /* @__PURE__ */ React.createElement("fieldset", { key: group.title, className: "nx-legend__group" }, /* @__PURE__ */ React.createElement("legend", { className: "nx-legend__title" }, /* @__PURE__ */ React.createElement(SectionHeading, { as: "span" }, "/// ", group.title)), group.rows)));
   }
 );
 Legend.displayName = "Legend";
@@ -1390,9 +1391,12 @@ html, body {
 
 /* Slides rather than mounting and unmounting, so the motion reads as one
    object moving instead of two objects swapping. It travels its own width plus
-   the gutter, which is what clears the edge completely. */
+   the gutter, which is what clears the edge completely — so the distance is
+   derived from the same two tokens that position it. The gutter used to be a
+   hardcoded 28px, which no longer matched the gutter once a consumer moved
+   --nx-drawer-inset. */
 .nx-drawer[data-open="0"] {
-  transform: translateX(calc(var(--nx-drawer-width, 296px) + 28px));
+  transform: translateX(calc(var(--nx-drawer-width, 296px) + var(--nx-drawer-inset, var(--nx-space-5))));
   opacity: 0;
   pointer-events: none;
 }
@@ -1656,6 +1660,10 @@ html, body {
 
 /* ------------------------------------------------------------ SectionHeading */
 .nx-heading {
+  /* Explicit so \`as="span"\` lays out exactly like the default \`as="div"\`:
+     an inline box would drop the margin-bottom below and shift everything
+     under it by 4px. */
+  display: block;
   color: var(--nx-heading-fg, var(--nx-fg-accent));
   font-size: var(--nx-heading-size, var(--nx-text-2xs));
   letter-spacing: var(--nx-heading-tracking, var(--nx-track-wider));
