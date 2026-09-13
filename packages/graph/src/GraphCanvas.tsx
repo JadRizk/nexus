@@ -14,15 +14,15 @@ import type {
 /* ============================================================================
    GraphCanvas
 
-   Ported from NexusCyberdeck.jsx's `boot()` — the physics/shader setup,
+   Ported from the prototype's `boot()` function — the physics/shader setup,
    render loop, interaction handlers, label pool and tooltip are structurally
    unchanged. What changed is exactly what had to: every lookup that used to
    read the module-global `NODE_TYPES`/`LINK_TYPES` tables now reads the
    `nodeCategories`/`linkCategories` props instead, node/edge `id`s (now
    arbitrary, caller-supplied) get resolved to dense internal indices once
    per graph, and the imperative `nodeOn`/`linkOn`/`isolate`/`selected`
-   state the original parent component owned directly are now controlled
-   props flowing in through refs, the same pattern the original already used
+   state the prototype's parent component owned directly are now controlled
+   props flowing in through refs, the same pattern the prototype already used
    for `cfg`/`running`/`labelMode`.
    ========================================================================== */
 
@@ -62,6 +62,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
     hiddenNodeCategories, hiddenLinkCategories, isolateId = null, selectedId = null,
     running = true,
     onSelect, onStats, onFatal,
+    ariaLabel,
     className, style,
   } = props;
 
@@ -80,6 +81,20 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
   const hiddenLinkRef = useRef(hiddenLinkCategories); hiddenLinkRef.current = hiddenLinkCategories;
   const isolateRef = useRef(isolateId); isolateRef.current = isolateId;
 
+  // onSelect/onStats/onFatal are read inside the mount effect's boot(), which
+  // only re-runs when the graph data changes (see the comment on that effect's
+  // dependency array below) — so they have to come from refs kept current in
+  // their own effect, not from the closure, or a handler that closes over
+  // state sees the first render's callback forever.
+  const onSelectRef = useRef(onSelect);
+  const onStatsRef = useRef(onStats);
+  const onFatalRef = useRef(onFatal);
+  useEffect(() => {
+    onSelectRef.current = onSelect;
+    onStatsRef.current = onStats;
+    onFatalRef.current = onFatal;
+  }, [onSelect, onStats, onFatal]);
+
   useImperativeHandle(ref, () => ({
     fit: () => api.current.fit?.(),
     focus: (id) => {
@@ -97,12 +112,22 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
   // above between mounts, so it has to live outside the effect's closure.
   const idToIndexRef = useRef<Map<unknown, number>>(new Map());
 
+  // Forwards every field of PhysicsConfig, not a subset: gravity and damping
+  // are documented props too, and omitting them here left them permanently
+  // pinned to the solver's own defaults. Depends on the fields rather than on
+  // physicsCfg, which is a fresh object every render. On first mount this is
+  // still a no-op — api.current.params does not exist until the mount effect
+  // below has run — so boot() applies the initial config itself.
   useEffect(() => {
     api.current.params?.({
       repulsion: physicsCfg.repulsion, linkDistance: physicsCfg.linkDistance,
+      gravity: physicsCfg.gravity, damping: physicsCfg.damping,
       cursorForce: physicsCfg.cursorForce, settle: physicsCfg.settle,
     });
-  }, [physicsCfg.repulsion, physicsCfg.linkDistance, physicsCfg.cursorForce, physicsCfg.settle]);
+  }, [
+    physicsCfg.repulsion, physicsCfg.linkDistance, physicsCfg.gravity,
+    physicsCfg.damping, physicsCfg.cursorForce, physicsCfg.settle,
+  ]);
 
   useEffect(() => {
     api.current.refilterInternal?.();
@@ -116,29 +141,63 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
   useEffect(() => {
     const mount = mountRef.current, lab = labelRef.current;
     if (!mount || !lab) return;
-    let dispose = () => { };
-    try { dispose = boot(mount, lab); }
+    // Everything boot() creates registers its teardown here the moment it
+    // exists, so a throw part-way through setup — after the renderer, its
+    // canvas, the label pool and the ResizeObserver are live — releases what
+    // was already built instead of leaving it alive until GC. A completed
+    // boot hands the same list to the effect's cleanup; drained in reverse
+    // so later resources (the frame loop, listeners) go before the renderer
+    // they draw through.
+    const disposables: Array<() => void> = [];
+    const dispose = () => {
+      while (disposables.length > 0) {
+        try { disposables.pop()!(); } catch (e) { console.error(e); }
+      }
+      api.current = {};
+    };
+    try { boot(mount, lab); }
     catch (err) {
+      dispose();
       const message = String((err as Error)?.message ?? err);
       console.error(err);
       setFatal(message);
-      onFatal?.(message);
+      onFatalRef.current?.(message);
     }
-    return () => { try { dispose(); } catch (e) { console.error(e); } };
+    return dispose;
 
     function boot(mountEl: HTMLDivElement, labelEl: HTMLDivElement) {
       const n = nodes.length, m = edges.length;
-      const idToIndex = new Map<unknown, number>(nodes.map((node, i) => [node.id, i]));
+      // Validated before anything that needs tearing down exists. An edge to
+      // an unknown node used to survive as index -1 until the adjacency
+      // build deep inside setup, where it died as an opaque TypeError with
+      // the renderer, canvas and label pool already live; a category id
+      // missing from the maps died the same way in the solver setup.
+      const show = (id: unknown) => JSON.stringify(id);
+      const idToIndex = new Map<unknown, number>();
+      for (let i = 0; i < n; i++) {
+        const node = nodes[i]!;
+        if (idToIndex.has(node.id)) throw new Error(`GraphCanvas: nodes[${i}] duplicates id ${show(node.id)}`);
+        if (nodeCategories[node.categoryId] === undefined) {
+          throw new Error(`GraphCanvas: nodes[${i}] has categoryId ${show(node.categoryId)}, which is not in nodeCategories`);
+        }
+        idToIndex.set(node.id, i);
+      }
+      const eA = new Int32Array(m), eB = new Int32Array(m);
+      for (let e = 0; e < m; e++) {
+        const edge = edges[e]!;
+        const a = idToIndex.get(edge.a), b = idToIndex.get(edge.b);
+        if (a === undefined) throw new Error(`GraphCanvas: edges[${e}].a references unknown node id ${show(edge.a)}`);
+        if (b === undefined) throw new Error(`GraphCanvas: edges[${e}].b references unknown node id ${show(edge.b)}`);
+        if (linkCategories[edge.categoryId] === undefined) {
+          throw new Error(`GraphCanvas: edges[${e}] has categoryId ${show(edge.categoryId)}, which is not in linkCategories`);
+        }
+        eA[e] = a; eB[e] = b;
+      }
       idToIndexRef.current = idToIndex;
 
       const nCategoryId = nodes.map((node) => node.categoryId);
       const eCategoryId = edges.map((edge) => edge.categoryId);
       const linkCategoryIds = Object.keys(linkCategories);
-      const eA = new Int32Array(m), eB = new Int32Array(m);
-      for (let e = 0; e < m; e++) {
-        eA[e] = idToIndex.get(edges[e]!.a) ?? -1;
-        eB[e] = idToIndex.get(edges[e]!.b) ?? -1;
-      }
       const degree = computeDegree(
         Array.from({ length: m }, (_, e) => ({ a: eA[e]!, b: eB[e]! })),
         n,
@@ -159,6 +218,13 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
           return { a: eA[e]!, b: eB[e]!, dist: cat.dist, strength: cat.strength };
         }),
       });
+      // The params effect above cannot reach the solver on the render that
+      // creates it, so the initial `physics` prop has to be applied here or it
+      // never lands. Numerically inert when the prop is absent: physicsCfg is
+      // DEFAULT_PHYSICS, which matches the solver's own starting params, and
+      // setParams' alpha floor of 0.28 is below the alpha of 1 a fresh solver
+      // already has.
+      sim.setParams(physicsCfg);
       const pos = sim.pos;
 
       const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
@@ -170,6 +236,15 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
       mountEl.appendChild(renderer.domElement);
       renderer.domElement.style.cssText =
         "display:block;touch-action:none;width:100%;height:100%";
+      disposables.push(() => {
+        renderer.dispose();
+        // dispose() alone leaves the GL context alive until the canvas is
+        // collected; under StrictMode, HMR or a list of graphs that is
+        // enough to hit the browser's context cap. Losing it explicitly
+        // gives it back now.
+        renderer.forceContextLoss();
+        renderer.domElement.remove();
+      });
 
       const scene = new THREE.Scene();
       const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, -10, 10);
@@ -277,7 +352,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
         blendSrc: THREE.OneFactor, blendDst: THREE.OneFactor,
         uniforms: {
           uTime: { value: 0 }, uPx: { value: 1 }, uHlStart: { value: -999 },
-          uGlow: { value: opticsCfg.glow }, uFocus: { value: 0 },
+          uGlow: { value: opticsCfg.glow }, uFocus: { value: 0 }, uReduced: { value: 0 },
         },
       });
       const nodeMesh = new THREE.Mesh(nodeGeo, nodeMat);
@@ -289,7 +364,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
       const fadeMat = new THREE.RawShaderMaterial({
         vertexShader: FADE_VS, fragmentShader: FADE_FS,
         transparent: true, depthTest: false, depthWrite: false,
-        uniforms: { uColor: { value: new THREE.Vector3(vc.r, vc.g, vc.b) }, uAlpha: { value: 1 } },
+        uniforms: { uColor: { value: new THREE.Vector3(vc.r, vc.g, vc.b) }, uAlpha: { value: 1 }, uReduced: { value: 0 } },
       });
       const fadeMesh = new THREE.Mesh(fadeGeo, fadeMat);
       fadeMesh.frustumCulled = false; fadeMesh.renderOrder = -10; scene.add(fadeMesh);
@@ -316,12 +391,16 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
           uRes: { value: new THREE.Vector2(1, 1) }, uTime: { value: 0 },
           uScan: { value: opticsCfg.scan }, uAberr: { value: opticsCfg.aberr }, uCurve: { value: opticsCfg.curve },
           uGrain: { value: opticsCfg.grain }, uBloomAmt: { value: opticsCfg.bloom }, uGlitch: { value: 0 },
+          uReduced: { value: 0 },
         },
       });
       const fsQuad = new THREE.Mesh(fsGeo, compMat);
       fsQuad.frustumCulled = false;
       const postScene = new THREE.Scene(); postScene.add(fsQuad);
       const postCam = new THREE.Camera();
+      disposables.push(() => [sceneRT, bloomA, bloomB].forEach((rt) => rt.dispose()));
+      disposables.push(() => [nodeMat, edgeMat, fadeMat, blurMat, compMat].forEach((mm) => mm.dispose()));
+      disposables.push(() => [nodeGeo, edgeGeo, fadeGeo, fsGeo].forEach((g) => g.dispose()));
 
       /* --------------------------------------------------------- label pool */
       const POOL = 60;
@@ -333,9 +412,14 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
           `font:600 9.5px/1 ${MONO};letter-spacing:.09em;text-transform:uppercase;` +
           "text-shadow:1px 0 rgba(255,46,99,.4),-1px 0 rgba(23,226,229,.4),0 0 7px rgba(0,0,0,.98);" +
           "transform:translate3d(-9999px,-9999px,0);will-change:transform;opacity:0;transition:opacity .1s";
+        // The pool is a rotating subset of node names driven straight by
+        // layout math, not by anything a screen reader should announce —
+        // aria-hidden keeps this decorative, same as the tooltip below.
+        el.setAttribute("aria-hidden", "true");
         labelEl.appendChild(el);
         labels.push(el);
       }
+      disposables.push(() => labels.forEach((l) => l.remove()));
       const LAB_H = 11;
 
       // Measure once per node instead of guessing from character count — the
@@ -364,7 +448,9 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
         "border-left-width:2px;padding:4px 7px;font:600 9px/1.4 " + MONO + ";letter-spacing:.11em;" +
         "text-transform:uppercase;opacity:0;transition:opacity .1s;" +
         "transform:translate3d(-9999px,-9999px,0);will-change:transform;z-index:5";
+      tip.setAttribute("aria-hidden", "true");
       labelEl.appendChild(tip);
+      disposables.push(() => tip.remove());
 
       let W = 1, H = 1, px = 1;
       const bufSize = new THREE.Vector2();
@@ -392,6 +478,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
       resize();
       const ro = new ResizeObserver(resize);
       ro.observe(mountEl);
+      disposables.push(() => ro.disconnect());
       // Intro animation: land on the usual density-based framing, but arrive
       // there from a wide pull-back instead of snapping straight to rest —
       // this is also what a reseed sees, since that remounts the whole scene.
@@ -422,7 +509,31 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
         ver: renderer.capabilities.isWebGL2 ? 2 : 1,
       };
       const kick = (d: number) => { glitchUntil = clock + d; };
-      kick(0.8); // glitch flourish riding along with the intro pull-back
+
+      // prefers-reduced-motion. Read once here and tracked live, so flipping
+      // the OS setting while the canvas is up takes effect on the next frame
+      // without a remount. Guarded: jsdom and SSR have no matchMedia, and
+      // Safari before 14 has a MediaQueryList with addListener only. The flag
+      // reaches the GPU as `uReduced` (see shaders.ts for what it gates) and
+      // is mirrored onto the canvas as data-nx-reduced-motion so the state is
+      // observable from outside — the uniforms themselves are not.
+      const motionQuery = typeof window.matchMedia === "function"
+        ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
+      let reduced = motionQuery?.matches ?? false;
+      const applyReduced = () => { renderer.domElement.dataset.nxReducedMotion = String(reduced); };
+      const onMotionChange = (ev: MediaQueryListEvent) => { reduced = ev.matches; applyReduced(); };
+      if (motionQuery) {
+        if (typeof motionQuery.addEventListener === "function") motionQuery.addEventListener("change", onMotionChange);
+        else motionQuery.addListener(onMotionChange);
+      }
+      applyReduced();
+      disposables.push(() => {
+        if (!motionQuery) return;
+        if (typeof motionQuery.removeEventListener === "function") motionQuery.removeEventListener("change", onMotionChange);
+        else motionQuery.removeListener(onMotionChange);
+      });
+
+      if (!reduced) kick(0.8); // glitch flourish riding along with the intro pull-back
 
       function refilter() {
         const hiddenNode = new Set(hiddenNodeRef.current ?? []);
@@ -509,7 +620,18 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
           const a = document.createElement("span");
           a.style.color = cat.color; a.textContent = nodes[idx]!.label;
           const b = document.createElement("span");
-          b.style.color = "#3D4C39"; b.textContent = " · " + cat.code + " · " + degree[idx];
+          // The old #3D4C39 measured 2.17:1 against the tooltip ground — see
+          // GraphCanvas.contrast.test.ts. This tooltip's ground is
+          // rgba(8,10,9,.95) composited over whatever the canvas is drawing
+          // underneath it, so the worst case is a bright node colour behind
+          // a translucent panel, not the flat dark background: over a node
+          // as bright as #9EFF3D this literal measures 4.5184:1, clearing
+          // the 4.5 AA floor. Kept as a hardcoded literal rather than a
+          // token name on purpose — this package has no dependency on the
+          // tokens layer (FALLBACK_BG/FALLBACK_FG above are the same story),
+          // so naming a token here would go stale silently if that token's
+          // value ever moved again.
+          b.style.color = "#6F8465"; b.textContent = " · " + cat.code + " · " + degree[idx];
           tip.appendChild(a); tip.appendChild(b);
           tip.style.borderLeftColor = cat.color;
         }
@@ -628,7 +750,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
         const w = toWorld(ev.clientX - rc.left, ev.clientY - rc.top);
         const idx = pickNode(w.x, w.y);
         const next = idx >= 0 && idx !== selIdx ? idx : -1;
-        onSelect?.(next >= 0 ? describe(next) : null);
+        onSelectRef.current?.(next >= 0 ? describe(next) : null);
       };
       const onWheel = (ev: WheelEvent) => {
         ev.preventDefault();
@@ -654,6 +776,14 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
       el.addEventListener("pointerleave", onLeave);
       el.addEventListener("wheel", onWheel, { passive: false });
       el.style.cursor = "grab";
+      disposables.push(() => {
+        el.removeEventListener("pointermove", onMove);
+        el.removeEventListener("pointerdown", onDown);
+        window.removeEventListener("pointerup", onUp);
+        el.removeEventListener("click", onClick);
+        el.removeEventListener("pointerleave", onLeave);
+        el.removeEventListener("wheel", onWheel);
+      });
 
       let raf = 0, last = performance.now(), accum = 0, dirty = true;
       let fA = 0, fN = 0, fT = 0;
@@ -701,9 +831,16 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
         edgeMat.uniforms.uOpacity!.value = c.edgeOpacity;
         edgeMat.uniforms.uFlowSpeed!.value = c.flowSpeed;
         fadeMat.uniforms.uAlpha!.value = 1 - c.trails * 0.94;
+        const uReduced = reduced ? 1 : 0;
+        nodeMat.uniforms.uReduced!.value = uReduced;
+        fadeMat.uniforms.uReduced!.value = uReduced;
+        compMat.uniforms.uReduced!.value = uReduced;
 
-        if (c.glitch > 0 && clock > glitchUntil && Math.random() < 0.0022 * c.glitch) kick(0.10 + Math.random() * 0.22);
-        const gActive = clock < glitchUntil ? c.glitch : 0;
+        // The composite shader already gates the bands on uReduced; not
+        // scheduling bursts at all just keeps the uniform at zero instead of
+        // handing the GPU a value it is going to multiply away.
+        if (!reduced && c.glitch > 0 && clock > glitchUntil && Math.random() < 0.0022 * c.glitch) kick(0.10 + Math.random() * 0.22);
+        const gActive = !reduced && clock < glitchUntil ? c.glitch : 0;
 
         renderer.setRenderTarget(sceneRT);
         renderer.render(scene, camera);
@@ -830,30 +967,27 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
             frameMs: +(performance.now() - t0).toFixed(2), settled: sim.isSettled(),
             drawnEdges: drawnLinks, vertexAttribs: glCaps.attribs, webglVersion: glCaps.ver as 1 | 2,
           };
-          onStats?.(stats);
+          onStatsRef.current?.(stats);
           fA = 0; fN = 0; fT = 0;
         }
       }
       raf = requestAnimationFrame(frame);
+      disposables.push(() => cancelAnimationFrame(raf));
 
-      return function cleanup() {
+      // A lost context can't be drawn to. No preventDefault here, so the
+      // browser isn't asked to restore it: the frame loop stops and the
+      // failure surfaces the same way a thrown boot does, through the halt
+      // panel and onFatal. Unmount still drains everything above. Registered
+      // last so it is the first thing removed on teardown — the
+      // forceContextLoss() in cleanup fires this very event.
+      const onContextLost = () => {
         cancelAnimationFrame(raf);
-        ro.disconnect();
-        el.removeEventListener("pointermove", onMove);
-        el.removeEventListener("pointerdown", onDown);
-        window.removeEventListener("pointerup", onUp);
-        el.removeEventListener("click", onClick);
-        el.removeEventListener("pointerleave", onLeave);
-        el.removeEventListener("wheel", onWheel);
-        labels.forEach((l) => l.remove());
-        tip.remove();
-        [nodeGeo, edgeGeo, fadeGeo, fsGeo].forEach((g) => g.dispose());
-        [nodeMat, edgeMat, fadeMat, blurMat, compMat].forEach((mm) => mm.dispose());
-        [sceneRT, bloomA, bloomB].forEach((rt) => rt.dispose());
-        renderer.dispose();
-        if (el.parentNode) el.parentNode.removeChild(el);
-        api.current = {};
+        const message = "WebGL context lost";
+        setFatal(message);
+        onFatalRef.current?.(message);
       };
+      el.addEventListener("webglcontextlost", onContextLost);
+      disposables.push(() => el.removeEventListener("webglcontextlost", onContextLost));
     }
     // Deliberate: this effect builds and tears down the entire WebGL scene, so
     // it may only re-run when the graph data itself changes. Optics, callbacks
@@ -874,10 +1008,27 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(functio
     );
   }
 
+  // role="img" is only meaningful paired with a name: an image role with no
+  // accessible name is itself a WCAG 2.0 A / axe "role-img-alt" violation —
+  // worse than the bare div this replaced, since a bare div at least isn't
+  // announced as a nameless image. So the role only appears when ariaLabel
+  // is actually supplied; omitting the prop leaves the root role-less, the
+  // same as before this feature existed.
+  const hasAriaLabel = Boolean(ariaLabel);
+
   return (
-    <div style={{ position: "relative", width: "100%", height: "100%", background: FALLBACK_BG, overflow: "hidden", ...style }} className={className}>
+    <div
+      role={hasAriaLabel ? "img" : undefined}
+      aria-label={hasAriaLabel ? ariaLabel : undefined}
+      style={{ position: "relative", width: "100%", height: "100%", background: FALLBACK_BG, overflow: "hidden", ...style }}
+      className={className}
+    >
       <div ref={mountRef} style={{ position: "absolute", inset: 0 }} />
-      <div ref={labelRef} style={{ position: "absolute", inset: 0, pointerEvents: "none" }} />
+      {/* Rotating label pool + tooltip are placement-driven decoration, not
+          content — aria-hidden here backstops the same attribute set on each
+          element as it's created in boot(), so the whole layer reads as
+          hidden even before the canvas mounts. */}
+      <div ref={labelRef} aria-hidden="true" style={{ position: "absolute", inset: 0, pointerEvents: "none" }} />
     </div>
   );
 });

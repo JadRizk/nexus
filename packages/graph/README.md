@@ -159,7 +159,8 @@ state.
 | `isolateId`                                    | show only this node and its neighbours                                                                                                  |
 | `selectedId`                                   | the selected node; update it from `onSelect`                                                                                            |
 | `running`                                      | run the physics solver; `false` pauses it (dragging still works). Default `true`                                                        |
-| `onSelect`, `onStats`, `onFatal`               | selection, per-frame stats, WebGL setup failure                                                                                         |
+| `onSelect`, `onStats`, `onFatal`               | selection, per-frame stats, WebGL setup failure or context loss                                                                         |
+| `ariaLabel`                                    | accessible name for the canvas. When supplied, the root carries `role="img"` + `aria-label`; when omitted, the root carries neither, so a screen reader never meets a nameless image. The label pool and tooltip are always `aria-hidden`, so this prop is the only name assistive tech can get |
 
 ### Controller
 
@@ -171,6 +172,32 @@ controller.current?.focus(id); // frame one node
 controller.current?.reheat(); // nudge the solver back above rest
 controller.current?.getNode(id); // GraphNodeSnapshot with degree and adjacency
 ```
+
+## Reduced motion
+
+The canvas reads `prefers-reduced-motion` itself — its CRT pass is WebGL, so
+no stylesheet rule can reach it — and listens for the setting to change while
+it is mounted, so flipping it in the OS takes effect on the next frame without
+a remount. The split is the one the CSS CRT layer in `@nexus-cyberdeck/react`
+makes, motion versus texture:
+
+- **Goes to zero**: the glitch bands (15 Hz), the grain (re-rolled at 24 Hz),
+  the rolling refresh bar, and the trails, so every frame starts clean.
+- **Clamped**: the HOT-node flicker re-rolls at 0.94 Hz instead of 9 Hz —
+  the same cap the tokens layer puts on its blink, under the 3 Hz flash
+  threshold in WCAG 2.3.1 — and its trough is lifted so a node blinks rather
+  than strobes.
+- **Unchanged**: the static scanlines, aperture grille, barrel curve,
+  chromatic aberration and vignette, since they are texture, not motion; the
+  physics solver, which lays the graph out; and the camera, packet flow and
+  breathing, which are slow and continuous.
+
+The `optics` values you pass are left as they are — `glitch`, `grain` and
+`trails` are gated on the GPU by a `uReduced` uniform, not overwritten — so
+nothing needs restoring when the preference is switched off again. The current
+state is mirrored onto the `<canvas>` as `data-nx-reduced-motion="true"` or
+`"false"` for tests and styling hooks. Where `window.matchMedia` does not exist
+(jsdom, server rendering) the canvas behaves as though the preference is off.
 
 ## Notes
 

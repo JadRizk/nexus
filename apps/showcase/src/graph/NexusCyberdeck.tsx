@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import type { RefObject } from "react";
 import { GraphCanvas, TIER_ZOOM } from "@nexus-cyberdeck/graph";
 import type { GraphController, GraphNodeSnapshot, GraphStats, OpticsConfig, PhysicsConfig } from "@nexus-cyberdeck/graph";
 import {
@@ -84,6 +85,7 @@ export default function NexusCyberdeck() {
     }}>
       <GraphCanvas
         ref={controllerRef}
+        ariaLabel="Knowledge graph of Nexus Cyberdeck sample data"
         nodes={sampleGraph.nodes}
         edges={sampleGraph.edges}
         nodeCategories={NODE_CATEGORIES}
@@ -250,7 +252,11 @@ function InspectorDrawer({
   const titleId = useId();
   return (
     <div
-      ref={trapRef}
+      // Cast for the same reason as the one in
+      // packages/react/src/components/Drawer/Drawer.tsx: useFocusTrap's
+      // RefObject<T | null> only structurally matches a DOM ref prop under
+      // @types/react 19, not the 18 this repo's devDependencies pin.
+      ref={trapRef as RefObject<HTMLDivElement>}
       role="dialog"
       aria-modal="true"
       aria-labelledby={selected ? titleId : undefined}

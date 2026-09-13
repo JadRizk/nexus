@@ -26,6 +26,27 @@ const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const read = (p) => readFileSync(join(root, p), "utf8");
 
 /**
+ * A ratio out of the generated contrast table, formatted the way prose quotes
+ * it. Both READMEs advertise the two ramp steps the AA claim rests on, and
+ * those are hand-typed numbers about accessibility — exactly the kind this
+ * file exists to stop from rotting. The token build already fails when a step
+ * drops under its *floor*; this catches the other half, a step that moves
+ * within the floor and leaves the README quoting the old figure.
+ */
+const contrast = read("packages/tokens/src/contrast.gen.ts");
+function ratio(theme, step) {
+  const block = contrast.match(new RegExp(`"${theme}": \\{([\\s\\S]*?)\\n  \\}`));
+  const found = block?.[1].match(new RegExp(`"${step}": ([\\d.]+),`));
+  if (!found) {
+    throw new Error(
+      `contrast.gen.ts has no ${theme}/${step} entry — regenerate it with ` +
+        `\`npm run build:tokens\`, or update scripts/check-docs.mjs deliberately.`,
+    );
+  }
+  return Number(found[1]).toFixed(2);
+}
+
+/**
  * Every file that quotes a figure in prose, and what it must say. Adding a
  * doc that names a count means adding a line here; forgetting to is the one
  * failure mode this file cannot catch itself.
@@ -63,6 +84,30 @@ const CHECKS = [
     pattern: /DS v(\d+\.\d+)/g,
     expected: shortVersion,
     what: "the version",
+  },
+  {
+    file: "README.md",
+    pattern: /\| disabled text\s+\| (\d+\.\d+):1/g,
+    expected: ratio("hud-aa", "grey-300"),
+    what: "hud-aa disabled-text contrast",
+  },
+  {
+    file: "README.md",
+    pattern: /\| UI boundaries\s+\| (\d+\.\d+):1/g,
+    expected: ratio("hud-aa", "grey-200"),
+    what: "hud-aa UI-boundary contrast",
+  },
+  {
+    file: "packages/tokens/README.md",
+    pattern: /\| Disabled text contrast\s+\| (\d+\.\d+):1/g,
+    expected: ratio("hud-aa", "grey-300"),
+    what: "hud-aa disabled-text contrast",
+  },
+  {
+    file: "packages/tokens/README.md",
+    pattern: /\| UI boundary contrast\s+\| (\d+\.\d+):1/g,
+    expected: ratio("hud-aa", "grey-200"),
+    what: "hud-aa UI-boundary contrast",
   },
 ];
 

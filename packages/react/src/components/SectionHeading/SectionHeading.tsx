@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import type { HTMLAttributes, ReactNode } from "react";
 import { mergeClassName } from "../../className.js";
 
@@ -10,10 +11,14 @@ export interface SectionHeadingProps extends HTMLAttributes<HTMLDivElement> {
  * not document structure, and a screen reader's heading list should not fill
  * up with them.
  */
-export function SectionHeading({ children, className = "", ...rest }: SectionHeadingProps) {
-  return (
-    <div className={mergeClassName("nx-heading", className)} {...rest}>
-      {children}
-    </div>
-  );
-}
+export const SectionHeading = forwardRef<HTMLDivElement, SectionHeadingProps>(
+  function SectionHeading({ children, className = "", ...rest }, ref) {
+    return (
+      <div ref={ref} className={mergeClassName("nx-heading", className)} {...rest}>
+        {children}
+      </div>
+    );
+  },
+);
+
+SectionHeading.displayName = "SectionHeading";

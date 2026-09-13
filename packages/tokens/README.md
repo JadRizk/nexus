@@ -1,5 +1,8 @@
 # @nexus-cyberdeck/tokens
 
+This stylesheet styles `html` and `body` directly because the system expects
+to own the viewport, not share the page with other content.
+
 Design tokens for the [Nexus Cyberdeck](https://github.com/JadRizk/nexus#readme)
 HUD design system. Plain CSS custom properties with zero runtime dependencies,
 plus typed accessors for TypeScript, plus contrast ratios computed at build
@@ -11,11 +14,17 @@ Two themes ship, both dark:
 | ---------------------- | ------------------------- | ------------------------ |
 | Muted ramp             | lifted, WCAG AA-compliant | the prototype's original |
 | Type scale             | ×1.15                     | ×1.0                     |
-| Disabled text contrast | 4.52:1                    | 2.14:1                   |
-| UI boundary contrast   | 3.01:1                    | 1.21:1                   |
+| Disabled text contrast | 4.82:1                    | 2.14:1                   |
+| UI boundary contrast   | 3.19:1                    | 1.21:1                   |
 
 The signature colours are identical in both. Only the muted grey ramp and the
 type scale differ, which is why switching themes never touches component code.
+
+Those ratios are measured against the panel surface, `--nx-bg-surface`, as
+every ratio in this system is. The floors themselves are enforced against
+every opaque background a component can render on, so the ramp is solved
+against the lightest of them, `--nx-bg-raised`: the same two steps are 4.54:1
+and 3.00:1 there.
 
 ## Install
 
@@ -94,8 +103,11 @@ restraint is what makes it read as a warning.
 
 ## Design tools
 
-`tokens.json` is exported in [W3C DTCG](https://tr.designtokens.org/format/)
-format and is importable by Style Dictionary v4+ and Figma Tokens Studio:
+`tokens.json` is written in [W3C DTCG](https://tr.designtokens.org/format/)
+shape (`$value`/`$type`/`$description`), but values are CSS strings (hex
+colours, `rem`/`ms` dimensions, `cubic-bezier()`) rather than the newer
+structured DTCG value shapes — so treat it as DTCG-flavoured rather than a
+strict DTCG document a tool is guaranteed to import unchanged:
 
 ```ts
 import tokens from "@nexus-cyberdeck/tokens/tokens.json";

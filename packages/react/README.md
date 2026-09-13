@@ -45,6 +45,16 @@ export function App() {
 custom properties, the dark canvas and the global focus ring live; without it
 every component renders unstyled.
 
+`styles.css` requires `tokens.css` to be imported first: it depends on the
+focus ring and reduced-motion rules defined in the tokens layer.
+
+`NexusProvider`'s `theme` and `crt` props are **initial values only** — they
+seed state on mount and are not re-read afterward, so changing either prop on
+a live provider does nothing. After mount, `useNexus().setTheme` and
+`useNexus().setCrt` are the only way to change them; there is no
+`onThemeChange` callback because the provider is uncontrolled by design, not
+also driven by its props.
+
 ## Components
 
 |              |                                                                    |
@@ -110,8 +120,19 @@ real renderer — for the things jsdom cannot see.
 - `ToggleRow` is a real checkbox; `Slider` is a native range input with
   `aria-valuetext`; `TabStrip` uses roving tabindex with arrow, Home and End.
 - `Glyph` encodes category by silhouette, never by colour alone (WCAG 1.4.1).
-- The focus ring is global and cannot be removed per component (WCAG 2.4.7).
+- The focus ring is global and cannot be removed per component (WCAG 2.4.7), except that `Slider` relocates it to the thumb and `CommandPalette` deliberately suppresses it on the input.
 - `prefers-reduced-motion` and `prefers-contrast` are honoured.
+
+Every accessible name below an app localises has a prop rather than a
+hardcoded string, defaulted to the current English copy so existing output is
+unchanged:
+
+| Component        | Prop           | Names                          | Default                                         |
+| ----------------- | -------------- | ------------------------------- | ------------------------------------------------ |
+| `Drawer`          | `closeLabel`   | the close button                | `"Close details"`                                 |
+| `CommandPalette`  | `label`        | the dialog (separate from `placeholder`, which still names the input) | `placeholder` |
+| `CommandPalette`  | `resultsLabel` | the live-region result count | string or `(count) => string`, defaulting to `` `${count} result${count === 1 ? "" : "s"}` `` |
+| `TabStrip`        | `label`        | the tablist                     | `"View"`                                          |
 
 ## Related
 

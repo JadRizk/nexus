@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
+import { createRef } from "react";
 import { Slider } from "./Slider.js";
 
 /* ============================================================================
@@ -42,5 +43,12 @@ describe("Slider", () => {
     // exposing both makes a screen reader say the value twice.
     render(<Slider {...base} onChange={() => {}} format={(v) => `${v}x`} />);
     expect(screen.getByText("0.5x")).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("forwards a ref to the input, not the wrapping field", () => {
+    const ref = createRef<HTMLInputElement>();
+    render(<Slider {...base} ref={ref} onChange={() => {}} />);
+    expect(ref.current).toBeInstanceOf(HTMLInputElement);
+    expect(ref.current).toBe(screen.getByRole("slider"));
   });
 });

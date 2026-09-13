@@ -1,9 +1,14 @@
 /* ============================================================================
    SHADERS
 
-   Moved verbatim from NexusCyberdeck.jsx — no logic changes, GLSL source is
-   byte-for-byte identical. `ARROW_T` is interpolated into EDGE_VS at module
-   load, same as before.
+   Extracted from the prototype. `ARROW_T` is interpolated into EDGE_VS at
+   module load, same as before.
+
+   `uReduced` (0 or 1) is the one departure from the prototype's GLSL: it
+   carries `prefers-reduced-motion` into the node, fade and composite
+   programs. It is a float rather than a bool so each effect can be scaled by
+   `1.0 - uReduced` in place instead of forking the shader — the branches stay
+   uniform across the whole draw, so there is no divergence cost.
    ========================================================================== */
 
 /** Where the edge triangle-strip stops widening for the arrowhead (fraction along the strip). */
@@ -44,7 +49,7 @@ void main() {
 
 export const NODE_FS = `
 precision highp float;
-uniform float uTime, uGlow, uFocus;
+uniform float uTime, uGlow, uFocus, uReduced;
 varying vec4 vA, vB, vC;
 const float R = 0.285;
 float h1(float n){ return fract(sin(n)*43758.5453123); }
@@ -75,8 +80,14 @@ void main(){
   float halo = pow(max(0.0, 1.0-rad), 5.0);
   body *= 0.55 + 0.45*step(0.5, fract(vQ.y*22.0 - uTime*0.25));
 
+  // HOT nodes re-roll their flicker 9x a second — above the 3 Hz flash
+  // threshold in WCAG 2.3.1. Under reduced motion the re-roll rate drops to
+  // the 0.94 Hz the tokens layer caps its blink at, and the trough is lifted
+  // so the node blinks rather than strobes.
+  float flickHz = mix(9.0, 0.94, uReduced);
+  float flickFloor = mix(0.35, 0.7, uReduced);
   float flick = vState > 2.5
-    ? (0.35 + 0.65*step(0.32, h1(vSeed*91.7 + floor(uTime*9.0)*12.9898))) : 1.0;
+    ? (flickFloor + (1.0-flickFloor)*step(0.32, h1(vSeed*91.7 + floor(uTime*flickHz)*12.9898))) : 1.0;
   float level = vState < 0.5 ? 0.38 : 1.0;
 
   float br = 0.0;
@@ -198,8 +209,10 @@ void main(){
 
 export const FADE_VS = `precision highp float; attribute vec2 position;
 void main(){ gl_Position = vec4(position, 0.0, 1.0); }`;
-export const FADE_FS = `precision highp float; uniform vec3 uColor; uniform float uAlpha;
-void main(){ gl_FragColor = vec4(uColor, uAlpha); }`;
+// uAlpha < 1 leaves a fraction of the previous frame behind (the trails). Under
+// reduced motion the veil goes fully opaque, so every frame starts clean.
+export const FADE_FS = `precision highp float; uniform vec3 uColor; uniform float uAlpha, uReduced;
+void main(){ gl_FragColor = vec4(uColor, max(uAlpha, uReduced)); }`;
 
 export const POST_VS = `precision highp float;
 attribute vec2 position; attribute vec2 uv; varying vec2 vUv;
@@ -227,20 +240,26 @@ export const COMPOSITE_FS = `
 precision highp float;
 uniform sampler2D uScene, uBloom;
 uniform vec2 uRes;
-uniform float uTime, uScan, uAberr, uCurve, uGrain, uBloomAmt, uGlitch;
+uniform float uTime, uScan, uAberr, uCurve, uGrain, uBloomAmt, uGlitch, uReduced;
 varying vec2 vUv;
 float h1(float n){ return fract(sin(n)*43758.5453123); }
 float h2(vec2 p){ return fract(sin(dot(p, vec2(12.9898,78.233)))*43758.5453123); }
 void main(){
+  // Motion vs texture, the same split the CSS CRT layer makes: the glitch
+  // bands (15 Hz), grain (24 Hz) and the rolling bar are motion and go to
+  // zero under reduced motion; the scanlines, grille, curve, aberration and
+  // vignette are static texture and stay.
+  float motion = 1.0 - uReduced;
+  float glitch = uGlitch * motion;
   vec2 uv = vUv*2.0 - 1.0;
   vec2 off = abs(uv.yx)/vec2(6.0, 5.0);
   uv += uv*off*off*uCurve;
   uv = uv*0.5 + 0.5;
 
-  if (uGlitch > 0.001) {
+  if (glitch > 0.001) {
     float band = floor(uv.y*26.0);
     float r = h1(band*7.13 + floor(uTime*15.0)*3.77);
-    if (r > 0.80) uv.x += (r-0.9)*0.10*uGlitch;
+    if (r > 0.80) uv.x += (r-0.9)*0.10*glitch;
   }
   if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
     gl_FragColor = vec4(0.0,0.0,0.0,1.0); return;
@@ -260,8 +279,8 @@ void main(){
   col *= mix(vec3(1.0), grille, uScan*0.5);
 
   float roll = fract(uv.y - uTime*0.08);
-  col += vec3(0.09,0.12,0.06) * pow(max(0.0, 1.0-abs(roll-0.5)*2.0), 24.0) * uScan;
-  col += (h2(uv*vec2(uRes.x, uRes.y) + floor(uTime*24.0)) - 0.5) * uGrain*0.11;
+  col += vec3(0.09,0.12,0.06) * pow(max(0.0, 1.0-abs(roll-0.5)*2.0), 24.0) * uScan * motion;
+  col += (h2(uv*vec2(uRes.x, uRes.y) + floor(uTime*24.0)) - 0.5) * uGrain*0.11 * motion;
   vec2 d = uv-0.5;
   col *= 1.0 - dot(d,d)*0.78;
   gl_FragColor = vec4(col, 1.0);

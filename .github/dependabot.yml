@@ -1,0 +1,13 @@
+version: 2
+updates:
+  # Root package.json declares npm workspaces (packages/*, apps/*), so a
+  # single entry rooted at "/" covers the workspace packages as well.
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"

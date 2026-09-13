@@ -1,10 +1,12 @@
-import { useId, version as reactVersion } from "react";
+import { forwardRef, useId, version as reactVersion } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { Panel } from "../Panel/index.js";
 import { HazardRule } from "../HazardRule/index.js";
+import { Button } from "../Button/index.js";
 import { useFocusTrap } from "../../hooks/index.js";
 import { resolveColour } from "../../colour.js";
 import type { ToneProps } from "../../colour.js";
+import { mergeRefs } from "../../refs.js";
 import { inertAttr } from "./inert.js";
 
 // Resolved once: React cannot change major mid-session. See ./inert.ts for
@@ -34,6 +36,8 @@ export interface DrawerProps extends ToneProps {
   icon?: ReactNode;
   footer?: ReactNode;
   width?: number;
+  /** Accessible name for the close button. Default: `"Close details"`. */
+  closeLabel?: string;
   children?: ReactNode;
 }
 
@@ -45,17 +49,24 @@ export interface DrawerProps extends ToneProps {
  * When closed the subtree is `aria-hidden` and inert, so a screen reader never
  * wanders into offscreen content.
  */
-export function Drawer({
-  open, onClose, title, subtitle, tone, colour,
-  icon, footer, width = 296, children,
-}: DrawerProps) {
+export const Drawer = forwardRef<HTMLDivElement, DrawerProps>(function Drawer(
+  {
+    open, onClose, title, subtitle, tone, colour,
+    icon, footer, width = 296, closeLabel = "Close details", children,
+  },
+  ref,
+) {
   const trapRef = useFocusTrap<HTMLDivElement>(open, onClose);
   const titleId = useId();
   const accent = resolveColour({ tone, colour }, "var(--nx-fg-info)");
 
   return (
     <div
-      ref={trapRef}
+      // useFocusTrap needs its own handle on this node to find focusable
+      // descendants; the forwarded ref gives a consumer a second one. Both
+      // point at the same element, so they're merged into one callback ref
+      // rather than fighting over the single `ref` prop.
+      ref={mergeRefs(trapRef, ref)}
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
@@ -83,14 +94,13 @@ export function Drawer({
               </h2>
               {subtitle != null && <div className="nx-drawer__subtitle">{subtitle}</div>}
             </div>
-            <button
-              type="button"
-              className="nx-btn nx-drawer__close"
+            <Button
+              className="nx-drawer__close"
               onClick={onClose}
-              aria-label="Close details"
+              aria-label={closeLabel}
             >
               ✕
-            </button>
+            </Button>
           </div>
         </header>
 
@@ -102,4 +112,6 @@ export function Drawer({
       </Panel>
     </div>
   );
-}
+});
+
+Drawer.displayName = "Drawer";

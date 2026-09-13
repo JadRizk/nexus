@@ -32,6 +32,7 @@
     "build:styles": "npm run build:styles -w packages/react"
   },
   "devDependencies": {
+    "@arethetypeswrong/cli": "0.18.5",
     "@axe-core/playwright": "^4.13.0",
     "@changesets/cli": "^2.31.1",
     "@playwright/test": "^1.62.1",
