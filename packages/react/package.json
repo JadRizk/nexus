@@ -77,10 +77,10 @@
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.6",
     "@types/react": "^18.3.5",
-    "@types/react-dom": "^18.3.0",
+    "@types/react-dom": "^19.2.7",
     "jsdom": "^25.0.1",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "react-dom": "^19.2.8",
     "tsup": "^8.2.4",
     "typescript": "^5.5.4",
     "vitest": "^3.2.7"
