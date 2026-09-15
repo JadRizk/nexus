@@ -231,9 +231,12 @@
 
 /* Slides rather than mounting and unmounting, so the motion reads as one
    object moving instead of two objects swapping. It travels its own width plus
-   the gutter, which is what clears the edge completely. */
+   the gutter, which is what clears the edge completely — so the distance is
+   derived from the same two tokens that position it. The gutter used to be a
+   hardcoded 28px, which no longer matched the gutter once a consumer moved
+   --nx-drawer-inset. */
 .nx-drawer[data-open="0"] {
-  transform: translateX(calc(var(--nx-drawer-width, 296px) + 28px));
+  transform: translateX(calc(var(--nx-drawer-width, 296px) + var(--nx-drawer-inset, var(--nx-space-5))));
   opacity: 0;
   pointer-events: none;
 }
@@ -497,6 +500,10 @@
 
 /* ------------------------------------------------------------ SectionHeading */
 .nx-heading {
+  /* Explicit so `as="span"` lays out exactly like the default `as="div"`:
+     an inline box would drop the margin-bottom below and shift everything
+     under it by 4px. */
+  display: block;
   color: var(--nx-heading-fg, var(--nx-fg-accent));
   font-size: var(--nx-heading-size, var(--nx-text-2xs));
   letter-spacing: var(--nx-heading-tracking, var(--nx-track-wider));

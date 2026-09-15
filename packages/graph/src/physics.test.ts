@@ -62,6 +62,37 @@ describe("createPhysics", () => {
     expect(sim.pos[1]).toBeCloseTo(-45);
   });
 
+  describe("seed", () => {
+    const graph = {
+      nodes: Array.from({ length: 12 }, () => ({ charge: 1, mass: 1 })),
+      edges: [
+        { a: 0, b: 1, dist: 1, strength: 1 },
+        { a: 1, b: 2, dist: 1, strength: 1 },
+        { a: 3, b: 4, dist: 1, strength: 1 },
+      ],
+    };
+    const run = (seed?: number) => {
+      const sim = createPhysics(graph, seed === undefined ? {} : { seed });
+      for (let i = 0; i < 60; i++) sim.step();
+      return Array.from(sim.pos);
+    };
+
+    it("gives the same layout twice for the same seed", () => {
+      expect(run(1234)).toEqual(run(1234));
+    });
+
+    it("gives a different layout for a different seed", () => {
+      expect(run(1234)).not.toEqual(run(4321));
+    });
+
+    it("falls back to Math.random when no seed is given", () => {
+      // The unseeded path is the one every existing numerics test above runs
+      // through, so this only has to show it is still non-deterministic —
+      // i.e. that the PRNG swap did not quietly become the default.
+      expect(run()).not.toEqual(run());
+    });
+  });
+
   it("reheat un-settles a settled simulation", () => {
     const sim = createPhysics({ nodes: [{ charge: 1, mass: 1 }], edges: [] });
     sim.setParams({ repulsion: 0, linkDistance: 1, gravity: 0, damping: 0.5, cursorForce: 0 });

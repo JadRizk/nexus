@@ -23,6 +23,21 @@ describe("Button", () => {
     expect(screen.getByRole("button")).toHaveAttribute("data-active", "1");
   });
 
+  it("exposes its active state to assistive tech as aria-pressed", () => {
+    const { rerender } = render(<Button active>Isolate</Button>);
+    expect(screen.getByRole("button")).toHaveAttribute("aria-pressed", "true");
+    rerender(<Button active={false}>Isolate</Button>);
+    expect(screen.getByRole("button")).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("stays a plain button when active is not passed", () => {
+    // aria-pressed="false" on a button that is not a toggle announces "toggle
+    // button, not pressed" — a control the user can look for and never find.
+    // Only a button that was given the prop is a toggle.
+    render(<Button>Isolate</Button>);
+    expect(screen.getByRole("button")).not.toHaveAttribute("aria-pressed");
+  });
+
   it("forwards native button props, including disabled", () => {
     const onClick = vi.fn();
     render(<Button disabled onClick={onClick}>Isolate</Button>);

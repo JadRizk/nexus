@@ -128,6 +128,20 @@ export function Graph() {
 
 The canvas fills its parent, so the parent needs a definite height.
 
+### Props that must keep a stable reference
+
+`nodes`, `edges`, `nodeCategories` and `linkCategories` are compared by
+identity, and a new reference tears the whole WebGL scene down and rebuilds it
+— buffers, materials, render targets, the solver and its layout. Define them
+outside the component or wrap them in `useMemo`; the example above puts them at
+module scope for exactly this reason. Passing a literal inline (`nodes={[...]}`)
+remounts the scene on every render and the graph will appear to reset itself
+constantly.
+
+Everything else is safe to pass inline. `hiddenNodeCategories`,
+`hiddenLinkCategories` and the `physics` and `optics` objects are compared by
+content, so `hiddenNodeCategories={["note"]}` written in place costs nothing.
+
 ## Data model
 
 - **`GraphNode`**: `id`, `categoryId`, `label`, optional `state` (0 dormant,
@@ -142,6 +156,27 @@ The canvas fills its parent, so the parent needs a definite height.
 - **`LinkCategory`**: `color`, `width`, rest distance (`dist`, a multiplier of
   `physics.linkDistance`), `strength`, and optional `dash`, `arrow`, `flow`
   (packet direction and speed, negative reverses), `curve` and `jit`.
+
+### Colour space
+
+The category `color` values are read by Three.js's `Color`, which decodes a hex
+string from sRGB to linear-sRGB, and the CRT composite writes its result
+straight to the default framebuffer through a `RawShaderMaterial` — which is
+the one material type three does not add an output encode to. So the colour
+that reaches the screen is the **linear** value of your hex, displayed as
+though it were sRGB: `#C6F135` on the canvas is darker and more saturated than
+`#C6F135` in CSS beside it.
+
+This is deliberate for now — the palette was tuned by eye against the bloom and
+the grille, and "correcting" it would change every shipped screenshot. Two
+things follow if you are matching the canvas to surrounding UI:
+
+- Pick canvas colours by looking at the canvas, not by pasting a CSS token
+  value in and expecting a match.
+- If you need the two to agree exactly, set
+  `THREE.ColorManagement.enabled = false` before mounting, which makes `Color`
+  take the hex verbatim and skip the decode. It is a global in three, so it
+  affects everything else in your scene graph too.
 
 ## Props
 

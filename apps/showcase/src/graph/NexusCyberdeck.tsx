@@ -27,7 +27,7 @@ const DEFAULT_CFG = {
 };
 
 const DEFAULT_STATS: GraphStats = {
-  fps: 0, nodes: 0, edges: 0, drawnEdges: 0, frameMs: 0, settled: false, vertexAttribs: 0, webglVersion: 2,
+  fps: 0, nodes: 0, edges: 0, drawnEdges: 0, frameMs: 0, settled: false,
 };
 
 export default function NexusCyberdeck() {
@@ -126,7 +126,6 @@ export default function NexusCyberdeck() {
             <KeyValue style={{ gap: "var(--nx-space-2)" }} label="DRAWN" value={stats.drawnEdges} />
             <KeyValue style={{ gap: "var(--nx-space-2)" }} label="FRAME" value={stats.frameMs} />
             <KeyValue style={{ gap: "var(--nx-space-2)" }} label="SOLVER" value={<span style={{ color: stats.settled ? "var(--nx-fg-accent)" : "var(--nx-fg-warning)" }}>{stats.settled ? "LOCKED" : "COOLING"}</span>} />
-            <KeyValue style={{ gap: "var(--nx-space-2)" }} label="VTXATTR" value={<span style={{ color: stats.vertexAttribs >= 8 ? "var(--nx-fg-muted)" : "var(--nx-fg-critical)" }}>{stats.vertexAttribs}/7</span>} />
           </div>
 
           <div style={{ margin: "var(--nx-space-4) 0 var(--nx-space-3)" }}>

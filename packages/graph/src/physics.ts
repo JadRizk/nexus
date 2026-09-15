@@ -61,9 +61,43 @@ export function computeDegree(edges: ReadonlyArray<{ a: number; b: number }>, no
   return degree;
 }
 
-export function createPhysics(graph: PhysicsGraph): Physics {
+export interface PhysicsOptions {
+  /**
+   * Seeds the pseudo-random numbers the solver draws — the initial ring
+   * scatter, and the nudge that separates two nodes that land exactly on top
+   * of each other. The same seed and the same graph give byte-identical
+   * positions at every step, which is what makes a layout reproducible in a
+   * test or a screenshot.
+   *
+   * Omitted, the solver uses `Math.random` and every run differs. This is a
+   * PRNG swap and nothing more: the stepping numerics are untouched, so a
+   * seeded run is the same physics with a different starting scatter.
+   */
+  seed?: number;
+}
+
+/**
+ * mulberry32 — 32 bits of state, one multiply-xorshift round. Chosen for
+ * being short enough to read and verify in place; this seeds a layout, it is
+ * not a source of randomness anything depends on for secrecy or for
+ * statistical quality beyond "looks scattered".
+ */
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+export function createPhysics(graph: PhysicsGraph, options: PhysicsOptions = {}): Physics {
   const n = graph.nodes.length, m = graph.edges.length;
   const degree = computeDegree(graph.edges, n);
+  // Identity when no seed is given: same function, same call order, same
+  // numbers an unseeded solver has always produced.
+  const random = options.seed === undefined ? Math.random : mulberry32(options.seed);
 
   const pos = new Float32Array(n * 2), vel = new Float32Array(n * 2);
   const fx = new Float32Array(n), fy = new Float32Array(n);
@@ -76,8 +110,8 @@ export function createPhysics(graph: PhysicsGraph): Physics {
     const node = graph.nodes[i]!;
     charge[i] = node.charge; mass[i] = node.mass;
     const a = (i / n) * Math.PI * 10, r = 30 + Math.sqrt(i) * 9;
-    pos[i * 2] = Math.cos(a) * r + (Math.random() - 0.5) * 20;
-    pos[i * 2 + 1] = Math.sin(a) * r + (Math.random() - 0.5) * 20;
+    pos[i * 2] = Math.cos(a) * r + (random() - 0.5) * 20;
+    pos[i * 2 + 1] = Math.sin(a) * r + (random() - 0.5) * 20;
   }
   // Stiffness normalised by degree, or a 35-link hub diverges under Euler.
   for (let e = 0; e < m; e++) {
@@ -102,7 +136,7 @@ export function createPhysics(graph: PhysicsGraph): Physics {
       for (let j = i + 1; j < n; j++) {
         let dx = pos[j * 2]! - xi, dy = pos[j * 2 + 1]! - yi;
         let d2 = dx * dx + dy * dy;
-        if (d2 < 1e-3) { dx = Math.random() - 0.5; dy = Math.random() - 0.5; d2 = dx * dx + dy * dy + 1e-3; }
+        if (d2 < 1e-3) { dx = random() - 0.5; dy = random() - 0.5; d2 = dx * dx + dy * dy + 1e-3; }
         const f = (k * ci * charge[j]!) / (d2 * Math.sqrt(d2));
         const ax = dx * f, ay = dy * f;
         fx[i] -= ax; fy[i] -= ay; fx[j]! += ax; fy[j]! += ay;
@@ -112,7 +146,7 @@ export function createPhysics(graph: PhysicsGraph): Physics {
       const a = eA[e]!, b = eB[e]!;
       let dx = pos[b * 2]! - pos[a * 2]!, dy = pos[b * 2 + 1]! - pos[a * 2 + 1]!;
       let d = Math.sqrt(dx * dx + dy * dy);
-      if (d < 1e-4) { dx = Math.random() - 0.5; dy = Math.random() - 0.5; d = 1e-2; }
+      if (d < 1e-4) { dx = random() - 0.5; dy = random() - 0.5; d = 1e-2; }
       const f = ((d - eRest[e]! * P.linkDistance) / d) * eK[e]! * alpha;
       fx[a] += dx * f * eWA[e]!; fy[a] += dy * f * eWA[e]!;
       fx[b]! -= dx * f * eWB[e]!; fy[b]! -= dy * f * eWB[e]!;
