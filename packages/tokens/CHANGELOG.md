@@ -1,5 +1,57 @@
 # @nexus-cyberdeck/tokens
 
+## 4.0.0
+
+### Minor Changes
+
+- 65a5833: Two muted greys are lighter, and the contrast guard now runs on every opaque
+  background rather than only on the panel.
+
+  `--nx-grey-200` moves `#53624B` → `#57664F` and `--nx-grey-300` moves
+  `#6B7F61` → `#6F8465` in the `hud-aa` theme. Both cleared their floors against
+  `--nx-bg-surface` (3.01:1 and 4.52:1) but not against `--nx-bg-raised`, which
+  is lighter (2.83:1 and 4.25:1) — so disabled text and UI boundaries inside a
+  `Drawer` were below WCAG 1.4.3 and 1.4.11 where they were actually drawn. The
+  new values are 3.19:1 and 4.82:1 on the panel, 3.00:1 and 4.54:1 on raised.
+  The `hud` prototype theme is untouched; it declares no floors and still fails
+  AA by design.
+
+  This is visible if you depend on the exact hex of `--nx-fg-disabled`,
+  `--nx-border-strong` or the ramp primitives — in screenshot baselines, for
+  instance. The values in `contrast["hud-aa"]` move with them. Nothing was
+  renamed and no token was added or removed.
+
+  The guard behind those numbers also got stricter: `semantic.fg.*` is held to
+  the theme's declared text floor (4.5) instead of a hardcoded 3.0, and
+  `semantic.border.*` and the focus ring are held to its non-text floor (3.0).
+  `--nx-border-default` is exempt and says so in `tokens.json` — it is a
+  decorative hairline at 1.61:1, and `--nx-border-strong` is the role that
+  carries a control's boundary.
+
+- fcc16b9: `tokens.css` now declares `color-scheme: dark` on `:root`, so native controls
+  (scrollbars, `<select>`, form fields) render with the dark UA palette instead
+  of clashing with a light default — both shipped themes are dark-only. The
+  `Tone` union gained `"cat-lime"` and `"cat-violet"`, and `Surface` gained
+  `"hover"`, `"active"` and `"track"`: typed handles for semantic roles that
+  already existed in `tokens.json` and in the shipped CSS, but had no route
+  through `tone()`/`surface()` before now.
+
+### Patch Changes
+
+- 90f836b: Packages are named under the `@nexus-cyberdeck` scope. The `@nexus` scope on
+  npm belongs to the GraphQL Nexus project, so `@nexus/react` was never going to
+  be publishable; nothing had shipped under the old name, so no consumer has to
+  migrate.
+- 7b68784: The `.` export's `import` and `require` conditions each now carry their own
+  `types` entry (`index.d.ts` for ESM, `index.d.cts` for CJS) instead of sharing
+  one declaration file. A `require()` consumer under Node's `node16`/`node18`
+  module resolution previously got the ESM types applied to the CommonJS build,
+  which `arethetypeswrong` reports as "Masquerading as ESM"; nothing to do on
+  upgrade, but a TypeScript consumer on `require()` now resolves the correct
+  `.d.cts` file. `CHANGELOG.md` is also now included in the published tarball,
+  so `npm view <pkg> versions` and in-editor "what changed" links work without
+  visiting the repo.
+
 ## 3.0.0
 
 ### Patch Changes
