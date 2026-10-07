@@ -13,7 +13,7 @@ import { PageHeader, Spec, Row } from "../components/Spec.js";
 import { ITEMS } from "../data.js";
 
 export function OverlaysPage() {
-  const [drawer, setDrawer] = useState(true);
+  const [drawer, setDrawer] = useState(false);
   const [pal, setPal] = useState(false);
   const [picked, setPicked] = useState<PaletteItem>(ITEMS[3]!);
 

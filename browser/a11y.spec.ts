@@ -101,6 +101,7 @@ for (const [route, name] of COMPONENTS) {
 test.describe("overlays while open", () => {
   test("drawer", async ({ page }) => {
     await gotoPage(page, "overlays", "hud-aa");
+    await page.getByRole("button", { name: "Open drawer" }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
     const { violations } = await audit(page).analyze();
     expect(report(violations), report(violations)).toBe("");

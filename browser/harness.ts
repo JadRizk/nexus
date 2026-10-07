@@ -38,22 +38,16 @@ export async function gotoPage(
 ) {
   await page.goto("/");
 
-  // Theme and CRT are set from the Primitives page, not from wherever we are
-  // going. On Home the docked Drawer is `position: fixed` in the top-right and
-  // sits over the site header, so the theme and CRT buttons are underneath it
-  // and cannot be clicked at this viewport. Both controls live in the provider
-  // and persist across routes, so setting them somewhere unobstructed is
-  // equivalent — and avoids `force: true`, which would paper over exactly the
-  // kind of overlap a visual suite is supposed to notice.
-  await page.getByRole("button", { name: "Primitives", exact: true }).click();
-
+  // Theme and CRT live in the provider and persist across routes, so they are
+  // set once, from the header, before navigating to the route under test.
   const crtButton = banner(page).getByRole("button", { name: "CRT", exact: true });
   if ((await crtButton.getAttribute("aria-pressed")) === String(!crt)) await crtButton.click();
   await expect(crtButton).toHaveAttribute("aria-pressed", String(crt));
 
   await setTheme(page, theme);
 
-  if (route !== "primitives") {
+  // The app lands on Home; every other route is one nav click away.
+  if (route !== "home") {
     await page.getByRole("button", { name: NAV_LABEL[route], exact: true }).click();
   }
 
