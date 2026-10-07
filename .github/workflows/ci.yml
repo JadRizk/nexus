@@ -12,6 +12,7 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -152,6 +153,7 @@ jobs:
   # the same lockfile field, so a version bump can only go stale in one place.
   playwright-version:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
       version: ${{ steps.read.outputs.version }}
     steps:
@@ -168,6 +170,9 @@ jobs:
   browser:
     needs: playwright-version
     runs-on: ubuntu-latest
+    # A healthy run is ~2.5 minutes. Without a cap a hung Playwright step runs
+    # to GitHub's 360-minute default, on metered minutes.
+    timeout-minutes: 15
     container:
       image: mcr.microsoft.com/playwright:v${{ needs.playwright-version.outputs.version }}-noble
       # Chromium needs more than the default 64MB of shared memory.
