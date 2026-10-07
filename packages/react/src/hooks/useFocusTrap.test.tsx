@@ -100,7 +100,9 @@ describe("useFocusTrap", () => {
             <div ref={ref as RefObject<HTMLDivElement>} tabIndex={-1}>
               <button data-testid="first">first</button>
               {extra && (
-                <button data-testid="extra" onClick={() => setExtra(false)}>extra</button>
+                <button data-testid="extra" onClick={() => setExtra(false)}>
+                  extra
+                </button>
               )}
             </div>
           </div>
@@ -139,7 +141,9 @@ describe("useFocusTrap", () => {
         <div>
           <button data-testid="outside">outside</button>
           <div ref={outerRef as RefObject<HTMLDivElement>} tabIndex={-1}>
-            <button data-testid="outer-btn" onClick={() => setInner(true)}>open inner</button>
+            <button data-testid="outer-btn" onClick={() => setInner(true)}>
+              open inner
+            </button>
           </div>
           {inner && (
             <div ref={innerRef as RefObject<HTMLDivElement>} tabIndex={-1}>
@@ -177,7 +181,9 @@ describe("useFocusTrap", () => {
       });
       return (
         <div>
-          <button data-testid="opener" onClick={() => setOpen(true)}>open</button>
+          <button data-testid="opener" onClick={() => setOpen(true)}>
+            open
+          </button>
           {open && (
             <div ref={ref as RefObject<HTMLDivElement>} tabIndex={-1} data-testid="trap">
               <button data-testid="inner">inner</button>

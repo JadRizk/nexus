@@ -1,8 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { render } from "@testing-library/react";
+import { createRef } from "react";
 import { BlinkCursor } from "./BlinkCursor.js";
 
 describe("BlinkCursor", () => {
+  it("forwards a ref to the span", () => {
+    const ref = createRef<HTMLSpanElement>();
+    render(<BlinkCursor ref={ref} />);
+    expect(ref.current).toBeInstanceOf(HTMLSpanElement);
+    expect(ref.current).toHaveClass("nx-blink");
+  });
+
   it("is decorative and carries the class the capped animation is bound to", () => {
     // The 0.94Hz cap lives on the --nx-blink token and is applied through this
     // class. Losing the class silently removes the cap along with the blink.

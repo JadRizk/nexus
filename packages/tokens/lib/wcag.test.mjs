@@ -39,6 +39,17 @@ describe("luminance", () => {
     expect(luminance("#000000")).toBeCloseTo(0, 10);
   });
 
+  it("puts the transfer curve's knee where WCAG 2.2 puts it, at 0.04045", () => {
+    // 0.03928 (WCAG 2.0's text) and 0.04045 (WCAG 2.2's) only disagree for a
+    // channel between 10.0 and 10.3 out of 255, and no 8-bit channel lands
+    // there — so #0A is linear and #0B is on the curve under either number.
+    // Asserted so that using the current figure stays a deliberate choice
+    // rather than something a future copy-paste quietly reverts.
+    const linear = (v) => v / 255 / 12.92;
+    expect(luminance("#0A0A0A")).toBeCloseTo(linear(10), 12);
+    expect(luminance("#0B0B0B")).toBeCloseTo(((11 / 255 + 0.055) / 1.055) ** 2.4, 12);
+  });
+
   it("applies the sRGB transfer curve, not a linear one", () => {
     // Mid grey is ~21.6% luminance, not 50% — getting this wrong is the
     // classic contrast-maths bug and it inflates every dark-theme ratio.

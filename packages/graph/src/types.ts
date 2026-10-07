@@ -3,10 +3,10 @@ import type { CSSProperties } from "react";
 /* ============================================================================
    Public types for @nexus-cyberdeck/graph.
 
-   The original NexusCyberdeck.jsx hardcoded one taxonomy (ATLAS/TAG/UNRSLV/
-   SOURCE/AGENT/NODE, refs/cites/tagged/mentions/contradicts) directly into
-   the engine via module-global `NODE_TYPES`/`LINK_TYPES` lookup tables keyed
-   by a `.type` string. Everything here replaces that with a generic
+   The prototype this was extracted from hardcoded one taxonomy (ATLAS/TAG/
+   UNRSLV/SOURCE/AGENT/NODE, refs/cites/tagged/mentions/contradicts) directly
+   into the engine via module-global `NODE_TYPES`/`LINK_TYPES` lookup tables
+   keyed by a `.type` string. Everything here replaces that with a generic
    category system: nodes/edges carry a `categoryId`, and the caller supplies
    `nodeCategories`/`linkCategories` maps describing how each category looks
    and behaves. The showcase's ATLAS/TAG/etc. vocabulary becomes sample data
@@ -118,6 +118,13 @@ export interface GraphNodeSnapshot {
   }>;
 }
 
+/**
+ * Per-frame telemetry, sampled about twice a second. Everything here is about
+ * the graph being drawn, not about the driver drawing it: `vertexAttribs` and
+ * `webglVersion` used to be reported alongside, but they are constants of the
+ * host's GL context, never change over the canvas's life, and were only ever
+ * there as a leftover debugging aid from bringing the edge program up.
+ */
 export interface GraphStats {
   fps: number;
   nodes: number;
@@ -125,8 +132,6 @@ export interface GraphStats {
   drawnEdges: number;
   frameMs: number;
   settled: boolean;
-  vertexAttribs: number;
-  webglVersion: 1 | 2;
 }
 
 export interface GraphController {
@@ -158,8 +163,10 @@ export interface GraphCanvasProps {
   /** Fires when the user clicks a node (or clicks empty space, with `null`) — update `selectedId` in response. */
   onSelect?: (node: GraphNodeSnapshot | null) => void;
   onStats?: (stats: GraphStats) => void;
-  /** Called once if WebGL setup throws — the canvas renders nothing further after this. */
+  /** Called once if WebGL setup throws (including an invalid graph: an edge to an unknown node id, a duplicate node id, or a category id missing from the maps) or the WebGL context is lost — the canvas renders nothing further after this. */
   onFatal?: (message: string) => void;
+  /** Accessible name for the canvas, exposed via `role="img"`. The label pool and tooltip are `aria-hidden` — this is the one name assistive tech gets for the whole graph. */
+  ariaLabel?: string;
   className?: string;
   style?: CSSProperties;
 }

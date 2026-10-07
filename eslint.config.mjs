@@ -16,9 +16,22 @@ import prettier from "eslint-config-prettier";
 /** Primitive custom properties. Named here so the rule fails loudly when one
  *  is added to tokens.css without a semantic alias to reach it through. */
 const PRIMITIVES = [
-  "void", "panel", "raised",
-  "acid", "data", "lime", "sodium", "violet", "phosphor", "alarm",
-  "grey-100", "grey-200", "grey-300", "grey-400", "grey-500", "grey-600",
+  "void",
+  "panel",
+  "raised",
+  "acid",
+  "data",
+  "lime",
+  "sodium",
+  "violet",
+  "phosphor",
+  "alarm",
+  "grey-100",
+  "grey-200",
+  "grey-300",
+  "grey-400",
+  "grey-500",
+  "grey-600",
 ];
 
 const PRIMITIVE_RE = `var\\(\\s*--nx-(${PRIMITIVES.join("|")})\\b`;

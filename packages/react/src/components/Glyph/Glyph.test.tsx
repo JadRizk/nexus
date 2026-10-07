@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { render } from "@testing-library/react";
+import { createRef } from "react";
 import { GLYPH_SHAPES, Glyph } from "./Glyph.js";
 
 /* ============================================================================
@@ -57,5 +58,12 @@ describe("Glyph", () => {
     const circle = container.querySelector("circle")!;
     expect(circle).toHaveAttribute("fill", "none");
     expect(circle).toHaveAttribute("stroke-width", "2.1");
+  });
+
+  it("forwards a ref to the svg", () => {
+    const ref = createRef<SVGSVGElement>();
+    const { container } = render(<Glyph ref={ref} />);
+    expect(ref.current).toBeInstanceOf(SVGSVGElement);
+    expect(ref.current).toBe(container.querySelector("svg"));
   });
 });

@@ -1,11 +1,12 @@
-import { useId, version as reactVersion } from "react";
-import type { CSSProperties, ReactNode, RefObject } from "react";
+import { forwardRef, useId, version as reactVersion } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { Panel } from "../Panel/index.js";
 import { HazardRule } from "../HazardRule/index.js";
 import { Button } from "../Button/index.js";
 import { useFocusTrap } from "../../hooks/index.js";
 import { resolveColour } from "../../colour.js";
 import type { ToneProps } from "../../colour.js";
+import { mergeRefs } from "../../refs.js";
 import { inertAttr } from "./inert.js";
 
 // Resolved once: React cannot change major mid-session. See ./inert.ts for
@@ -18,7 +19,7 @@ const INERT_VALUE = inertAttr(reactVersion);
 // typed as boolean and widening it to string is simply wrong for their whole
 // codebase.
 const inertWhenClosed = (open: boolean): Record<string, boolean | string> =>
-  (open ? {} : { inert: INERT_VALUE });
+  open ? {} : { inert: INERT_VALUE };
 
 /* ============================================================================
    @nexus-cyberdeck/react — overlays
@@ -35,6 +36,8 @@ export interface DrawerProps extends ToneProps {
   icon?: ReactNode;
   footer?: ReactNode;
   width?: number;
+  /** Accessible name for the close button. Default: `"Close details"`. */
+  closeLabel?: string;
   children?: ReactNode;
 }
 
@@ -49,10 +52,22 @@ export interface DrawerProps extends ToneProps {
  * is `aria-hidden` and inert, so a screen reader never wanders into offscreen
  * content.
  */
-export function Drawer({
-  open, onClose, title, subtitle, tone, colour,
-  icon, footer, width = 296, children,
-}: DrawerProps) {
+export const Drawer = forwardRef<HTMLDivElement, DrawerProps>(function Drawer(
+  {
+    open,
+    onClose,
+    title,
+    subtitle,
+    tone,
+    colour,
+    icon,
+    footer,
+    width = 296,
+    closeLabel = "Close details",
+    children,
+  },
+  ref,
+) {
   const trapRef = useFocusTrap<HTMLDivElement>(open, onClose);
   const titleId = useId();
   const accent = resolveColour({ tone, colour }, "var(--nx-fg-info)");
@@ -74,14 +89,11 @@ export function Drawer({
         onMouseDown={(e) => e.preventDefault()}
       />
       <div
-        // @types/react 18's `RefObject<T>` already bakes `| null` into `current`,
-        // so a plain HTML element's `ref` prop wants `RefObject<T>` there; 19
-        // moved the `| null` onto the ref prop itself and made `RefObject<T>`
-        // exact, so it wants `RefObject<T | null>` instead. useFocusTrap returns
-        // the honest `RefObject<T | null>` for 19's sake (see its own comment),
-        // which 18's stricter generic-variance check then rejects here even
-        // though the underlying object is identical either way — hence the cast.
-        ref={trapRef as RefObject<HTMLDivElement>}
+        // useFocusTrap needs its own handle on this node to find focusable
+        // descendants; the forwarded ref gives a consumer a second one. Both
+        // point at the same element, so they're merged into one callback ref
+        // rather than fighting over the single `ref` prop.
+        ref={mergeRefs(trapRef, ref)}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -109,11 +121,7 @@ export function Drawer({
                 </h2>
                 {subtitle != null && <div className="nx-drawer__subtitle">{subtitle}</div>}
               </div>
-              <Button
-                className="nx-drawer__close"
-                onClick={onClose}
-                aria-label="Close details"
-              >
+              <Button className="nx-drawer__close" onClick={onClose} aria-label={closeLabel}>
                 ✕
               </Button>
             </div>
@@ -128,4 +136,6 @@ export function Drawer({
       </div>
     </>
   );
-}
+});
+
+Drawer.displayName = "Drawer";

@@ -20,11 +20,22 @@ export function parseHex(hex) {
   return [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16));
 }
 
-/** WCAG relative luminance. */
+/**
+ * WCAG relative luminance.
+ *
+ * The knee is 0.04045, the value WCAG 2.2 gives. Older copies of the formula
+ * (WCAG 2.0's original text, and most code copied from it) use 0.03928, which
+ * is where the linear segment and the power segment actually meet; 0.04045 is
+ * the sRGB specification's own rounded figure and is what the current
+ * normative text says. For 8-bit channels the choice is inert either way —
+ * the two only disagree for `c` in [0.03928, 0.04045], which is `v` in
+ * (10.0, 10.3), and there is no integer in there. It is changed here so the
+ * code reads as the spec reads rather than as the spec used to read.
+ */
 export function luminance(hex) {
   const [r, g, b] = parseHex(hex).map((v) => {
     const c = v / 255;
-    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
   });
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }

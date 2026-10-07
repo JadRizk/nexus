@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 import { chaosEnv, hashf, sampleKeys } from "./GlitchLab.jsx";
 
 describe("sampleKeys", () => {
-  const keys = [[0, 0], [0.5, 1], [1, 0]];
+  const keys = [
+    [0, 0],
+    [0.5, 1],
+    [1, 0],
+  ];
 
   it("clamps to the first key's value before the track starts", () => {
     expect(sampleKeys(keys, -1)).toBe(0);
@@ -22,11 +26,15 @@ describe("sampleKeys", () => {
   });
 
   it('a "step" key holds the previous value through its own boundary, then the next segment starts from the new one', () => {
-    const stepped = [[0, 0], [0.5, 1, "step"], [1, 0]];
-    expect(sampleKeys(stepped, 0.49)).toBe(0);              // still holding the pre-jump value
-    expect(sampleKeys(stepped, 0.5)).toBe(0);                // still holding, exactly at the boundary
-    expect(sampleKeys(stepped, 0.5001)).toBeCloseTo(1, 2);    // the instant after: now interpolating from the new value
-    expect(sampleKeys(stepped, 0.75)).toBeCloseTo(0.5);       // halfway through the un-stepped segment that follows
+    const stepped = [
+      [0, 0],
+      [0.5, 1, "step"],
+      [1, 0],
+    ];
+    expect(sampleKeys(stepped, 0.49)).toBe(0); // still holding the pre-jump value
+    expect(sampleKeys(stepped, 0.5)).toBe(0); // still holding, exactly at the boundary
+    expect(sampleKeys(stepped, 0.5001)).toBeCloseTo(1, 2); // the instant after: now interpolating from the new value
+    expect(sampleKeys(stepped, 0.75)).toBeCloseTo(0.5); // halfway through the un-stepped segment that follows
   });
 });
 
@@ -49,8 +57,8 @@ describe("chaosEnv", () => {
 
   it("is quantised to ~24Hz — two u values in the same 1/24 window agree", () => {
     // 0.10 and 0.11 both fall in floor(u*24) === 2
-    expect(Math.floor(0.10 * 24)).toBe(Math.floor(0.11 * 24));
-    expect(chaosEnv(0.10, 0.6, 5)).toBe(chaosEnv(0.11, 0.6, 5));
+    expect(Math.floor(0.1 * 24)).toBe(Math.floor(0.11 * 24));
+    expect(chaosEnv(0.1, 0.6, 5)).toBe(chaosEnv(0.11, 0.6, 5));
   });
 });
 

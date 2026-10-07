@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import type { HTMLAttributes } from "react";
 import { mergeClassName } from "../../className.js";
 import type { Corner } from "../../types.js";
@@ -9,11 +10,13 @@ export interface PanelProps extends HTMLAttributes<HTMLDivElement> {
   raised?: boolean;
 }
 
-export function Panel({
-  corners = ["tl", "br"], padded = true, raised = false, className = "", children, ...rest
-}: PanelProps) {
+export const Panel = forwardRef<HTMLDivElement, PanelProps>(function Panel(
+  { corners = ["tl", "br"], padded = true, raised = false, className = "", children, ...rest },
+  ref,
+) {
   return (
     <div
+      ref={ref}
       className={mergeClassName("nx-panel", className)}
       data-nx-corners={corners === "none" ? "none" : corners.join(" ")}
       data-nx-padded={padded ? "1" : "0"}
@@ -23,4 +26,6 @@ export function Panel({
       {children}
     </div>
   );
-}
+});
+
+Panel.displayName = "Panel";

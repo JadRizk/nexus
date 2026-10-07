@@ -1,8 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { createRef } from "react";
 import { MeterRow } from "./MeterRow.js";
 
 describe("MeterRow", () => {
+  it("forwards a ref to the row", () => {
+    const ref = createRef<HTMLDivElement>();
+    render(<MeterRow ref={ref} label="LINK" value={5} total={7} tone="info" />);
+    expect(ref.current).toBeInstanceOf(HTMLDivElement);
+    expect(ref.current).toBe(screen.getByRole("meter").parentElement);
+  });
+
   it("is a real meter with a composed label, not a decorative div", () => {
     render(<MeterRow label="LINK" value={5} total={7} tone="info" />);
     const meter = screen.getByRole("meter", { name: "LINK: 5 of 7" });

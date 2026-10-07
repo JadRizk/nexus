@@ -49,7 +49,9 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
   // throw the result away, and a ref mutated on that discarded pass keeps the
   // stale value. The point of the ref is unchanged — it lets Escape reach the
   // latest onDismiss without re-running (and so re-arming) the trap effect.
-  useEffect(() => { onDismissRef.current = onDismiss; });
+  useEffect(() => {
+    onDismissRef.current = onDismiss;
+  });
 
   useEffect(() => {
     if (!active) return undefined;
@@ -60,12 +62,13 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
     activeTraps.push(token);
 
     const SEL =
-      'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),' +
+      "a[href],button:not([disabled]),input:not([disabled]),select:not([disabled])," +
       'textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
     const focusables = (): HTMLElement[] =>
-      Array.from(node?.querySelectorAll<HTMLElement>(SEL) ?? [])
-        .filter((el) => el.offsetParent !== null);
+      Array.from(node?.querySelectorAll<HTMLElement>(SEL) ?? []).filter(
+        (el) => el.offsetParent !== null,
+      );
 
     // The element inside the trap that most recently held focus. That is
     // where focus goes back to when it escapes, rather than the first
@@ -77,7 +80,10 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
       if (activeTraps[activeTraps.length - 1] !== token) return;
       const target = e.target as HTMLElement | null;
       if (!node || !(target instanceof Element)) return;
-      if (node.contains(target)) { lastInside = target; return; }
+      if (node.contains(target)) {
+        lastInside = target;
+        return;
+      }
       const back = lastInside?.isConnected ? lastInside : (focusables()[0] ?? node);
       back.focus();
     };
@@ -95,7 +101,10 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
       }
       if (e.key !== "Tab") return;
       const list = focusables();
-      if (list.length === 0) { e.preventDefault(); return; }
+      if (list.length === 0) {
+        e.preventDefault();
+        return;
+      }
       const i = list.indexOf(document.activeElement as HTMLElement);
       if (e.shiftKey && i <= 0) {
         e.preventDefault();

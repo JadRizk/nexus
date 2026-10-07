@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { useState, version as reactVersion } from "react";
+import { createRef, useState, version as reactVersion } from "react";
 import { Drawer } from "./Drawer.js";
 import { inertAttr } from "./inert.js";
 
@@ -127,5 +127,23 @@ describe("Drawer", () => {
       await user.tab();
       expect(dialog).toContainElement(document.activeElement as HTMLElement);
     });
+  });
+
+  it("forwards a ref to the dialog node, alongside the internal focus trap", () => {
+    const ref = createRef<HTMLDivElement>();
+    render(<Drawer ref={ref} open onClose={() => {}} title="Inspector" />);
+    expect(ref.current).toBeInstanceOf(HTMLDivElement);
+    expect(ref.current).toBe(screen.getByRole("dialog"));
+  });
+
+  it('defaults the close button\'s accessible name to "Close details"', () => {
+    render(<DrawerHarness />);
+    expect(screen.getByRole("button", { name: "Close details" })).toBeInTheDocument();
+  });
+
+  it("takes closeLabel as the close button's accessible name", () => {
+    render(<Drawer open onClose={() => {}} title="Inspector" closeLabel="Dismiss inspector" />);
+    expect(screen.getByRole("button", { name: "Dismiss inspector" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Close details" })).not.toBeInTheDocument();
   });
 });
