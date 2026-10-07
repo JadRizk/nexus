@@ -300,33 +300,30 @@ function CommandPaletteInner({
   width = 520
 }, ref) {
   const [query, setQuery] = useState("");
-  const [cursor, setCursor] = useState(0);
+  const [requestedCursor, setRequestedCursor] = useState(0);
+  const [wasOpen, setWasOpen] = useState(open);
   const inputRef = useRef3(null);
   const listRef = useRef3(null);
   const trapRef = useFocusTrap(open, onClose);
   const listId = useId();
-  useEffect3(() => {
+  if (open !== wasOpen) {
+    setWasOpen(open);
     if (open) {
       setQuery("");
-      setCursor(0);
+      setRequestedCursor(0);
     }
-  }, [open]);
+  }
   useEffect3(() => {
     if (open) requestAnimationFrame(() => inputRef.current?.focus());
   }, [open]);
-  useEffect3(() => {
-    setCursor(0);
-  }, [query]);
   const hits = useMemo(() => rankItems(items, query), [items, query]);
+  const cursor = Math.min(requestedCursor, Math.max(0, hits.length - 1));
   const dialogLabel = label ?? placeholder;
   const announceResults = (count) => {
     if (typeof resultsLabel === "function") return resultsLabel(count);
     if (typeof resultsLabel === "string") return resultsLabel;
     return `${count} result${count === 1 ? "" : "s"}`;
   };
-  useEffect3(() => {
-    setCursor((c) => Math.min(c, Math.max(0, hits.length - 1)));
-  }, [hits.length]);
   useEffect3(() => {
     const el = listRef.current?.children[cursor];
     el?.scrollIntoView?.({ block: "nearest" });
@@ -357,7 +354,10 @@ function CommandPaletteInner({
         {
           ref: inputRef,
           value: query,
-          onChange: (e) => setQuery(e.target.value),
+          onChange: (e) => {
+            setQuery(e.target.value);
+            setRequestedCursor(0);
+          },
           placeholder,
           className: "nx-palette__input",
           role: "combobox",
@@ -369,16 +369,16 @@ function CommandPaletteInner({
           onKeyDown: (e) => {
             if (e.key === "ArrowDown") {
               e.preventDefault();
-              setCursor((c) => Math.min(hits.length - 1, c + 1));
+              setRequestedCursor(Math.min(hits.length - 1, cursor + 1));
             } else if (e.key === "ArrowUp") {
               e.preventDefault();
-              setCursor((c) => Math.max(0, c - 1));
+              setRequestedCursor(Math.max(0, cursor - 1));
             } else if (e.key === "Home") {
               e.preventDefault();
-              setCursor(0);
+              setRequestedCursor(0);
             } else if (e.key === "End") {
               e.preventDefault();
-              setCursor(Math.max(0, hits.length - 1));
+              setRequestedCursor(Math.max(0, hits.length - 1));
             } else if (e.key === "Enter" && active) {
               e.preventDefault();
               onSelect(active);
@@ -402,7 +402,7 @@ function CommandPaletteInner({
             role: "option",
             "aria-selected": i === cursor,
             className: "nx-palette__option",
-            onMouseEnter: () => setCursor(i),
+            onMouseEnter: () => setRequestedCursor(i),
             onMouseDown: (e) => {
               e.preventDefault();
               onSelect(it);
