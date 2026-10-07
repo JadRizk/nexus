@@ -5,7 +5,7 @@
    module load, same as before.
 
    `uReduced` (0 or 1) is the one departure from the prototype's GLSL: it
-   carries `prefers-reduced-motion` into the node, fade and composite
+   carries `prefers-reduced-motion` into the edge, node, fade and composite
    programs. It is a float rather than a bool so each effect can be scaled by
    `1.0 - uReduced` in place instead of forking the shader — the branches stay
    uniform across the whole draw, so there is no divergence cost.
@@ -110,7 +110,7 @@ void main(){
 export const EDGE_VS = `
 precision highp float;
 uniform mat4 modelViewMatrix, projectionMatrix;
-uniform float uPx, uWidth, uTime;
+uniform float uPx, uWidth, uTime, uReduced;
 
 // 7 attribute slots, 3 varyings. Ten of either is over the WebGL1 guaranteed
 // minimum (8), and a program that exceeds it fails to LINK — drawing nothing
@@ -154,7 +154,9 @@ void main(){
     w = max(uWidth, 1.6)*uPx*3.2*(1.0-k)*(1.0+iActive*0.5);
     head = 1.0;
   }
-  p += nn * sin(position.x*37.0 + uTime*11.0 + iSeed*40.0) * iJit * uPx * 1.6;
+  // The jitter is a travelling sine at 11 rad/s: pure motion, so it is scaled
+  // away under prefers-reduced-motion, leaving the edge on its true path.
+  p += nn * sin(position.x*37.0 + uTime*11.0 + iSeed*40.0) * iJit * uPx * 1.6 * (1.0 - uReduced);
 
   vCT = vec4(iColor, position.x);
   vA  = vec4(position.y, iSeed, iActive, iDash);

@@ -11,7 +11,7 @@ import { createRoot } from "react-dom/client";
 import type { Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GraphCanvas } from "./GraphCanvas.js";
-import { COMPOSITE_FS, FADE_FS, NODE_FS } from "./shaders.js";
+import { COMPOSITE_FS, EDGE_FS, EDGE_VS, FADE_FS, NODE_FS } from "./shaders.js";
 import type * as ThreeModule from "three";
 import type { LinkCategory, NodeCategory } from "./types.js";
 
@@ -19,6 +19,8 @@ type Uniforms = Record<string, { value: unknown }>;
 
 /** Every RawShaderMaterial built during a test, keyed by its fragment source. */
 const materials = new Map<string, { uniforms: Uniforms }>();
+/** Every mesh built during a test. */
+const meshes: ThreeModule.Mesh[] = [];
 
 vi.mock("three", async (importOriginal) => {
   const actual = await importOriginal<typeof ThreeModule>();
@@ -48,10 +50,17 @@ vi.mock("three", async (importOriginal) => {
         materials.set(params.fragmentShader, this as unknown as { uniforms: Uniforms });
     }
   }
+  class ObservedMesh extends actual.Mesh {
+    constructor(...args: ConstructorParameters<typeof actual.Mesh>) {
+      super(...args);
+      meshes.push(this);
+    }
+  }
   return {
     ...actual,
     WebGLRenderer: MockWebGLRenderer,
     RawShaderMaterial: ObservedRawShaderMaterial,
+    Mesh: ObservedMesh,
   };
 });
 
@@ -112,6 +121,7 @@ function tick() {
 
 beforeEach(() => {
   materials.clear();
+  meshes.length = 0;
   frame = null;
   now = 0;
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -165,6 +175,7 @@ function mount(query: FakeMediaQueryList | null) {
   if (!canvas) throw new Error("canvas did not mount");
   return {
     canvas,
+    edge: materials.get(EDGE_FS)!.uniforms,
     node: materials.get(NODE_FS)!.uniforms,
     fade: materials.get(FADE_FS)!.uniforms,
     comp: materials.get(COMPOSITE_FS)!.uniforms,
@@ -183,9 +194,10 @@ describe("GraphCanvas prefers-reduced-motion", () => {
   });
 
   it("zeroes the composite uniforms and flags the canvas when reduce is set at mount", () => {
-    const { canvas, node, fade, comp } = mount(new FakeMediaQueryList(true));
+    const { canvas, edge, node, fade, comp } = mount(new FakeMediaQueryList(true));
     tick();
     expect(canvas.dataset.nxReducedMotion).toBe("true");
+    expect(edge.uReduced!.value).toBe(1);
     expect(comp.uReduced!.value).toBe(1);
     expect(comp.uGlitch!.value).toBe(0);
     expect(node.uReduced!.value).toBe(1);
@@ -220,11 +232,30 @@ describe("GraphCanvas prefers-reduced-motion", () => {
   });
 });
 
+describe("bounding spheres", () => {
+  // three reads `boundingSphere` while projecting the scene to depth-sort,
+  // even for a mesh with frustumCulled = false, and computes it lazily if it
+  // is missing. From a 2-component `position` attribute that comes out NaN and
+  // logs an error on every boot. The renderer is mocked here, so do what it
+  // would: use the sphere if there is one, compute it if not.
+  it("leaves every mesh with a usable bounding sphere, so three never has to compute a NaN one", () => {
+    mount(new FakeMediaQueryList(false));
+
+    expect(meshes.length).toBeGreaterThanOrEqual(4);
+    for (const mesh of meshes) {
+      const geometry = mesh.geometry;
+      if (geometry.boundingSphere === null) geometry.computeBoundingSphere();
+      expect(Number.isNaN(geometry.boundingSphere!.radius)).toBe(false);
+    }
+  });
+});
+
 describe("shader sources", () => {
   // Structural guard on the GLSL: the uniform has to be declared and used in
   // every program that reads it, or the value the test above observes on the
   // JS side never reaches a pixel.
   it.each([
+    ["EDGE_VS", EDGE_VS],
     ["NODE_FS", NODE_FS],
     ["FADE_FS", FADE_FS],
     ["COMPOSITE_FS", COMPOSITE_FS],
