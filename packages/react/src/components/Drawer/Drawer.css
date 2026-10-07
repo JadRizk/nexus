@@ -1,5 +1,6 @@
 .nx-drawer {
   position: fixed;
+  z-index: var(--nx-z-drawer);
   top: var(--nx-drawer-inset, var(--nx-space-5));
   right: var(--nx-drawer-inset, var(--nx-space-5));
   bottom: var(--nx-drawer-inset, var(--nx-space-5));

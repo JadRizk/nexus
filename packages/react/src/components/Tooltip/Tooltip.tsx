@@ -8,15 +8,18 @@ export interface TooltipProps extends ToneProps {
   y: number;
   children: ReactNode;
   style?: CSSProperties;
+  /** Lets a subject reference this tooltip with aria-describedby. */
+  id?: string;
 }
 
 export const Tooltip = forwardRef<HTMLDivElement, TooltipProps>(function Tooltip(
-  { x, y, tone, colour, children, style },
+  { x, y, tone, colour, children, style, id },
   ref,
 ) {
   return (
     <div
       ref={ref}
+      id={id}
       role="tooltip"
       className="nx-tooltip"
       // Position follows a pointer and the accent follows the subject's

@@ -119,9 +119,9 @@ export function HomePage() {
               gap: "1px var(--nx-space-4)",
             }}
           >
-            <KeyValue label="TOKENS" value={String(__NX_TOKENS__)} />
+            <KeyValue label="TOKENS" value={<span data-nx-figure>{__NX_TOKENS__}</span>} />
             <KeyValue label="THEMES" value="2" />
-            <KeyValue label="COMPS" value={String(__NX_COMPONENTS__)} />
+            <KeyValue label="COMPS" value={<span data-nx-figure>{__NX_COMPONENTS__}</span>} />
             <KeyValue label="DEPS" value="0" />
           </div>
 
