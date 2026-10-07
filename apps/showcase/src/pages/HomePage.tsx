@@ -23,8 +23,8 @@ import { CLASSES, ITEMS, RELATIONS } from "../home-data.js";
 
 /* ============================================================================
    Home — the landing-page console
-   Three docked panels (console · legend · theme), a docked Drawer and a
-   command palette, all driven by the shared NexusProvider theme/CRT state so
+   Three docked panels (console · legend · theme), a Drawer opened from the
+   console and a command palette, all driven by the shared NexusProvider theme/CRT state so
    the site-wide header toggles and this page's own theme panel stay in sync.
    ========================================================================== */
 
@@ -33,7 +33,7 @@ type OpticsTab = "optics" | "solver";
 export function HomePage() {
   const { theme, setTheme, crt, setCrt } = useNexus();
   const [tab, setTab] = useState<OpticsTab>("optics");
-  const [drawer, setDrawer] = useState(true);
+  const [drawer, setDrawer] = useState(false);
   const [pal, setPal] = useState(false);
   const [scan, setScan] = useState(0.55);
   const [bloom, setBloom] = useState(0.85);

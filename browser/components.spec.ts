@@ -68,17 +68,22 @@ for (const theme of THEMES) {
 
 test.describe("overlays", () => {
   test("drawer", async ({ page }) => {
-    // The Overlays page mounts the drawer open, so this is its default state
-    // rather than something the test has to arrange.
     await gotoPage(page, "overlays", "hud-aa");
+    await page.getByRole("button", { name: "Open drawer" }).click();
     const drawer = page.getByRole("dialog");
     await expect(drawer).toBeVisible();
     await expect(drawer).toHaveScreenshot("drawer.png");
   });
 
   test("drawer closed is hidden from assistive tech and off-screen", async ({ page }) => {
+    // Mounted closed: that is the state the page loads in, and the one that
+    // must not leave anything reachable.
     await gotoPage(page, "overlays", "hud-aa");
-    await page.getByRole("button", { name: "Close drawer" }).click();
+    await expect(page.getByRole("dialog")).toBeHidden();
+
+    await page.getByRole("button", { name: "Open drawer" }).click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await page.getByRole("button", { name: "Close details" }).click();
     await expect(page.getByRole("dialog")).toBeHidden();
   });
 
