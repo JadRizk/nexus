@@ -34,7 +34,9 @@ describe("Legend", () => {
     // HTML, and a parser that acts on that moves the title out of the legend
     // — which takes the group's accessible name with it.
     const { container } = render(
-      <Legend groups={[{ title: "entity class", rows: <input type="checkbox" aria-label="ATLAS" /> }]} />,
+      <Legend
+        groups={[{ title: "entity class", rows: <input type="checkbox" aria-label="ATLAS" /> }]}
+      />,
     );
     const legend = container.querySelector("legend")!;
     expect(legend.querySelectorAll("div")).toHaveLength(0);

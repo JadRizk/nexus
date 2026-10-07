@@ -37,7 +37,10 @@ vi.mock("./physics.js", async (importOriginal) => {
       const sim = actual.createPhysics(graph);
       return {
         ...sim,
-        setParams: (p: ParamsPatch) => { setParamsCalls.push({ ...p }); sim.setParams(p); },
+        setParams: (p: ParamsPatch) => {
+          setParamsCalls.push({ ...p });
+          sim.setParams(p);
+        },
       };
     },
   };
@@ -52,28 +55,43 @@ vi.mock("three", async (importOriginal) => {
     autoClear = true;
     capabilities = { isWebGL2: true };
     teardown: string[] = [];
-    constructor() { renderers.push(this); }
-    setPixelRatio() { }
-    setClearColor() { }
-    setSize() { }
+    constructor() {
+      renderers.push(this);
+    }
+    setPixelRatio() {}
+    setClearColor() {}
+    setSize() {}
     getDrawingBufferSize(target: { set(x: number, y: number): void }) {
       target.set(300, 150);
       return target;
     }
-    setRenderTarget() { }
-    clear() { }
-    render() { }
+    setRenderTarget() {}
+    clear() {}
+    render() {}
     getContext() {
       return { MAX_VERTEX_ATTRIBS: 0x8869, getParameter: () => 16 };
     }
-    dispose() { this.teardown.push("dispose"); }
-    forceContextLoss() { this.teardown.push("forceContextLoss"); }
+    dispose() {
+      this.teardown.push("dispose");
+    }
+    forceContextLoss() {
+      this.teardown.push("forceContextLoss");
+    }
   }
   return { ...actual, WebGLRenderer: MockWebGLRenderer };
 });
 
 const nodeCategories: Record<string, NodeCategory> = {
-  atlas: { label: "ATLAS", shape: 0, color: "#9EFF3D", code: "ATL", size: 7, charge: 1, mass: 1, tier: 0 },
+  atlas: {
+    label: "ATLAS",
+    shape: 0,
+    color: "#9EFF3D",
+    code: "ATL",
+    size: 7,
+    charge: 1,
+    mass: 1,
+    tier: 0,
+  },
 };
 const linkCategories: Record<string, LinkCategory> = {
   refs: { label: "REFS", color: "#17E2E5", width: 1, dist: 1, strength: 0.5 },
@@ -93,11 +111,19 @@ beforeEach(() => {
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
   // jsdom ships none of these. The frame loop is deliberately never scheduled:
   // this test is about what reaches the solver at mount, not about rendering.
-  vi.stubGlobal("ResizeObserver", class { observe() { } unobserve() { } disconnect() { } });
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  );
   vi.stubGlobal("requestAnimationFrame", () => 0);
-  vi.stubGlobal("cancelAnimationFrame", () => { });
+  vi.stubGlobal("cancelAnimationFrame", () => {});
   vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
-    font: "", measureText: (t: string) => ({ width: t.length * 6 }),
+    font: "",
+    measureText: (t: string) => ({ width: t.length * 6 }),
   } as unknown as CanvasRenderingContext2D);
   container = document.createElement("div");
   document.body.appendChild(container);
@@ -136,7 +162,12 @@ describe("GraphCanvas physics prop", () => {
   it("forwards all six documented fields, defaulting the ones not passed", () => {
     mount({ gravity: 0.1 });
     expect(setParamsCalls[0]).toEqual({
-      repulsion: 900, linkDistance: 78, gravity: 0.1, damping: 0.62, cursorForce: 0, settle: 0,
+      repulsion: 900,
+      linkDistance: 78,
+      gravity: 0.1,
+      damping: 0.62,
+      cursorForce: 0,
+      settle: 0,
     });
   });
 
@@ -145,7 +176,12 @@ describe("GraphCanvas physics prop", () => {
     setParamsCalls.length = 0;
     mount({ gravity: 0.2, damping: 0.4 });
     expect(setParamsCalls[setParamsCalls.length - 1]).toEqual({
-      repulsion: 900, linkDistance: 78, gravity: 0.2, damping: 0.4, cursorForce: 0, settle: 0,
+      repulsion: 900,
+      linkDistance: 78,
+      gravity: 0.2,
+      damping: 0.4,
+      cursorForce: 0,
+      settle: 0,
     });
   });
 });
@@ -155,7 +191,7 @@ describe("GraphCanvas boot and teardown", () => {
   // onFatal; silenced so a passing run reads clean, and asserted on below.
   let consoleError: ReturnType<typeof vi.spyOn>;
   beforeEach(() => {
-    consoleError = vi.spyOn(console, "error").mockImplementation(() => { });
+    consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
   it("rejects an edge to an unknown node id before constructing a WebGLRenderer", () => {
@@ -163,22 +199,30 @@ describe("GraphCanvas boot and teardown", () => {
     mount(undefined, { edges: [{ a: "a", b: "zzz", categoryId: "refs" }], onFatal });
     expect(renderers).toHaveLength(0);
     expect(onFatal).toHaveBeenCalledTimes(1);
-    expect(onFatal.mock.calls[0]![0]).toBe('GraphCanvas: edges[0].b references unknown node id "zzz"');
+    expect(onFatal.mock.calls[0]![0]).toBe(
+      'GraphCanvas: edges[0].b references unknown node id "zzz"',
+    );
     expect(container.textContent).toContain("SYSTEM HALT");
     expect(container.querySelector("canvas")).toBeNull();
     expect(consoleError).toHaveBeenCalled();
   });
 
   it.each([
-    ["a duplicate node id",
+    [
+      "a duplicate node id",
       { nodes: [...nodes, { id: "a", categoryId: "atlas", label: "A again" }] },
-      'GraphCanvas: nodes[2] duplicates id "a"'],
-    ["a node category missing from nodeCategories",
+      'GraphCanvas: nodes[2] duplicates id "a"',
+    ],
+    [
+      "a node category missing from nodeCategories",
       { nodes: [{ id: "a", categoryId: "ghost", label: "A" }], edges: [] },
-      'GraphCanvas: nodes[0] has categoryId "ghost", which is not in nodeCategories'],
-    ["an edge category missing from linkCategories",
+      'GraphCanvas: nodes[0] has categoryId "ghost", which is not in nodeCategories',
+    ],
+    [
+      "an edge category missing from linkCategories",
       { edges: [{ a: "a", b: "b", categoryId: "ghost" }] },
-      'GraphCanvas: edges[0] has categoryId "ghost", which is not in linkCategories'],
+      'GraphCanvas: edges[0] has categoryId "ghost", which is not in linkCategories',
+    ],
   ] as const)("rejects %s with a clear message and no renderer", (_what, overrides, message) => {
     const onFatal = vi.fn();
     mount(undefined, { ...overrides, onFatal });
@@ -192,12 +236,15 @@ describe("GraphCanvas boot and teardown", () => {
     // tooltip all exist. Snapshot the label layer while it is still mounted;
     // the halt panel that replaces it afterwards would hide a leak.
     let labelLayer: Element | null = null;
-    vi.stubGlobal("ResizeObserver", class {
-      constructor() {
-        labelLayer = container.firstElementChild!.children[1]!;
-        throw new Error("no ResizeObserver here");
-      }
-    });
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor() {
+          labelLayer = container.firstElementChild!.children[1]!;
+          throw new Error("no ResizeObserver here");
+        }
+      },
+    );
     const onFatal = vi.fn();
     mount(undefined, { onFatal });
 
@@ -229,7 +276,9 @@ describe("GraphCanvas boot and teardown", () => {
     const canvas = renderers[0]!.domElement;
     expect(cancel).not.toHaveBeenCalled();
 
-    act(() => { canvas.dispatchEvent(new Event("webglcontextlost")); });
+    act(() => {
+      canvas.dispatchEvent(new Event("webglcontextlost"));
+    });
 
     expect(cancel).toHaveBeenCalledWith(7);
     expect(onFatal).toHaveBeenCalledTimes(1);

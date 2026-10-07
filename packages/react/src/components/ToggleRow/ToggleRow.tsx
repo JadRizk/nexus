@@ -15,17 +15,23 @@ export interface ToggleRowProps {
  * reachable by keyboard and announced by screen readers; `:focus-within` on
  * the label draws the ring.
  */
-export const ToggleRow = forwardRef<HTMLLabelElement, ToggleRowProps>(
-  function ToggleRow({ checked, onChange, icon, label, meta, style }, ref) {
-    return (
-      <label ref={ref} className="nx-row" data-checked={checked ? "1" : "0"} style={style}>
-        <input type="checkbox" className="nx-sr" checked={checked} onChange={(e) => onChange(e.target.checked)} />
-        {icon}
-        <span className="nx-row__label">{label}</span>
-        {meta != null && <span className="nx-row__meta">{meta}</span>}
-      </label>
-    );
-  },
-);
+export const ToggleRow = forwardRef<HTMLLabelElement, ToggleRowProps>(function ToggleRow(
+  { checked, onChange, icon, label, meta, style },
+  ref,
+) {
+  return (
+    <label ref={ref} className="nx-row" data-checked={checked ? "1" : "0"} style={style}>
+      <input
+        type="checkbox"
+        className="nx-sr"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+      />
+      {icon}
+      <span className="nx-row__label">{label}</span>
+      {meta != null && <span className="nx-row__meta">{meta}</span>}
+    </label>
+  );
+});
 
 ToggleRow.displayName = "ToggleRow";

@@ -19,7 +19,7 @@ const INERT_VALUE = inertAttr(reactVersion);
 // typed as boolean and widening it to string is simply wrong for their whole
 // codebase.
 const inertWhenClosed = (open: boolean): Record<string, boolean | string> =>
-  (open ? {} : { inert: INERT_VALUE });
+  open ? {} : { inert: INERT_VALUE };
 
 /* ============================================================================
    @nexus-cyberdeck/react — overlays
@@ -51,8 +51,17 @@ export interface DrawerProps extends ToneProps {
  */
 export const Drawer = forwardRef<HTMLDivElement, DrawerProps>(function Drawer(
   {
-    open, onClose, title, subtitle, tone, colour,
-    icon, footer, width = 296, closeLabel = "Close details", children,
+    open,
+    onClose,
+    title,
+    subtitle,
+    tone,
+    colour,
+    icon,
+    footer,
+    width = 296,
+    closeLabel = "Close details",
+    children,
   },
   ref,
 ) {
@@ -94,11 +103,7 @@ export const Drawer = forwardRef<HTMLDivElement, DrawerProps>(function Drawer(
               </h2>
               {subtitle != null && <div className="nx-drawer__subtitle">{subtitle}</div>}
             </div>
-            <Button
-              className="nx-drawer__close"
-              onClick={onClose}
-              aria-label={closeLabel}
-            >
+            <Button className="nx-drawer__close" onClick={onClose} aria-label={closeLabel}>
               ✕
             </Button>
           </div>

@@ -150,12 +150,12 @@ Every accessible name below an app localises has a prop rather than a
 hardcoded string, defaulted to the current English copy so existing output is
 unchanged:
 
-| Component        | Prop           | Names                          | Default                                         |
-| ----------------- | -------------- | ------------------------------- | ------------------------------------------------ |
-| `Drawer`          | `closeLabel`   | the close button                | `"Close details"`                                 |
-| `CommandPalette`  | `label`        | the dialog (separate from `placeholder`, which still names the input) | `placeholder` |
-| `CommandPalette`  | `resultsLabel` | the live-region result count | string or `(count) => string`, defaulting to `` `${count} result${count === 1 ? "" : "s"}` `` |
-| `TabStrip`        | `label`        | the tablist                     | `"View"`                                          |
+| Component        | Prop           | Names                                                                 | Default                                                                                       |
+| ---------------- | -------------- | --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `Drawer`         | `closeLabel`   | the close button                                                      | `"Close details"`                                                                             |
+| `CommandPalette` | `label`        | the dialog (separate from `placeholder`, which still names the input) | `placeholder`                                                                                 |
+| `CommandPalette` | `resultsLabel` | the live-region result count                                          | string or `(count) => string`, defaulting to `` `${count} result${count === 1 ? "" : "s"}` `` |
+| `TabStrip`       | `label`        | the tablist                                                           | `"View"`                                                                                      |
 
 ## Related
 

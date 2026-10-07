@@ -311,7 +311,9 @@ function assertFloors(table) {
 
 /* --------------------------------------------------------------- CSS output */
 
-const GENERATED = (from) => `/* ============================================================================
+const GENERATED = (
+  from,
+) => `/* ============================================================================
    GENERATED FILE — do not edit.
 
    Produced from ${from} by packages/tokens/build-tokens.mjs.
@@ -434,9 +436,10 @@ ${THEMES.filter((t) => t !== DEFAULT_THEME)
       if (isThemed(path)) continue; // emitted per theme below
       const name = path.split(".").pop();
       const value = resolveValue(path, DEFAULT_THEME);
-      const comment = isOpaqueHex(value) && !NOT_FOREGROUND.has(name)
-        ? `${ratio2(value, SURFACE).toFixed(2)}:1`
-        : null;
+      const comment =
+        isOpaqueHex(value) && !NOT_FOREGROUND.has(name)
+          ? `${ratio2(value, SURFACE).toFixed(2)}:1`
+          : null;
       entries.push([cssName(path), toCssValue(node, path), comment]);
     }
     if (!entries.length) continue;
@@ -454,7 +457,9 @@ ${THEMES.filter((t) => t !== DEFAULT_THEME)
       const head = declBlock(s.entries.slice(0, idx));
       out.push(head);
       out.push("");
-      out.push(`  /* ${alarm.$description.replace(/\s+/g, " ").replace(/(.{68}) /g, "$1\n     ")} */`);
+      out.push(
+        `  /* ${alarm.$description.replace(/\s+/g, " ").replace(/(.{68}) /g, "$1\n     ")} */`,
+      );
       out.push(declBlock(s.entries.slice(idx)));
     } else {
       out.push(declBlock(s.entries));
@@ -520,7 +525,15 @@ ${THEMES.filter((t) => t !== DEFAULT_THEME)
 
   /* ---- hand-authored base layer ---- */
   const base = readFileSync(src("base.css"), "utf8");
-  out.push(base.slice(base.indexOf("/* ============================================================================\n   BASE")).trimEnd());
+  out.push(
+    base
+      .slice(
+        base.indexOf(
+          "/* ============================================================================\n   BASE",
+        ),
+      )
+      .trimEnd(),
+  );
 
   return out.join("\n") + "\n";
 }
@@ -537,7 +550,10 @@ function buildTs(table) {
   }).join("\n");
 
   const floors = THEMES.filter((t) => tokens.theme[t].wcag)
-    .map((t) => `  "${t}": { text: ${tokens.theme[t].wcag.text}, nonText: ${tokens.theme[t].wcag.nonText} },`)
+    .map(
+      (t) =>
+        `  "${t}": { text: ${tokens.theme[t].wcag.text}, nonText: ${tokens.theme[t].wcag.nonText} },`,
+    )
     .join("\n");
 
   return `${GENERATED("src/tokens.json")}

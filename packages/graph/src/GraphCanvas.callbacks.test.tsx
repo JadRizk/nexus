@@ -22,27 +22,38 @@ vi.mock("three", async (importOriginal) => {
     domElement = document.createElement("canvas");
     autoClear = true;
     capabilities = { isWebGL2: true };
-    constructor() { rendererInstances++; }
-    setPixelRatio() { }
-    setClearColor() { }
-    setSize() { }
+    constructor() {
+      rendererInstances++;
+    }
+    setPixelRatio() {}
+    setClearColor() {}
+    setSize() {}
     getDrawingBufferSize(target: { set(x: number, y: number): void }) {
       target.set(300, 150);
       return target;
     }
-    setRenderTarget() { }
-    clear() { }
-    render() { }
+    setRenderTarget() {}
+    clear() {}
+    render() {}
     getContext() {
       return { MAX_VERTEX_ATTRIBS: 0x8869, getParameter: () => 16 };
     }
-    dispose() { }
+    dispose() {}
   }
   return { ...actual, WebGLRenderer: MockWebGLRenderer };
 });
 
 const nodeCategories: Record<string, NodeCategory> = {
-  atlas: { label: "ATLAS", shape: 0, color: "#9EFF3D", code: "ATL", size: 7, charge: 1, mass: 1, tier: 0 },
+  atlas: {
+    label: "ATLAS",
+    shape: 0,
+    color: "#9EFF3D",
+    code: "ATL",
+    size: 7,
+    charge: 1,
+    mass: 1,
+    tier: 0,
+  },
 };
 const linkCategories: Record<string, LinkCategory> = {
   refs: { label: "REFS", color: "#17E2E5", width: 1, dist: 1, strength: 0.5 },
@@ -61,11 +72,19 @@ beforeEach(() => {
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
   // jsdom ships none of these. The frame loop is deliberately never scheduled:
   // these tests are about what a DOM event reaches, not about rendering.
-  vi.stubGlobal("ResizeObserver", class { observe() { } unobserve() { } disconnect() { } });
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  );
   vi.stubGlobal("requestAnimationFrame", () => 0);
-  vi.stubGlobal("cancelAnimationFrame", () => { });
+  vi.stubGlobal("cancelAnimationFrame", () => {});
   vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
-    font: "", measureText: (t: string) => ({ width: t.length * 6 }),
+    font: "",
+    measureText: (t: string) => ({ width: t.length * 6 }),
   } as unknown as CanvasRenderingContext2D);
   container = document.createElement("div");
   document.body.appendChild(container);

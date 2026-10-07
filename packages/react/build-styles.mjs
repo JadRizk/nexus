@@ -64,13 +64,10 @@ for (const file of readdirSync(stylesDir).sort()) {
   parts.push([file.replace(/\.css$/, ""), stripped]);
 }
 
-const out =
-  HEADER +
-  parts.map(([name, body]) => `\n${banner(name)}\n${body}\n`).join("") ;
+const out = HEADER + parts.map(([name, body]) => `\n${banner(name)}\n${body}\n`).join("");
 
 writeFileSync(join(src, "styles.css"), out);
 
 console.log(
-  `styles.css assembled from ${parts.length} parts — ` +
-    parts.map(([n]) => n).join(", "),
+  `styles.css assembled from ${parts.length} parts — ` + parts.map(([n]) => n).join(", "),
 );

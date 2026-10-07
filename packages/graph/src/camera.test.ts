@@ -9,7 +9,12 @@ describe("crtFwd / crtInv", () => {
 
   it("crtInv approximately inverts crtFwd for interior points", () => {
     const c = 0.6;
-    for (const [nx, ny] of [[0.3, 0.2], [-0.5, 0.4], [0.1, -0.7], [0, 0]] as const) {
+    for (const [nx, ny] of [
+      [0.3, 0.2],
+      [-0.5, 0.4],
+      [0.1, -0.7],
+      [0, 0],
+    ] as const) {
       const [wx, wy] = crtFwd(nx, ny, c);
       const [rx, ry] = crtInv(wx, wy, c);
       expect(Math.abs(rx - nx)).toBeLessThan(0.01);
@@ -22,8 +27,14 @@ describe("project / unproject", () => {
   const viewport = { width: 800, height: 600, curve: 0.5 };
 
   it("round-trips world -> screen -> world", () => {
-    const zoom = 1.4, cx = 12, cy = -8;
-    for (const [wx, wy] of [[0, 0], [50, -30], [-120, 90]] as const) {
+    const zoom = 1.4,
+      cx = 12,
+      cy = -8;
+    for (const [wx, wy] of [
+      [0, 0],
+      [50, -30],
+      [-120, 90],
+    ] as const) {
       const [sx, sy] = project(wx, wy, zoom, cx, cy, viewport);
       const back = unproject(sx, sy, zoom, cx, cy, viewport);
       expect(Math.abs(back.x - wx)).toBeLessThan(0.5);

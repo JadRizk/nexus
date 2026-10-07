@@ -3,8 +3,16 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
-  border, contrast, duration, space, surface, text,
-  themeMeetsAA, tone, track, WCAG,
+  border,
+  contrast,
+  duration,
+  space,
+  surface,
+  text,
+  themeMeetsAA,
+  tone,
+  track,
+  WCAG,
 } from "./index.js";
 // Internal, deliberately not re-exported from index.js — see roles.ts.
 import { BORDER_TONES, SURFACES, TONES } from "./roles.js";
@@ -73,12 +81,12 @@ describe("typed unions stay in sync with tokens.json", () => {
     expect([...BORDER_TONES].sort()).toEqual(rolesOf(tokens.semantic.border));
   });
 
-  it("tone(\"cat-lime\") and tone(\"cat-violet\") typecheck and resolve", () => {
+  it('tone("cat-lime") and tone("cat-violet") typecheck and resolve', () => {
     expect(tone("cat-lime")).toBe("var(--nx-fg-cat-lime)");
     expect(tone("cat-violet")).toBe("var(--nx-fg-cat-violet)");
   });
 
-  it("surface(\"hover\"), surface(\"active\") and surface(\"track\") typecheck and resolve", () => {
+  it('surface("hover"), surface("active") and surface("track") typecheck and resolve', () => {
     expect(surface("hover")).toBe("var(--nx-bg-hover)");
     expect(surface("active")).toBe("var(--nx-bg-active)");
     expect(surface("track")).toBe("var(--nx-bg-track)");
