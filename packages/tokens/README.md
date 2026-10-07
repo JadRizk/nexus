@@ -1,8 +1,5 @@
 # @nexus-cyberdeck/tokens
 
-This stylesheet styles `html` and `body` directly because the system expects
-to own the viewport, not share the page with other content.
-
 Design tokens for the [Nexus Cyberdeck](https://github.com/JadRizk/nexus#readme)
 HUD design system. Plain CSS custom properties with zero runtime dependencies,
 plus typed accessors for TypeScript, plus contrast ratios computed at build
@@ -53,6 +50,9 @@ import "@nexus-cyberdeck/tokens/crt.css"; // optional scanline layer
 
 `.nx-root` applies the canvas background, phosphor foreground, monospace
 family and base type size, and hosts the global focus ring.
+
+`tokens.css` also styles `html` and `body` directly, because the system expects
+to own the viewport rather than share the page with other content.
 
 ### Typed handles
 
