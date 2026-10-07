@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { createRef } from "react";
+import { createRef, useState } from "react";
 import { CommandPalette } from "./CommandPalette.js";
 
 const ITEMS = [
@@ -17,12 +17,10 @@ const ITEMS = [
 describe("CommandPalette", () => {
   it("clamps cursor to a valid index if results repopulate for the same query", () => {
     // The specific regression this guards: End on an empty result list used
-    // to leave cursor at -1 with nothing to re-clamp it, so if `items`
-    // changed to a non-empty set for the same query (an async results
-    // update), Enter would silently do nothing until an arrow key was
-    // pressed. `hits` becomes empty here not through the query — the effect
-    // under test only fires on `hits.length` changing, not on `query`
-    // changing (that path is already covered elsewhere).
+    // to leave the cursor at -1, so if `items` changed to a non-empty set for
+    // the same query (an async results update), Enter would silently do
+    // nothing until an arrow key was pressed. The cursor is clamped on read
+    // now, so it cannot be left out of range however the list changes size.
     const onSelect = vi.fn();
     const { rerender } = render(
       <CommandPalette open onClose={() => {}} items={[]} onSelect={onSelect} />,
@@ -132,5 +130,139 @@ describe("CommandPalette", () => {
     render(<CommandPalette ref={ref} open onClose={() => {}} items={ITEMS} onSelect={() => {}} />);
     expect(ref.current).toBeInstanceOf(HTMLDivElement);
     expect(ref.current).toBe(screen.getByRole("dialog"));
+  });
+
+  it("closes when the scrim is pressed, but not when the dialog is", () => {
+    const onClose = vi.fn();
+    render(<CommandPalette open onClose={onClose} items={ITEMS} onSelect={() => {}} />);
+
+    fireEvent.mouseDown(screen.getByRole("dialog"));
+    expect(onClose).not.toHaveBeenCalled();
+
+    fireEvent.mouseDown(screen.getByRole("dialog").parentElement!);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("moves the active option to the one the pointer enters", () => {
+    render(<CommandPalette open onClose={() => {}} items={ITEMS} onSelect={() => {}} />);
+    const options = screen.getAllByRole("option");
+
+    fireEvent.mouseEnter(options[2]!);
+    expect(screen.getByRole("combobox")).toHaveAttribute("aria-activedescendant", options[2]!.id);
+    expect(options[2]).toHaveAttribute("aria-selected", "true");
+    expect(options[0]).toHaveAttribute("aria-selected", "false");
+  });
+
+  it("selects an option on mousedown without letting the input lose focus", () => {
+    const onSelect = vi.fn();
+    render(<CommandPalette open onClose={() => {}} items={ITEMS} onSelect={onSelect} />);
+
+    // preventDefault on mousedown is what keeps focus on the input; fireEvent
+    // returns false when the default was prevented.
+    const notPrevented = fireEvent.mouseDown(screen.getAllByRole("option")[1]!);
+    expect(notPrevented).toBe(false);
+    expect(onSelect).toHaveBeenCalledWith(ITEMS[1]);
+  });
+
+  it("clamps ArrowUp at the first option and ArrowDown at the last", () => {
+    render(<CommandPalette open onClose={() => {}} items={ITEMS} onSelect={() => {}} />);
+    const input = screen.getByRole("combobox");
+    const options = screen.getAllByRole("option");
+
+    fireEvent.keyDown(input, { key: "ArrowUp" });
+    expect(input).toHaveAttribute("aria-activedescendant", options[0]!.id);
+
+    for (let i = 0; i < 5; i++) fireEvent.keyDown(input, { key: "ArrowDown" });
+    expect(input).toHaveAttribute("aria-activedescendant", options[2]!.id);
+  });
+
+  it("jumps to the first option on Home and the last on End", () => {
+    render(<CommandPalette open onClose={() => {}} items={ITEMS} onSelect={() => {}} />);
+    const input = screen.getByRole("combobox");
+    const options = screen.getAllByRole("option");
+
+    fireEvent.keyDown(input, { key: "End" });
+    expect(input).toHaveAttribute("aria-activedescendant", options[2]!.id);
+    fireEvent.keyDown(input, { key: "Home" });
+    expect(input).toHaveAttribute("aria-activedescendant", options[0]!.id);
+  });
+
+  it("does nothing on Enter when there are no results", () => {
+    const onSelect = vi.fn();
+    render(<CommandPalette open onClose={() => {}} items={ITEMS} onSelect={onSelect} />);
+    const input = screen.getByRole("combobox");
+
+    fireEvent.change(input, { target: { value: "zzz" } });
+    expect(input).not.toHaveAttribute("aria-activedescendant");
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it("returns to the first option whenever the query changes", () => {
+    render(<CommandPalette open onClose={() => {}} items={ITEMS} onSelect={() => {}} />);
+    const input = screen.getByRole("combobox");
+
+    fireEvent.keyDown(input, { key: "End" });
+    fireEvent.change(input, { target: { value: "atlas" } });
+    expect(input).toHaveAttribute("aria-activedescendant", screen.getAllByRole("option")[0]!.id);
+  });
+
+  it("clears the query and the cursor each time it reopens", () => {
+    function Harness() {
+      const [open, setOpen] = useState(true);
+      return (
+        <>
+          <button onClick={() => setOpen((o) => !o)}>toggle</button>
+          <CommandPalette open={open} onClose={() => {}} items={ITEMS} onSelect={() => {}} />
+        </>
+      );
+    }
+    render(<Harness />);
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "atlas" } });
+    fireEvent.keyDown(screen.getByRole("combobox"), { key: "ArrowDown" });
+
+    fireEvent.click(screen.getByText("toggle"));
+    fireEvent.click(screen.getByText("toggle"));
+
+    const input = screen.getByRole("combobox");
+    expect(input).toHaveValue("");
+    expect(screen.getAllByRole("option")).toHaveLength(3);
+    expect(input).toHaveAttribute("aria-activedescendant", screen.getAllByRole("option")[0]!.id);
+  });
+
+  it("renders renderMeta, the category code and the glyph on each row", () => {
+    const items = [
+      { id: 1, label: "atlas_prime", code: "ATL", shape: "hexagon" as const, colour: "#C6F135" },
+      { id: 2, label: "vector_null" },
+    ];
+    const { container } = render(
+      <CommandPalette
+        open
+        onClose={() => {}}
+        items={items}
+        onSelect={() => {}}
+        renderMeta={(it) => <span data-testid="meta">{`#${it.id}`}</span>}
+      />,
+    );
+    expect(screen.getAllByTestId("meta").map((n) => n.textContent)).toEqual(["#1", "#2"]);
+    expect(screen.getByText("ATL")).toHaveStyle({ "--nx-palette-code-fg": "#C6F135" });
+    // Only the row that declares a shape draws a glyph.
+    expect(container.querySelectorAll(".nx-palette__option svg")).toHaveLength(1);
+  });
+
+  it("takes width and a custom hint row", () => {
+    render(
+      <CommandPalette
+        open
+        onClose={() => {}}
+        items={ITEMS}
+        onSelect={() => {}}
+        width={400}
+        hint={[["TAB", "NEXT"]]}
+      />,
+    );
+    expect(screen.getByRole("dialog")).toHaveStyle({ "--nx-palette-width": "400px" });
+    expect(screen.getByText("TAB NEXT")).toBeInTheDocument();
+    expect(screen.queryByText("ESC CLOSE")).not.toBeInTheDocument();
   });
 });

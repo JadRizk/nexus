@@ -58,26 +58,39 @@ function CommandPaletteInner<T extends PaletteItem = PaletteItem>(
   ref: ForwardedRef<HTMLDivElement>,
 ) {
   const [query, setQuery] = useState("");
-  const [cursor, setCursor] = useState(0);
+  // What the last key or pointer move asked for. It is never read directly:
+  // `cursor` below clamps it to the current results, so it cannot go stale
+  // when `items` or the query changes the size of the list under it.
+  const [requestedCursor, setRequestedCursor] = useState(0);
+  const [wasOpen, setWasOpen] = useState(open);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const trapRef = useFocusTrap<HTMLDivElement>(open, onClose);
   const listId = useId();
 
-  useEffect(() => {
+  // Each opening starts from an empty query and the first result. Adjusted
+  // during render rather than in an effect: the palette stays mounted while
+  // closed, so the state has to be reset on the open edge, and doing it here
+  // means the reopened palette never paints a frame of the previous search.
+  if (open !== wasOpen) {
+    setWasOpen(open);
     if (open) {
       setQuery("");
-      setCursor(0);
+      setRequestedCursor(0);
     }
-  }, [open]);
+  }
+
   useEffect(() => {
     if (open) requestAnimationFrame(() => inputRef.current?.focus());
   }, [open]);
-  useEffect(() => {
-    setCursor(0);
-  }, [query]);
 
   const hits = useMemo(() => rankItems(items, query), [items, query]);
+  // Clamped on read, so a result set that shrinks or grows under the same
+  // query — `items` is a plain prop with no contract that it stay stable while
+  // the palette is open — can never leave the cursor past the end of the list
+  // and `active` undefined. With no results it is 0, never -1, so Enter has
+  // nothing to select until results appear and then selects the first.
+  const cursor = Math.min(requestedCursor, Math.max(0, hits.length - 1));
 
   // The dialog's own accessible name, distinct from the input's placeholder.
   // Falls back to `placeholder` so the default reads exactly as it did
@@ -89,16 +102,6 @@ function CommandPaletteInner<T extends PaletteItem = PaletteItem>(
     if (typeof resultsLabel === "string") return resultsLabel;
     return `${count} result${count === 1 ? "" : "s"}`;
   };
-
-  // Re-clamps whenever the result set itself changes size, not only when the
-  // query does. `items` is a plain prop with no contract that it stay stable
-  // while the palette is open — a consumer streaming in async results can
-  // shrink or grow `hits` for the same query — and without this, a cursor
-  // set by an earlier keystroke could point past the new end of the list, so
-  // `active` silently goes undefined and Enter stops doing anything.
-  useEffect(() => {
-    setCursor((c) => Math.min(c, Math.max(0, hits.length - 1)));
-  }, [hits.length]);
 
   // keep the active option in view without moving focus off the input
   useEffect(() => {
@@ -141,7 +144,10 @@ function CommandPaletteInner<T extends PaletteItem = PaletteItem>(
             <input
               ref={inputRef}
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setRequestedCursor(0);
+              }}
               placeholder={placeholder}
               className="nx-palette__input"
               role="combobox"
@@ -153,22 +159,16 @@ function CommandPaletteInner<T extends PaletteItem = PaletteItem>(
               onKeyDown={(e) => {
                 if (e.key === "ArrowDown") {
                   e.preventDefault();
-                  setCursor((c) => Math.min(hits.length - 1, c + 1));
+                  setRequestedCursor(Math.min(hits.length - 1, cursor + 1));
                 } else if (e.key === "ArrowUp") {
                   e.preventDefault();
-                  setCursor((c) => Math.max(0, c - 1));
+                  setRequestedCursor(Math.max(0, cursor - 1));
                 } else if (e.key === "Home") {
                   e.preventDefault();
-                  setCursor(0);
-                }
-                // Clamped to 0, not hits.length - 1, when hits is empty: an
-                // unclamped -1 would stick if results later populate for the
-                // same query (items updating async doesn't reset cursor, only
-                // a query change does), leaving Enter silently inert until an
-                // arrow key was pressed to pull cursor back into range.
-                else if (e.key === "End") {
+                  setRequestedCursor(0);
+                } else if (e.key === "End") {
                   e.preventDefault();
-                  setCursor(Math.max(0, hits.length - 1));
+                  setRequestedCursor(Math.max(0, hits.length - 1));
                 } else if (e.key === "Enter" && active) {
                   e.preventDefault();
                   onSelect(active);
@@ -209,7 +209,7 @@ function CommandPaletteInner<T extends PaletteItem = PaletteItem>(
                 role="option"
                 aria-selected={i === cursor}
                 className="nx-palette__option"
-                onMouseEnter={() => setCursor(i)}
+                onMouseEnter={() => setRequestedCursor(i)}
                 onMouseDown={(e) => {
                   e.preventDefault();
                   onSelect(it);

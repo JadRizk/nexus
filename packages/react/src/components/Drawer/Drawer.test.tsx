@@ -162,4 +162,56 @@ describe("Drawer", () => {
     expect(rule, ".nx-drawer rule not found in Drawer.css").toBeTruthy();
     expect(rule).toMatch(/z-index\s*:\s*var\(--nx-z-drawer\)\s*;/);
   });
+
+  it("renders the icon, subtitle and footer when given, and omits their wrappers when not", () => {
+    const { rerender, container } = render(
+      <Drawer open onClose={() => {}} title="Inspector">
+        body
+      </Drawer>,
+    );
+    expect(container.querySelector(".nx-drawer__icon")).toBeNull();
+    expect(container.querySelector(".nx-drawer__subtitle")).toBeNull();
+    expect(container.querySelector(".nx-drawer__footer")).toBeNull();
+
+    rerender(
+      <Drawer
+        open
+        onClose={() => {}}
+        title="Inspector"
+        icon={<i data-testid="icon" />}
+        subtitle="0x493B"
+        footer={<button>Isolate</button>}
+      >
+        body
+      </Drawer>,
+    );
+    expect(container.querySelector(".nx-drawer__icon")).toContainElement(
+      screen.getByTestId("icon"),
+    );
+    expect(container.querySelector(".nx-drawer__subtitle")).toHaveTextContent("0x493B");
+    expect(container.querySelector(".nx-drawer__footer")).toContainElement(
+      screen.getByRole("button", { name: "Isolate" }),
+    );
+  });
+
+  it("keeps a subtitle of 0 — only null and undefined are treated as absent", () => {
+    const { container } = render(<Drawer open onClose={() => {}} title="Inspector" subtitle={0} />);
+    expect(container.querySelector(".nx-drawer__subtitle")).toHaveTextContent("0");
+  });
+
+  it("takes width, and tone or colour for the title accent", () => {
+    const { rerender } = render(
+      <Drawer open onClose={() => {}} title="Inspector" width={400} tone="warning" />,
+    );
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveStyle({ "--nx-drawer-width": "400px" });
+    expect(screen.getByRole("heading", { name: "Inspector" })).toHaveStyle({
+      "--nx-drawer-accent": "var(--nx-fg-warning)",
+    });
+
+    rerender(<Drawer open onClose={() => {}} title="Inspector" colour="#C6F135" />);
+    expect(screen.getByRole("heading", { name: "Inspector" })).toHaveStyle({
+      "--nx-drawer-accent": "#C6F135",
+    });
+  });
 });
