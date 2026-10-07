@@ -41,16 +41,36 @@ function TabStripInner<V extends string = string>(
       className="nx-tabstrip"
       style={style}
       onKeyDown={(e) => {
-        if (e.key === "ArrowRight") { e.preventDefault(); move(1); }
-        else if (e.key === "ArrowLeft") { e.preventDefault(); move(-1); }
-        else if (e.key === "Home") { e.preventDefault(); const t = tabs[0]; if (t) { onChange(t.value); refs.current[0]?.focus(); } }
-        else if (e.key === "End") { e.preventDefault(); const n = tabs.length - 1; const t = tabs[n]; if (t) { onChange(t.value); refs.current[n]?.focus(); } }
+        if (e.key === "ArrowRight") {
+          e.preventDefault();
+          move(1);
+        } else if (e.key === "ArrowLeft") {
+          e.preventDefault();
+          move(-1);
+        } else if (e.key === "Home") {
+          e.preventDefault();
+          const t = tabs[0];
+          if (t) {
+            onChange(t.value);
+            refs.current[0]?.focus();
+          }
+        } else if (e.key === "End") {
+          e.preventDefault();
+          const n = tabs.length - 1;
+          const t = tabs[n];
+          if (t) {
+            onChange(t.value);
+            refs.current[n]?.focus();
+          }
+        }
       }}
     >
       {tabs.map((t, k) => (
         <button
           key={t.value}
-          ref={(el) => { refs.current[k] = el; }}
+          ref={(el) => {
+            refs.current[k] = el;
+          }}
           role="tab"
           type="button"
           aria-selected={t.value === value}

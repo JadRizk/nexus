@@ -26,32 +26,46 @@ vi.mock("three", async (importOriginal) => {
     domElement = document.createElement("canvas");
     autoClear = true;
     capabilities = { isWebGL2: true };
-    setPixelRatio() { }
-    setClearColor() { }
-    setSize() { }
+    setPixelRatio() {}
+    setClearColor() {}
+    setSize() {}
     getDrawingBufferSize(target: { set(x: number, y: number): void }) {
       target.set(300, 150);
       return target;
     }
-    setRenderTarget() { }
-    clear() { }
-    render() { }
+    setRenderTarget() {}
+    clear() {}
+    render() {}
     getContext() {
       return { MAX_VERTEX_ATTRIBS: 0x8869, getParameter: () => 16 };
     }
-    dispose() { }
+    dispose() {}
   }
   class ObservedRawShaderMaterial extends actual.RawShaderMaterial {
     constructor(params: ConstructorParameters<typeof actual.RawShaderMaterial>[0]) {
       super(params);
-      if (params?.fragmentShader) materials.set(params.fragmentShader, this as unknown as { uniforms: Uniforms });
+      if (params?.fragmentShader)
+        materials.set(params.fragmentShader, this as unknown as { uniforms: Uniforms });
     }
   }
-  return { ...actual, WebGLRenderer: MockWebGLRenderer, RawShaderMaterial: ObservedRawShaderMaterial };
+  return {
+    ...actual,
+    WebGLRenderer: MockWebGLRenderer,
+    RawShaderMaterial: ObservedRawShaderMaterial,
+  };
 });
 
 const nodeCategories: Record<string, NodeCategory> = {
-  atlas: { label: "ATLAS", shape: 0, color: "#9EFF3D", code: "ATL", size: 7, charge: 1, mass: 1, tier: 0 },
+  atlas: {
+    label: "ATLAS",
+    shape: 0,
+    color: "#9EFF3D",
+    code: "ATL",
+    size: 7,
+    charge: 1,
+    mass: 1,
+    tier: 0,
+  },
 };
 const linkCategories: Record<string, LinkCategory> = {
   refs: { label: "REFS", color: "#17E2E5", width: 1, dist: 1, strength: 0.5 },
@@ -66,10 +80,18 @@ const edges = [{ a: "a", b: "b", categoryId: "refs" }];
 class FakeMediaQueryList {
   matches: boolean;
   private listeners = new Set<(ev: { matches: boolean }) => void>();
-  constructor(matches: boolean) { this.matches = matches; }
-  addEventListener(_type: "change", fn: (ev: { matches: boolean }) => void) { this.listeners.add(fn); }
-  removeEventListener(_type: "change", fn: (ev: { matches: boolean }) => void) { this.listeners.delete(fn); }
-  get listenerCount() { return this.listeners.size; }
+  constructor(matches: boolean) {
+    this.matches = matches;
+  }
+  addEventListener(_type: "change", fn: (ev: { matches: boolean }) => void) {
+    this.listeners.add(fn);
+  }
+  removeEventListener(_type: "change", fn: (ev: { matches: boolean }) => void) {
+    this.listeners.delete(fn);
+  }
+  get listenerCount() {
+    return this.listeners.size;
+  }
   flip(matches: boolean) {
     this.matches = matches;
     this.listeners.forEach((fn) => fn({ matches }));
@@ -93,11 +115,22 @@ beforeEach(() => {
   frame = null;
   now = 0;
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
-  vi.stubGlobal("ResizeObserver", class { observe() { } unobserve() { } disconnect() { } });
-  vi.stubGlobal("requestAnimationFrame", (fn: (now: number) => void) => { frame = fn; return 1; });
-  vi.stubGlobal("cancelAnimationFrame", () => { });
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  );
+  vi.stubGlobal("requestAnimationFrame", (fn: (now: number) => void) => {
+    frame = fn;
+    return 1;
+  });
+  vi.stubGlobal("cancelAnimationFrame", () => {});
   vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
-    font: "", measureText: (t: string) => ({ width: t.length * 6 }),
+    font: "",
+    measureText: (t: string) => ({ width: t.length * 6 }),
   } as unknown as CanvasRenderingContext2D);
   container = document.createElement("div");
   document.body.appendChild(container);
@@ -112,10 +145,11 @@ afterEach(() => {
 });
 
 function mount(query: FakeMediaQueryList | null) {
-  if (query) vi.stubGlobal("matchMedia", (q: string) => {
-    expect(q).toBe("(prefers-reduced-motion: reduce)");
-    return query;
-  });
+  if (query)
+    vi.stubGlobal("matchMedia", (q: string) => {
+      expect(q).toBe("(prefers-reduced-motion: reduce)");
+      return query;
+    });
   act(() => {
     root.render(
       <GraphCanvas
@@ -190,10 +224,12 @@ describe("shader sources", () => {
   // Structural guard on the GLSL: the uniform has to be declared and used in
   // every program that reads it, or the value the test above observes on the
   // JS side never reaches a pixel.
-  it.each([["NODE_FS", NODE_FS], ["FADE_FS", FADE_FS], ["COMPOSITE_FS", COMPOSITE_FS]])(
-    "%s declares and reads uReduced", (_name, src) => {
-      expect(src).toMatch(/uniform float[^;]*\buReduced\b/);
-      expect(src.split("uReduced").length).toBeGreaterThan(2);
-    },
-  );
+  it.each([
+    ["NODE_FS", NODE_FS],
+    ["FADE_FS", FADE_FS],
+    ["COMPOSITE_FS", COMPOSITE_FS],
+  ])("%s declares and reads uReduced", (_name, src) => {
+    expect(src).toMatch(/uniform float[^;]*\buReduced\b/);
+    expect(src.split("uReduced").length).toBeGreaterThan(2);
+  });
 });

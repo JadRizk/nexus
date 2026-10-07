@@ -29,7 +29,13 @@ type RGB = [number, number, number];
 
 function parseHex(hex: string): RGB {
   const h = hex.trim().replace(/^#/, "");
-  const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+  const full =
+    h.length === 3
+      ? h
+          .split("")
+          .map((c) => c + c)
+          .join("")
+      : h;
   if (!/^[0-9a-fA-F]{6}$/.test(full)) throw new Error(`Not an opaque hex colour: "${hex}"`);
   return [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16)) as RGB;
 }
@@ -43,7 +49,8 @@ function luminance([r, g, b]: RGB): number {
 }
 
 function contrastRatio(a: RGB, b: RGB): number {
-  const la = luminance(a), lb = luminance(b);
+  const la = luminance(a),
+    lb = luminance(b);
   const [hi, lo] = la > lb ? [la, lb] : [lb, la];
   return (hi + 0.05) / (lo + 0.05);
 }
@@ -57,16 +64,25 @@ function compositeOver(fg: RGB, alpha: number, bg: RGB): RGB {
 // this file measures the colour that actually ships: reinstating #6B7F61 (or
 // any other value) in showTip() fails the floor assertion below instead of
 // leaving a test that only ever checked its own constants.
-const SOURCE = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "GraphCanvas.tsx"), "utf8");
+const SOURCE = readFileSync(
+  join(dirname(fileURLToPath(import.meta.url)), "GraphCanvas.tsx"),
+  "utf8",
+);
 
 function literal(re: RegExp, what: string): string {
   const m = SOURCE.match(re);
-  if (!m?.[1]) throw new Error(`${what} not found in GraphCanvas.tsx — the regex in this test needs updating alongside showTip()`);
+  if (!m?.[1])
+    throw new Error(
+      `${what} not found in GraphCanvas.tsx — the regex in this test needs updating alongside showTip()`,
+    );
   return m[1];
 }
 
 /** The secondary span's colour, from showTip(): `b.style.color = "#xxxxxx"`. */
-const SHIPPED_TEXT_HEX = literal(/b\.style\.color = "(#[0-9a-fA-F]{6})"/, "tooltip secondary-text colour");
+const SHIPPED_TEXT_HEX = literal(
+  /b\.style\.color = "(#[0-9a-fA-F]{6})"/,
+  "tooltip secondary-text colour",
+);
 
 // The tooltip panel's own background, from `tip.style.cssText`: rgba(r,g,b,a).
 const [, r, g, b, a] = literal(
@@ -113,7 +129,9 @@ describe("tooltip secondary-text contrast (composited, worst case)", () => {
   });
 
   it("also clears the floor over the flat dark canvas background", () => {
-    expect(tooltipTextContrast(SHIPPED_TEXT_HEX, CANVAS_DARK_GROUND)).toBeGreaterThanOrEqual(AA_TEXT_FLOOR);
+    expect(tooltipTextContrast(SHIPPED_TEXT_HEX, CANVAS_DARK_GROUND)).toBeGreaterThanOrEqual(
+      AA_TEXT_FLOOR,
+    );
   });
 
   it("regression: fails if the PR #14 colour (#6B7F61) is reinstated", () => {

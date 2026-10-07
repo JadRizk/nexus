@@ -22,7 +22,7 @@ longer defines it does not fail to compile, it renders the wrong colour. Exact
 pinning plus lockstep versioning is what makes that mismatch unreachable.
 
 **`@nexus-cyberdeck/graph` is versioned independently.** The README is explicit that the
-graph is a product built *with* the design system rather than part of it, so it
+graph is a product built _with_ the design system rather than part of it, so it
 should not be dragged through a major version because a token was renamed.
 
 **`privatePackages: { version: true }`** — the packages are still

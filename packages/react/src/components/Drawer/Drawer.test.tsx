@@ -75,7 +75,7 @@ describe("Drawer", () => {
     expect(ref.current).toBe(screen.getByRole("dialog"));
   });
 
-  it("defaults the close button's accessible name to \"Close details\"", () => {
+  it('defaults the close button\'s accessible name to "Close details"', () => {
     render(<DrawerHarness />);
     expect(screen.getByRole("button", { name: "Close details" })).toBeInTheDocument();
   });

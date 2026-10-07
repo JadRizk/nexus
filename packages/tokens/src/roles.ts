@@ -23,8 +23,17 @@
  * fails that test rather than silently having no typed handle.
  */
 export const TONES = [
-  "default", "muted", "subtle", "tertiary", "disabled",
-  "accent", "info", "warning", "critical", "cat-lime", "cat-violet",
+  "default",
+  "muted",
+  "subtle",
+  "tertiary",
+  "disabled",
+  "accent",
+  "info",
+  "warning",
+  "critical",
+  "cat-lime",
+  "cat-violet",
 ] as const;
 
 /** Background roles. See TONES for why this is an array, not a bare union. */

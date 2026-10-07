@@ -10,26 +10,29 @@ export interface TooltipProps extends ToneProps {
   style?: CSSProperties;
 }
 
-export const Tooltip = forwardRef<HTMLDivElement, TooltipProps>(
-  function Tooltip({ x, y, tone, colour, children, style }, ref) {
-    return (
-      <div
-        ref={ref}
-        role="tooltip"
-        className="nx-tooltip"
-        // Position follows a pointer and the accent follows the subject's
-        // category: both are only knowable at render.
-        style={{
+export const Tooltip = forwardRef<HTMLDivElement, TooltipProps>(function Tooltip(
+  { x, y, tone, colour, children, style },
+  ref,
+) {
+  return (
+    <div
+      ref={ref}
+      role="tooltip"
+      className="nx-tooltip"
+      // Position follows a pointer and the accent follows the subject's
+      // category: both are only knowable at render.
+      style={
+        {
           left: x,
           top: y,
           "--nx-tooltip-accent": resolveColour({ tone, colour }, "var(--nx-fg-info)"),
           ...style,
-        } as CSSProperties}
-      >
-        {children}
-      </div>
-    );
-  },
-);
+        } as CSSProperties
+      }
+    >
+      {children}
+    </div>
+  );
+});
 
 Tooltip.displayName = "Tooltip";

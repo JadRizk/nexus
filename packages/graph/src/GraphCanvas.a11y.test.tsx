@@ -16,7 +16,16 @@ import type { LinkCategory, NodeCategory } from "./types.js";
    by the browser/axe suite (out of reach here — see PR notes). */
 
 const nodeCategories: Record<string, NodeCategory> = {
-  topic: { label: "TOPIC", code: "TOP", tier: 0, shape: 0, color: "#fff", size: 1, charge: 1, mass: 1 },
+  topic: {
+    label: "TOPIC",
+    code: "TOP",
+    tier: 0,
+    shape: 0,
+    color: "#fff",
+    size: 1,
+    charge: 1,
+    mass: 1,
+  },
 };
 const linkCategories: Record<string, LinkCategory> = {};
 

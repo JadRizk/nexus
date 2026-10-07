@@ -11,7 +11,10 @@ export interface NexusContextValue {
 }
 
 const Ctx = createContext<NexusContextValue>({
-  theme: "hud-aa", crt: true, setTheme: () => {}, setCrt: () => {},
+  theme: "hud-aa",
+  crt: true,
+  setTheme: () => {},
+  setCrt: () => {},
 });
 
 export const useNexus = (): NexusContextValue => useContext(Ctx);
@@ -32,29 +35,27 @@ export interface NexusProviderProps extends HTMLAttributes<HTMLDivElement> {
  * uncontrolled by design — it is not also driven by its props — so it
  * never needs an `onThemeChange` callback to stay in sync with a parent.
  */
-export const NexusProvider = forwardRef<HTMLDivElement, NexusProviderProps>(
-  function NexusProvider({ theme = "hud-aa", crt = true, children, className = "", ...rest }, ref) {
-    const [t, setTheme] = useState<NexusTheme>(theme);
-    const [c, setCrt] = useState<boolean>(crt);
-    const value = useMemo(
-      () => ({ theme: t, crt: c, setTheme, setCrt }),
-      [t, c],
-    );
+export const NexusProvider = forwardRef<HTMLDivElement, NexusProviderProps>(function NexusProvider(
+  { theme = "hud-aa", crt = true, children, className = "", ...rest },
+  ref,
+) {
+  const [t, setTheme] = useState<NexusTheme>(theme);
+  const [c, setCrt] = useState<boolean>(crt);
+  const value = useMemo(() => ({ theme: t, crt: c, setTheme, setCrt }), [t, c]);
 
-    return (
-      <Ctx.Provider value={value}>
-        <div
-          ref={ref}
-          className={mergeClassName("nx-root", className)}
-          data-nx-theme={t}
-          data-nx-crt={c ? "on" : "off"}
-          {...rest}
-        >
-          {children}
-        </div>
-      </Ctx.Provider>
-    );
-  },
-);
+  return (
+    <Ctx.Provider value={value}>
+      <div
+        ref={ref}
+        className={mergeClassName("nx-root", className)}
+        data-nx-theme={t}
+        data-nx-crt={c ? "on" : "off"}
+        {...rest}
+      >
+        {children}
+      </div>
+    </Ctx.Provider>
+  );
+});
 
 NexusProvider.displayName = "NexusProvider";

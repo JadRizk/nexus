@@ -49,11 +49,9 @@ function buildCss(mutate) {
   const tokens = structuredClone(source);
   mutate(tokens);
   writeFileSync(sourceFile, JSON.stringify(tokens));
-  execFileSync(
-    "node",
-    [script, "--source", sourceFile, "--dry-run", "--print-css-to", cssFile],
-    { stdio: ["ignore", "ignore", "inherit"] },
-  );
+  execFileSync("node", [script, "--source", sourceFile, "--dry-run", "--print-css-to", cssFile], {
+    stdio: ["ignore", "ignore", "inherit"],
+  });
   return readFileSync(cssFile, "utf8");
 }
 
@@ -149,8 +147,14 @@ describe("the accessibility guard", () => {
 
   it("holds the boundary and focus-ring roles to the non-text floor", () => {
     for (const [role, mutate] of [
-      ["semantic.border.strong", (t) => (t.semantic.border.strong.$value = "{primitive.ramp.grey-100}")],
-      ["semantic.focus.focus-ring", (t) => (t.semantic.focus["focus-ring"].$value = "{primitive.ramp.grey-100}")],
+      [
+        "semantic.border.strong",
+        (t) => (t.semantic.border.strong.$value = "{primitive.ramp.grey-100}"),
+      ],
+      [
+        "semantic.focus.focus-ring",
+        (t) => (t.semantic.focus["focus-ring"].$value = "{primitive.ramp.grey-100}"),
+      ],
     ]) {
       const r = build(mutate);
       expect(r.ok, `${role} pointed at the decorative hairline should fail`).toBe(false);

@@ -1,6 +1,12 @@
 import { useState } from "react";
 import {
-  Button, CommandPalette, Drawer, Glyph, MeterRow, SectionHeading, useHotkey,
+  Button,
+  CommandPalette,
+  Drawer,
+  Glyph,
+  MeterRow,
+  SectionHeading,
+  useHotkey,
 } from "@nexus-cyberdeck/react";
 import type { PaletteItem } from "@nexus-cyberdeck/react";
 import { PageHeader, Spec, Row } from "../components/Spec.js";
@@ -11,11 +17,22 @@ export function OverlaysPage() {
   const [pal, setPal] = useState(false);
   const [picked, setPicked] = useState<PaletteItem>(ITEMS[3]!);
 
-  useHotkey("mod+k", () => setPal((v) => { const next = !v; if (next) setDrawer(false); return next; }));
-  useHotkey("/", () => { setPal(true); setDrawer(false); });
+  useHotkey("mod+k", () =>
+    setPal((v) => {
+      const next = !v;
+      if (next) setDrawer(false);
+      return next;
+    }),
+  );
+  useHotkey("/", () => {
+    setPal(true);
+    setDrawer(false);
+  });
 
   const hex = (((Number(picked.id) * 2654435761) >>> 0) % 65536)
-    .toString(16).toUpperCase().padStart(4, "0");
+    .toString(16)
+    .toUpperCase()
+    .padStart(4, "0");
 
   return (
     <>
@@ -41,7 +58,13 @@ export function OverlaysPage() {
           <Button active={drawer} onClick={() => setDrawer((d) => !d)}>
             {drawer ? "Close drawer" : "Open drawer"}
           </Button>
-          <span style={{ color: "var(--nx-fg-tertiary)", fontSize: "var(--nx-text-2xs)", letterSpacing: "var(--nx-track-wide)" }}>
+          <span
+            style={{
+              color: "var(--nx-fg-tertiary)",
+              fontSize: "var(--nx-text-2xs)",
+              letterSpacing: "var(--nx-track-wide)",
+            }}
+          >
             Tab into it, then press Escape — focus returns to this button.
           </span>
         </Row>
@@ -60,12 +83,27 @@ export function OverlaysPage() {
       >
         <Row>
           <Button onClick={() => setPal(true)}>Open palette</Button>
-          <span style={{ color: "var(--nx-fg-tertiary)", fontSize: "var(--nx-text-2xs)", letterSpacing: "var(--nx-track-wide)" }}>
+          <span
+            style={{
+              color: "var(--nx-fg-tertiary)",
+              fontSize: "var(--nx-text-2xs)",
+              letterSpacing: "var(--nx-track-wide)",
+            }}
+          >
             ⌘K / Ctrl+K anywhere · try “tid”, “#”, “atl”, or leave it empty
           </span>
         </Row>
-        <div style={{ marginTop: "var(--nx-space-4)", color: "var(--nx-fg-subtle)", fontSize: "var(--nx-text-2xs)", lineHeight: 1.8 }}>
-          <div>selected → <span style={{ color: picked.colour }}>{picked.label}</span> · 0x{hex}</div>
+        <div
+          style={{
+            marginTop: "var(--nx-space-4)",
+            color: "var(--nx-fg-subtle)",
+            fontSize: "var(--nx-text-2xs)",
+            lineHeight: 1.8,
+          }}
+        >
+          <div>
+            selected → <span style={{ color: picked.colour }}>{picked.label}</span> · 0x{hex}
+          </div>
         </div>
       </Spec>
 
@@ -91,7 +129,14 @@ export function OverlaysPage() {
         subtitle={`0x${hex} · ${picked.code}`}
         colour={picked.colour}
         icon={<Glyph shape={picked.shape} colour={picked.colour} />}
-        footer={<><Button style={{ flex: 1 }}>Focus</Button><Button style={{ flex: 1 }} active>Isolate</Button></>}
+        footer={
+          <>
+            <Button style={{ flex: 1 }}>Focus</Button>
+            <Button style={{ flex: 1 }} active>
+              Isolate
+            </Button>
+          </>
+        }
       >
         <SectionHeading>/// relation profile</SectionHeading>
         <MeterRow label="LINK" value={5} total={7} colour="#3AC6D4" />
@@ -104,15 +149,33 @@ export function OverlaysPage() {
             type="button"
             className="nx-row"
             onClick={() => setPicked(it)}
-            style={{ width: "100%", background: "none", border: 0, textAlign: "left", paddingLeft: 0 }}
+            style={{
+              width: "100%",
+              background: "none",
+              border: 0,
+              textAlign: "left",
+              paddingLeft: 0,
+            }}
           >
-            <span aria-hidden="true" style={{ color: it.colour, width: 8 }}>▸</span>
+            <span aria-hidden="true" style={{ color: it.colour, width: 8 }}>
+              ▸
+            </span>
             <Glyph shape={it.shape} colour={it.colour} size={10} />
-            <span style={{
-              flex: 1, color: it.colour, textTransform: "uppercase",
-              letterSpacing: "var(--nx-track-normal)", overflow: "hidden", textOverflow: "ellipsis",
-            }}>{it.label}</span>
-            <span style={{ color: "var(--nx-fg-tertiary)", fontSize: "var(--nx-text-2xs)" }}>{it.code}</span>
+            <span
+              style={{
+                flex: 1,
+                color: it.colour,
+                textTransform: "uppercase",
+                letterSpacing: "var(--nx-track-normal)",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
+              {it.label}
+            </span>
+            <span style={{ color: "var(--nx-fg-tertiary)", fontSize: "var(--nx-text-2xs)" }}>
+              {it.code}
+            </span>
           </button>
         ))}
       </Drawer>
@@ -121,9 +184,20 @@ export function OverlaysPage() {
         open={pal}
         onClose={() => setPal(false)}
         items={ITEMS}
-        onSelect={(it) => { setPicked(it); setDrawer(true); setPal(false); }}
+        onSelect={(it) => {
+          setPicked(it);
+          setDrawer(true);
+          setPal(false);
+        }}
         renderMeta={(it) => (
-          <span style={{ color: "var(--nx-fg-tertiary)", fontSize: "var(--nx-text-2xs)", width: 22, textAlign: "right" }}>
+          <span
+            style={{
+              color: "var(--nx-fg-tertiary)",
+              fontSize: "var(--nx-text-2xs)",
+              width: 22,
+              textAlign: "right",
+            }}
+          >
             {it.weight}
           </span>
         )}

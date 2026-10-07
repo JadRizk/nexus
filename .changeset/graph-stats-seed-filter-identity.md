@@ -20,7 +20,7 @@ untouched.
 instead of by reference. Written inline — `hiddenNodeCategories={["note"]}` —
 they were a new array every render, which refiltered the scene and fired the
 glitch kick on renders that had nothing to do with the graph. The README now
-also says which props *do* need a stable reference (`nodes`, `edges`,
+also says which props _do_ need a stable reference (`nodes`, `edges`,
 `nodeCategories`, `linkCategories`: a new reference rebuilds the whole scene),
 and documents that category colours are handed to the GPU as linear-sRGB, so a
 hex on the canvas does not match the same hex in CSS.

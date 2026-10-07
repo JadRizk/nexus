@@ -31,14 +31,14 @@ async function main() {
   if (boundaryIndex < 0) {
     throw new Error(
       "Could not find the PAGES boundary comment in reference/preview.jsx — " +
-      "has the hand-authored section been renamed or removed?",
+        "has the hand-authored section been renamed or removed?",
     );
   }
   const boundaryLineStart = existing.lastIndexOf("/* ====", boundaryIndex);
   if (boundaryLineStart < 0) {
     throw new Error(
       "Found the PAGES boundary comment in reference/preview.jsx but not the " +
-      "banner that opens it — has the comment style changed?",
+        "banner that opens it — has the comment style changed?",
     );
   }
   // The tail is hand-authored, but the figures it quotes are not: they are

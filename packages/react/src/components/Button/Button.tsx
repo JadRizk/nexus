@@ -15,21 +15,22 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   active?: boolean;
 }
 
-export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  function Button({ active, className, children, ...rest }, ref) {
-    return (
-      <button
-        ref={ref}
-        type="button"
-        className={mergeClassName("nx-btn", className)}
-        data-active={active ? "1" : "0"}
-        aria-pressed={active}
-        {...rest}
-      >
-        {children}
-      </button>
-    );
-  },
-);
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+  { active, className, children, ...rest },
+  ref,
+) {
+  return (
+    <button
+      ref={ref}
+      type="button"
+      className={mergeClassName("nx-btn", className)}
+      data-active={active ? "1" : "0"}
+      aria-pressed={active}
+      {...rest}
+    >
+      {children}
+    </button>
+  );
+});
 
 Button.displayName = "Button";

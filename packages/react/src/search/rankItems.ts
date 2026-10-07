@@ -24,7 +24,11 @@ export interface PaletteItem {
  * know the beginning of what you want, and fuzzy matching mostly produces
  * confident nonsense. Order: exact, prefix, word-start, contains, code.
  */
-export function rankItems<T extends PaletteItem>(items: readonly T[], query: string, limit = 40): T[] {
+export function rankItems<T extends PaletteItem>(
+  items: readonly T[],
+  query: string,
+  limit = 40,
+): T[] {
   const needle = query.trim().toLowerCase();
   const scored: Array<[number, T]> = [];
 
@@ -34,9 +38,19 @@ export function rankItems<T extends PaletteItem>(items: readonly T[], query: str
     if (!needle) score = 40;
     else if (name === needle) score = 100;
     else if (name.startsWith(needle)) score = 80;
-    else if (name.includes(`_${needle}`) || name.includes(`#${needle}`) || name.includes(` ${needle}`)) score = 65;
+    else if (
+      name.includes(`_${needle}`) ||
+      name.includes(`#${needle}`) ||
+      name.includes(` ${needle}`)
+    )
+      score = 65;
     else if (name.includes(needle)) score = 50;
-    else if (String(it.code ?? "").toLowerCase().startsWith(needle)) score = 45;
+    else if (
+      String(it.code ?? "")
+        .toLowerCase()
+        .startsWith(needle)
+    )
+      score = 45;
     else continue;
     scored.push([score * 1000 + (it.weight ?? 0), it]);
   }
