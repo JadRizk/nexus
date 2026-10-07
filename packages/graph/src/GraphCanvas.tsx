@@ -72,6 +72,19 @@ const DEFAULT_OPTICS: OpticsConfig = {
 /** Device-pixel-ratio ceiling for the CRT pass; see the note where it is applied. */
 const MAX_DPR = 1.6;
 
+/**
+ * Gives a geometry a hand-set, unbounded sphere. These meshes are drawn with
+ * `frustumCulled = false` because their vertices are positioned in the vertex
+ * shader, so the attribute data says nothing about where they land on screen —
+ * but three still reads `boundingSphere` while projecting the scene to
+ * depth-sort, and computes it lazily from a 2-component `position` attribute
+ * as NaN (logging an error each time). Draw order here comes from
+ * `renderOrder`, with depth testing off, so the sphere only has to be valid.
+ */
+const unbounded = (geometry: THREE.BufferGeometry): void => {
+  geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), Infinity);
+};
+
 const hex4 = (i: number): string =>
   (((i * 2654435761) >>> 0) % 65536).toString(16).toUpperCase().padStart(4, "0");
 
@@ -424,6 +437,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
         edgeGeo.setAttribute("iP1", stat(eP1, 4));
         edgeGeo.setAttribute("iP2", aEP2);
         edgeGeo.instanceCount = m;
+        unbounded(edgeGeo);
         const edgeMat = new THREE.RawShaderMaterial({
           vertexShader: EDGE_VS,
           fragmentShader: EDGE_FS,
@@ -441,6 +455,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
             uOpacity: { value: opticsCfg.edgeOpacity },
             uFlowSpeed: { value: opticsCfg.flowSpeed },
             uFocus: { value: 0 },
+            uReduced: { value: 0 },
           },
         });
         const edgeMesh = new THREE.Mesh(edgeGeo, edgeMat);
@@ -482,6 +497,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
         nodeGeo.setAttribute("iN0", aN0);
         nodeGeo.setAttribute("iN1", aN1);
         nodeGeo.instanceCount = n;
+        unbounded(nodeGeo);
         const nodeMat = new THREE.RawShaderMaterial({
           vertexShader: NODE_VS,
           fragmentShader: NODE_FS,
@@ -512,6 +528,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           "position",
           new THREE.BufferAttribute(new Float32Array([-1, -1, 3, -1, -1, 3]), 2),
         );
+        unbounded(fadeGeo);
         const fadeMat = new THREE.RawShaderMaterial({
           vertexShader: FADE_VS,
           fragmentShader: FADE_FS,
@@ -580,6 +597,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
             uReduced: { value: 0 },
           },
         });
+        unbounded(fsGeo);
         const fsQuad = new THREE.Mesh(fsGeo, compMat);
         fsQuad.frustumCulled = false;
         const postScene = new THREE.Scene();
@@ -1161,6 +1179,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           edgeMat.uniforms.uFlowSpeed!.value = c.flowSpeed;
           fadeMat.uniforms.uAlpha!.value = 1 - c.trails * 0.94;
           const uReduced = reduced ? 1 : 0;
+          edgeMat.uniforms.uReduced!.value = uReduced;
           nodeMat.uniforms.uReduced!.value = uReduced;
           fadeMat.uniforms.uReduced!.value = uReduced;
           compMat.uniforms.uReduced!.value = uReduced;
