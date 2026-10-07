@@ -10,21 +10,24 @@ export interface HazardRuleProps {
 }
 
 /** Diagonal warning stripe. Decorative — hidden from assistive tech. */
-export const HazardRule = forwardRef<HTMLDivElement, HazardRuleProps>(
-  function HazardRule({ height, opacity, className = "", style }, ref) {
-    return (
-      <div
-        ref={ref}
-        aria-hidden="true"
-        className={mergeClassName("nx-hazard", className)}
-        style={{
+export const HazardRule = forwardRef<HTMLDivElement, HazardRuleProps>(function HazardRule(
+  { height, opacity, className = "", style },
+  ref,
+) {
+  return (
+    <div
+      ref={ref}
+      aria-hidden="true"
+      className={mergeClassName("nx-hazard", className)}
+      style={
+        {
           ...(height != null ? { "--nx-hazard-height": `${height}px` } : null),
           ...(opacity != null ? { "--nx-hazard-opacity": String(opacity) } : null),
           ...style,
-        } as CSSProperties}
-      />
-    );
-  },
-);
+        } as CSSProperties
+      }
+    />
+  );
+});
 
 HazardRule.displayName = "HazardRule";

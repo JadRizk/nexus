@@ -10,7 +10,7 @@ import { NexusProvider } from "@nexus-cyberdeck/react";
 
 <NexusProvider theme="hud-aa" crt={false}>
   {/* your screen */}
-</NexusProvider>
+</NexusProvider>;
 ```
 
 - `theme`: `"hud-aa"` (default — WCAG AA contrast) or `"hud"` (the original,
@@ -29,11 +29,13 @@ This is not a Tailwind-style class system and not a prop-based theme (no
 defined by `@nexus-cyberdeck/tokens`.
 
 **Components style themselves from their own stylesheet**, not from inline
-`style` objects. Each one reads a `--nx-<component>-<part>` property *with the
-semantic token as the fallback in the usage*:
+`style` objects. Each one reads a `--nx-<component>-<part>` property _with the
+semantic token as the fallback in the usage_:
 
 ```css
-.nx-stat__label { color: var(--nx-stat-label-fg, var(--nx-fg-tertiary)); }
+.nx-stat__label {
+  color: var(--nx-stat-label-fg, var(--nx-fg-tertiary));
+}
 ```
 
 The fallback is never a declaration on the same class. That is the whole
@@ -53,18 +55,18 @@ the `style` prop belongs in consumer code: your own wrappers, spacing and
 grids, built from the tokens below rather than from raw values. Real tokens
 (there is no `-100`/`-900` numeric scale — semantic names only):
 
-| Purpose | Tokens |
-|---|---|
-| Foreground | `--nx-fg-default`, `-accent`, `-info`, `-warning`, `-critical`, `-tertiary`, `-subtle`, `-muted`, `-disabled` |
-| Background | `--nx-bg-canvas` (page), `--nx-bg-surface` (panel), `-raised`, `-hover`, `-active` |
-| Border | `--nx-border-default`, `-strong`, `-accent` |
-| Space (2px base) | `--nx-space-0` … `--nx-space-8` |
-| Type size | `--nx-text-2xs` … `--nx-text-xl` |
-| Tracking | `--nx-track-tight`, `-normal`, `-wide`, `-wider` |
-| Type family | `--nx-font-mono` (body/UI), `--nx-font-stencil` (display — `Wordmark` only) |
-| Motion | `--nx-dur-micro`, `-fade`, `-panel`, with `--nx-ease` |
-| Effects | `--nx-glow-raised`, `--nx-glow-inset`, `--nx-hairline`, `--nx-radius`, `--nx-scrim` |
-| Focus | `--nx-focus-ring`, `--nx-focus-width`, `--nx-focus-offset` (never remove — WCAG 2.4.7) |
+| Purpose          | Tokens                                                                                                        |
+| ---------------- | ------------------------------------------------------------------------------------------------------------- |
+| Foreground       | `--nx-fg-default`, `-accent`, `-info`, `-warning`, `-critical`, `-tertiary`, `-subtle`, `-muted`, `-disabled` |
+| Background       | `--nx-bg-canvas` (page), `--nx-bg-surface` (panel), `-raised`, `-hover`, `-active`                            |
+| Border           | `--nx-border-default`, `-strong`, `-accent`                                                                   |
+| Space (2px base) | `--nx-space-0` … `--nx-space-8`                                                                               |
+| Type size        | `--nx-text-2xs` … `--nx-text-xl`                                                                              |
+| Tracking         | `--nx-track-tight`, `-normal`, `-wide`, `-wider`                                                              |
+| Type family      | `--nx-font-mono` (body/UI), `--nx-font-stencil` (display — `Wordmark` only)                                   |
+| Motion           | `--nx-dur-micro`, `-fade`, `-panel`, with `--nx-ease`                                                         |
+| Effects          | `--nx-glow-raised`, `--nx-glow-inset`, `--nx-hairline`, `--nx-radius`, `--nx-scrim`                           |
+| Focus            | `--nx-focus-ring`, `--nx-focus-width`, `--nx-focus-offset` (never remove — WCAG 2.4.7)                        |
 
 `@nexus-cyberdeck/react` re-exports one helper, `tone(t: Tone)`, which returns
 `var(--nx-fg-${t})` for the nine semantic tones (`default | muted | subtle |
@@ -94,9 +96,11 @@ import { NexusProvider, Panel, SectionHeading, Stat, Button } from "@nexus-cyber
       <Stat label="Class" value="NODE" tone="info" />
       <Stat label="Conflict" value="2" tone="critical" />
     </div>
-    <Button active style={{ marginTop: "var(--nx-space-5)" }}>Isolate</Button>
+    <Button active style={{ marginTop: "var(--nx-space-5)" }}>
+      Isolate
+    </Button>
   </Panel>
-</NexusProvider>
+</NexusProvider>;
 ```
 
 Everything is dense, monospace, and uppercase-leaning by convention (see

@@ -9,7 +9,9 @@
   transition: background var(--nx-dur-micro);
 }
 
-.nx-row:hover { background: var(--nx-row-hover-bg, var(--nx-bg-hover)); }
+.nx-row:hover {
+  background: var(--nx-row-hover-bg, var(--nx-bg-hover));
+}
 
 .nx-row__label {
   flex: 1;

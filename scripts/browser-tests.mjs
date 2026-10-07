@@ -81,14 +81,20 @@ if (run("npm", ["run", "build", "-w", "apps/showcase"]) !== 0) process.exit(1);
 const server = spawn(
   "npm",
   [
-    "run", "preview", "-w", "apps/showcase", "--",
-    "--port", String(PORT),
+    "run",
+    "preview",
+    "-w",
+    "apps/showcase",
+    "--",
+    "--port",
+    String(PORT),
     "--strictPort",
     // Bound to all interfaces so the containerised browser can reach it
     // through the host gateway; vite preview otherwise binds IPv6 localhost
     // only. Short-lived and serving a static showcase, but it is a real
     // listener on the LAN for the duration of the run.
-    "--host", "0.0.0.0",
+    "--host",
+    "0.0.0.0",
   ],
   { cwd: root, stdio: "inherit", detached: true },
 );

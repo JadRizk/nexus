@@ -8,7 +8,12 @@ export function TwoTabs() {
       <TabStrip
         value={tab}
         onChange={setTab}
-        tabs={[{ value: "optics", label: "Optics" }, { value: "solver", label: "Solver" }] as const}
+        tabs={
+          [
+            { value: "optics", label: "Optics" },
+            { value: "solver", label: "Solver" },
+          ] as const
+        }
       />
     </div>
   );

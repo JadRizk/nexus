@@ -45,18 +45,15 @@ test.describe("focus rings", () => {
   });
 
   test("the skip link is the first focusable element in the document", async ({ page }) => {
-    // Asserted structurally rather than by pressing Tab. On a fresh load of
-    // Home the drawer mounts open and its focus trap pulls focus inside, so
-    // the first Tab lands in the drawer and the skip link is never reached —
-    // see the note on Drawer-as-docked-panel in the review. That is a defect
-    // in the showcase, not in the skip link, and encoding it as the expected
-    // tab order here would quietly bless it.
+    // Asserted structurally rather than by pressing Tab: the question is where
+    // the skip link sits in the document, not how the browser happens to walk
+    // it on a given run.
     await page.goto("/");
     await settle(page);
 
     const firstFocusable = await page.evaluate(() => {
       const SEL =
-        'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),' +
+        "a[href],button:not([disabled]),input:not([disabled]),select:not([disabled])," +
         'textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
       const el = document.querySelector<HTMLElement>(SEL);
       return el ? `${el.tagName}.${el.className}` : null;
@@ -107,12 +104,15 @@ test.describe("CRT layer", () => {
 
   test("off", async ({ page }) => {
     await gotoPage(page, "home");
-    await expect(page).toHaveScreenshot("crt-off.png", { fullPage: false, mask: versionMask(page) });
+    await expect(page).toHaveScreenshot("crt-off.png", {
+      fullPage: false,
+      mask: versionMask(page),
+    });
   });
 
   test("on", async ({ page }) => {
-    // Enabled before navigating: on Home the docked drawer covers the header,
-    // so the CRT control cannot be clicked once we are there.
+    // Enabled before navigating, like the theme, so the shot is of the page
+    // as it loads rather than of a toggle being clicked.
     await gotoPage(page, "home", "hud-aa", { crt: true });
     await expect(banner(page).getByRole("button", { name: "CRT", exact: true })).toHaveAttribute(
       "aria-pressed",
@@ -135,8 +135,8 @@ test.describe("theme swap", () => {
   });
 
   test("the console in the prototype theme", async ({ page }) => {
-    // The theme is set before navigating rather than switched here: on Home
-    // the docked drawer covers the header controls (see harness).
+    // The theme is set before navigating rather than switched here, so the
+    // shot is of the page as it loads.
     await gotoPage(page, "home", "hud");
     await expect(page).toHaveScreenshot("console-hud.png", { mask: versionMask(page) });
   });
@@ -222,7 +222,7 @@ test.describe("component tokens", () => {
   });
 });
 
-test.describe("Panel corners=\"none\" suppression", () => {
+test.describe('Panel corners="none" suppression', () => {
   // Not a screenshot: the corner-tick variables default to transparent, so a
   // panel with the pseudo-element wrongly generated and one with it actually
   // suppressed render pixel-identical — a diff cannot tell them apart. That
@@ -234,9 +234,7 @@ test.describe("Panel corners=\"none\" suppression", () => {
     await gotoPage(page, "primitives");
     const header = banner(page);
     await expect(header).toHaveAttribute("data-nx-corners", "none");
-    const content = await header.evaluate(
-      (el) => getComputedStyle(el, "::before").content,
-    );
+    const content = await header.evaluate((el) => getComputedStyle(el, "::before").content);
     expect(content).toBe("none");
   });
 

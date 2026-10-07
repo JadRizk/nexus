@@ -1,4 +1,8 @@
 .nx-heading {
+  /* Explicit so `as="span"` lays out exactly like the default `as="div"`:
+     an inline box would drop the margin-bottom below and shift everything
+     under it by 4px. */
+  display: block;
   color: var(--nx-heading-fg, var(--nx-fg-accent));
   font-size: var(--nx-heading-size, var(--nx-text-2xs));
   letter-spacing: var(--nx-heading-tracking, var(--nx-track-wider));

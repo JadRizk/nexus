@@ -118,6 +118,13 @@ export interface GraphNodeSnapshot {
   }>;
 }
 
+/**
+ * Per-frame telemetry, sampled about twice a second. Everything here is about
+ * the graph being drawn, not about the driver drawing it: `vertexAttribs` and
+ * `webglVersion` used to be reported alongside, but they are constants of the
+ * host's GL context, never change over the canvas's life, and were only ever
+ * there as a leftover debugging aid from bringing the edge program up.
+ */
 export interface GraphStats {
   fps: number;
   nodes: number;
@@ -125,8 +132,6 @@ export interface GraphStats {
   drawnEdges: number;
   frameMs: number;
   settled: boolean;
-  vertexAttribs: number;
-  webglVersion: 1 | 2;
 }
 
 export interface GraphController {

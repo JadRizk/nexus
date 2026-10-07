@@ -9,7 +9,11 @@ function Harness() {
     <TabStrip
       value={value}
       onChange={setValue}
-      tabs={[{ value: "a", label: "A" }, { value: "b", label: "B" }, { value: "c", label: "C" }]}
+      tabs={[
+        { value: "a", label: "A" },
+        { value: "b", label: "B" },
+        { value: "c", label: "C" },
+      ]}
     />
   );
 }
@@ -51,19 +55,14 @@ describe("TabStrip", () => {
     expect(screen.getByRole("tab", { name: "A" })).toHaveAttribute("aria-selected", "true");
   });
 
-  it("defaults the tablist's accessible name to \"View\"", () => {
+  it('defaults the tablist\'s accessible name to "View"', () => {
     render(<Harness />);
     expect(screen.getByRole("tablist")).toHaveAccessibleName("View");
   });
 
   it("takes label as the tablist's accessible name", () => {
     render(
-      <TabStrip
-        label="Panels"
-        value="a"
-        onChange={() => {}}
-        tabs={[{ value: "a", label: "A" }]}
-      />,
+      <TabStrip label="Panels" value="a" onChange={() => {}} tabs={[{ value: "a", label: "A" }]} />,
     );
     expect(screen.getByRole("tablist")).toHaveAccessibleName("Panels");
   });
@@ -71,12 +70,7 @@ describe("TabStrip", () => {
   it("forwards a ref to the tablist", () => {
     const ref = createRef<HTMLDivElement>();
     render(
-      <TabStrip
-        ref={ref}
-        value="a"
-        onChange={() => {}}
-        tabs={[{ value: "a", label: "A" }]}
-      />,
+      <TabStrip ref={ref} value="a" onChange={() => {}} tabs={[{ value: "a", label: "A" }]} />,
     );
     expect(ref.current).toBeInstanceOf(HTMLDivElement);
     expect(ref.current).toBe(screen.getByRole("tablist"));
@@ -98,7 +92,10 @@ describe("TabStrip", () => {
             panelId="view-panel"
             value={value}
             onChange={setValue}
-            tabs={[{ value: "a", label: "A" }, { value: "b", label: "B" }]}
+            tabs={[
+              { value: "a", label: "A" },
+              { value: "b", label: "B" },
+            ]}
           />
           <div id="view-panel" role="tabpanel" aria-labelledby={`view-tabs-${value}`}>
             {value}
@@ -123,13 +120,7 @@ describe("TabStrip", () => {
   });
 
   it("derives each tab's id from useId() when no id prop is given", () => {
-    render(
-      <TabStrip
-        value="a"
-        onChange={() => {}}
-        tabs={[{ value: "a", label: "A" }]}
-      />,
-    );
+    render(<TabStrip value="a" onChange={() => {}} tabs={[{ value: "a", label: "A" }]} />);
     // No `id` prop was passed, so the base comes from useId() — the exact
     // string is React's own implementation detail, but every tab still gets
     // a real, non-empty id built from it.

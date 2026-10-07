@@ -73,6 +73,20 @@ on any element and the custom properties cascade.
 - **The graph is included.** Most systems stop at the panel. This one ships the
   canvas the panels were designed around.
 
+## Browser support
+
+Evergreen browsers — the current and previous versions of Chrome, Edge,
+Firefox and Safari. The floor is **Safari 15.4+**, because the focus ring is
+built on `:focus-visible`, which Safari did not ship until 15.4; on anything
+older the ring never appears and keyboard users lose the only focus indicator
+the system draws.
+
+`@nexus-cyberdeck/graph` additionally requires **WebGL2**, and that is a hard
+requirement rather than a preference: its Three.js renderer asks for a
+`webgl2` context and nothing else, and there is no 2D or DOM fallback. Where
+WebGL2 is unavailable or the context is lost, the canvas calls `onFatal` and
+renders nothing further — handle that prop and show your own fallback.
+
 ## Documentation
 
 - [Getting started](docs/getting-started.md): zero to a themed console, verified against a real install.
@@ -300,6 +314,33 @@ npx changeset      # pick packages, pick the bump, describe the change
 
 CI asks for one on any pull request that touches `packages/*/src`. The entry
 you write becomes the changelog verbatim, so write it for someone upgrading.
+
+### What counts as breaking
+
+A breaking change is any change that could require a consuming application to
+update. Major bump, always:
+
+- Removal or rename of an exported name — component, hook, type, constant or function.
+- Addition of a **required** prop, or removal of any prop, on an exported component.
+- Change to an existing prop's type, default or behaviour.
+- Removal or rename of an `nx-*` class on a rendered element. The DOM is part
+  of the contract here, because the whole restyling story is consumers writing
+  CSS against those classes: `react@3.0.0` was a major with no API change at
+  all, purely because the markup moved from inline styles to classes.
+- Removal or rename of a `--nx-*` custom property, or a change to what an
+  existing one means.
+
+Not breaking, and not a major bump: adding an **optional** prop, adding an
+export, adding an `nx-*` class or a `--nx-*` property, and any internal change
+that leaves all of the above intact.
+
+Those two lists are the whole rule and they apply to every exported component
+equally. A component with a closed prop interface — one that declares its own
+`Props` type instead of extending an HTML element's — is not exempt from them.
+A closed interface says which props the component accepts; it says nothing
+about how stable those props are, and changing one of them is as breaking
+there as anywhere else. (Adding an optional prop to a closed interface is
+still fine, by the second list, same as everywhere else.)
 
 `@nexus-cyberdeck/tokens` and `@nexus-cyberdeck/react` are versioned in
 **lockstep**, and `react` depends on an exact `tokens` version rather than a

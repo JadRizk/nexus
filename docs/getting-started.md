@@ -15,6 +15,60 @@ cd my-console
 npm install
 ```
 
+### App Router (Next.js 13+)
+
+Both builds emit a `"use client"` banner, so importing a component from
+`@nexus-cyberdeck/react` or `@nexus-cyberdeck/graph` inside a Server Component
+already puts it on the client side of the boundary — you do not have to add a
+`"use client"` file of your own just to render one.
+
+You do need one as soon as you pass a prop a Server Component cannot hold.
+Every stateful component here is controlled, so `onChange`, `onSelect`,
+`onClose` and `useState` all have to live in a file that declares
+`"use client"` itself. In practice that means the smallest wrapper that owns
+the state, with the server page rendering the wrapper.
+
+`GraphCanvas` needs that wrapper for a second reason. It opens a WebGL2 context
+at mount, so it cannot be server-rendered at all and has to be loaded through
+`next/dynamic` with `ssr: false` — and `ssr: false` is itself only allowed in a
+Client Component. Both constraints land on the same file, `app/graph/page.tsx`:
+
+<!-- prettier-ignore -->
+```tsx
+"use client";
+
+import dynamic from "next/dynamic";
+import type { LinkCategory, NodeCategory } from "@nexus-cyberdeck/graph";
+
+const GraphCanvas = dynamic(() => import("@nexus-cyberdeck/graph").then((m) => m.GraphCanvas), {
+  ssr: false,
+});
+
+const nodeCategories: Record<string, NodeCategory> = {
+  topic: { label: "TOPIC", code: "TOP", tier: 0, shape: 1, color: "#C6F135", size: 3.2, charge: 3, mass: 3 },
+};
+const linkCategories: Record<string, LinkCategory> = {
+  refs: { label: "LINK", color: "#3AC6D4", width: 1.15, dist: 1, strength: 0.55, arrow: true, flow: 1, curve: 0.13 },
+};
+
+export default function GraphPage() {
+  return (
+    <div style={{ height: 480 }}>
+      <GraphCanvas
+        nodes={[{ id: "t1", categoryId: "topic", label: "THRESHOLD//ATLAS" }]}
+        edges={[]}
+        nodeCategories={nodeCategories}
+        linkCategories={linkCategories}
+      />
+    </div>
+  );
+}
+```
+
+`nodeCategories` and `linkCategories` are required props, not optional ones,
+and the wrapping `<div>` is what gives the canvas its height — see
+[step 7](#7-add-the-graph-optional) for what the category fields mean.
+
 ## 2. Install the packages
 
 ```bash

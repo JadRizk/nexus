@@ -91,9 +91,7 @@ for (const [route, name] of COMPONENTS) {
   test(`${name} has no axe violations`, async ({ page }) => {
     await gotoPage(page, route, "hud-aa");
     await expect(spec(page, name)).toBeVisible();
-    const { violations } = await audit(page)
-      .include(`[data-spec="${name}"]`)
-      .analyze();
+    const { violations } = await audit(page).include(`[data-spec="${name}"]`).analyze();
     expect(report(violations), report(violations)).toBe("");
   });
 }
@@ -103,6 +101,7 @@ for (const [route, name] of COMPONENTS) {
 test.describe("overlays while open", () => {
   test("drawer", async ({ page }) => {
     await gotoPage(page, "overlays", "hud-aa");
+    await page.getByRole("button", { name: "Open drawer" }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
     const { violations } = await audit(page).analyze();
     expect(report(violations), report(violations)).toBe("");
@@ -136,17 +135,13 @@ test.describe("the contrast trade-off between themes", () => {
 
   test("hud-aa passes axe's colour-contrast rule", async ({ page }) => {
     await gotoPage(page, "primitives", "hud-aa");
-    const { violations } = await new AxeBuilder({ page })
-      .withRules(["color-contrast"])
-      .analyze();
+    const { violations } = await new AxeBuilder({ page }).withRules(["color-contrast"]).analyze();
     expect(report(violations), report(violations)).toBe("");
   });
 
   test("hud genuinely fails it — the documented trade-off, not an oversight", async ({ page }) => {
     await gotoPage(page, "primitives", "hud");
-    const { violations } = await new AxeBuilder({ page })
-      .withRules(["color-contrast"])
-      .analyze();
+    const { violations } = await new AxeBuilder({ page }).withRules(["color-contrast"]).analyze();
     expect(
       violations.length,
       "hud is documented as failing AA. If this passes, either the ramp was " +
@@ -182,13 +177,17 @@ test.describe("claims axe cannot make", () => {
       .evaluateAll((svgs) =>
         svgs.map((s) =>
           [...s.querySelectorAll("circle,polygon,rect,path")]
-            .map((el) => el.tagName + ":" + (el.getAttribute("points") ?? el.getAttribute("r") ?? ""))
+            .map(
+              (el) => el.tagName + ":" + (el.getAttribute("points") ?? el.getAttribute("r") ?? ""),
+            )
             .join(),
         ),
       );
     const distinct = new Set(shapes);
     expect(shapes.length).toBeGreaterThanOrEqual(6);
-    expect(distinct.size, `expected distinct silhouettes, got ${shapes.length}`).toBe(shapes.length);
+    expect(distinct.size, `expected distinct silhouettes, got ${shapes.length}`).toBe(
+      shapes.length,
+    );
   });
 
   test("the focus ring cannot be removed by a component (WCAG 2.4.7)", async ({ page }) => {
@@ -295,9 +294,15 @@ test.describe("claims axe cannot make", () => {
         .map((s) => s.href)
         .filter((h): h is string => !!h);
       const texts = await Promise.all(hrefs.map((h) => fetch(h).then((r) => r.text())));
-      return texts.join("\n").match(/\.nx-slider:focus-visible::-moz-range-thumb\s*\{([^}]*)\}/)?.[1] ?? null;
+      return (
+        texts.join("\n").match(/\.nx-slider:focus-visible::-moz-range-thumb\s*\{([^}]*)\}/)?.[1] ??
+        null
+      );
     });
-    expect(mozRuleText, "no :focus-visible::-moz-range-thumb rule in the served stylesheet").toBeTruthy();
+    expect(
+      mozRuleText,
+      "no :focus-visible::-moz-range-thumb rule in the served stylesheet",
+    ).toBeTruthy();
     expect(mozRuleText).toMatch(/outline:\s*[^;]*\bsolid\b/);
 
     // And that the tokens the rule references actually resolve on this
@@ -313,7 +318,9 @@ test.describe("claims axe cannot make", () => {
     expect(tokens.ring).not.toBe("");
   });
 
-  test("CommandPalette deliberately suppresses the focus ring on the input (WCAG 2.4.7 exception)", async ({ page }) => {
+  test("CommandPalette deliberately suppresses the focus ring on the input (WCAG 2.4.7 exception)", async ({
+    page,
+  }) => {
     // Unlike Slider.css:32, this suppression genuinely lives inside a
     // `:focus-visible` block (CommandPalette.css:61-63), so it is only
     // observable under real keyboard focus. The ARIA combobox pattern keeps
@@ -350,7 +357,9 @@ test.describe("claims axe cannot make", () => {
     expect(state.opacity).toBe("1");
   });
 
-  test("prefers-reduced-motion stills the graph's glitch, grain, roll bar and trails", async ({ page }) => {
+  test("prefers-reduced-motion stills the graph's glitch, grain, roll bar and trails", async ({
+    page,
+  }) => {
     // The graph's CRT pass is WebGL, not CSS, so the stylesheet rule above
     // cannot reach it: the canvas reads the media query itself and carries the
     // answer to the GPU as the `uReduced` uniform. The uniform is not

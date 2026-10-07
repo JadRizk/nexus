@@ -19,9 +19,9 @@ describe("rankItems", () => {
 
   it("ranks an exact match above a prefix match above a contains match", () => {
     const order: PaletteItem[] = [
-      { id: 1, label: "riptide" },   // contains "tide", not at the start
+      { id: 1, label: "riptide" }, // contains "tide", not at the start
       { id: 2, label: "tidewater" }, // starts with "tide"
-      { id: 3, label: "tide" },      // exact
+      { id: 3, label: "tide" }, // exact
     ];
     expect(rankItems(order, "tide").map((h) => h.id)).toEqual([3, 2, 1]);
   });

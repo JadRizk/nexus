@@ -67,12 +67,40 @@ also driven by its props.
 | **Hooks**    | `useFocusTrap`, `useHotkey`                                        |
 | **Search**   | `rankItems`                                                        |
 
-`NexusProvider`, `Panel`, `Button`, `SectionHeading` and `Wordmark` extend
-their underlying element's props, so `className`, `style`, `aria-*` and event
-handlers pass straight through. The rest declare closed prop interfaces —
-`Stat` takes `label` and `value`, `Glyph` takes `shape` and a colour, and
-neither accepts `className`. Restyle those through their component tokens
-(below) rather than through a class.
+Five of them — `NexusProvider`, `Panel`, `Button`, `SectionHeading` and
+`Wordmark` — extend their underlying element's props and spread the rest onto
+the DOM node, so `className`, `style`, `aria-*` and event handlers all pass
+straight through. Those five, and no others: the passthrough is the `...rest`
+spread in the component, not something every component has.
+
+The other fourteen declare **closed** prop interfaces. They accept exactly the
+props they list and nothing else — there is no rest spread, so an `aria-label`
+or an `onMouseEnter` passed to one is dropped on the floor rather than reaching
+the DOM. Restyle those through their component tokens (below) rather than
+through a class. What a closed component lets a caller reach is then one of
+three things:
+
+- **`style`, on nine of them** — `BlinkCursor`, `HazardRule`, `KeyValue`,
+  `Legend`, `Slider`, `Stat`, `TabStrip`, `ToggleRow` and `Tooltip`. It is
+  there for _placement_, not appearance: a component cannot know the margin,
+  gap or flex behaviour the surrounding layout needs, and every use of it in
+  this repository's own showcase is exactly that (`margin`, `marginTop`,
+  `gap`, `flexShrink`). It lands on the component's root element and is spread
+  last, so a caller's value wins over the custom properties the component
+  computes there. Appearance still belongs to the tokens.
+- **A typed dimension prop instead, on five** — `Glyph` and `LinkGlyph` take
+  `size`, `MeterRow` takes `labelWidth`, `CommandPalette` and `Drawer` take
+  `width`. These own their own box (the last two are overlays that position
+  themselves), so the one thing a caller needs to move is a number, and it
+  goes through a prop rather than a CSS object. They accept no `style` at all.
+- **`className`, on exactly one** — `HazardRule`, which merges the caller's
+  class onto its own `nx-hazard`. It is the single exception to the rule that
+  closed components keep their class list private, and it is not a passthrough:
+  a closed interface with `className` in it still drops `aria-*` and handlers.
+
+So `Stat` takes `label` and `value` and a `style` for placement; `Glyph` takes
+`shape`, `size` and a colour and neither `className` nor `style`; `HazardRule`
+takes `className` and is still closed. Three-way, not two-way.
 
 ### Colour
 
@@ -112,8 +140,8 @@ outranks everything.
 
 These numbers are only meaningful relative to one another, and only when
 nothing between the overlay and the viewport has created its own stacking
-context. `position: fixed` positions against the *initial containing
-block* — normally the viewport — but an ancestor with a `transform`,
+context. `position: fixed` positions against the _initial containing
+block_ — normally the viewport — but an ancestor with a `transform`,
 `filter`, `perspective`, `contain: layout|paint|content|strict`, or
 `opacity` below `1` becomes that containing block instead. Wrap a `Drawer`
 or `CommandPalette` inside an ancestor carrying any of those (a
@@ -143,12 +171,12 @@ Every accessible name below an app localises has a prop rather than a
 hardcoded string, defaulted to the current English copy so existing output is
 unchanged:
 
-| Component        | Prop           | Names                          | Default                                         |
-| ----------------- | -------------- | ------------------------------- | ------------------------------------------------ |
-| `Drawer`          | `closeLabel`   | the close button                | `"Close details"`                                 |
-| `CommandPalette`  | `label`        | the dialog (separate from `placeholder`, which still names the input) | `placeholder` |
-| `CommandPalette`  | `resultsLabel` | the live-region result count | string or `(count) => string`, defaulting to `` `${count} result${count === 1 ? "" : "s"}` `` |
-| `TabStrip`        | `label`        | the tablist                     | `"View"`                                          |
+| Component        | Prop           | Names                                                                 | Default                                                                                       |
+| ---------------- | -------------- | --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `Drawer`         | `closeLabel`   | the close button                                                      | `"Close details"`                                                                             |
+| `CommandPalette` | `label`        | the dialog (separate from `placeholder`, which still names the input) | `placeholder`                                                                                 |
+| `CommandPalette` | `resultsLabel` | the live-region result count                                          | string or `(count) => string`, defaulting to `` `${count} result${count === 1 ? "" : "s"}` `` |
+| `TabStrip`       | `label`        | the tablist                                                           | `"View"`                                                                                      |
 
 ## Related
 
