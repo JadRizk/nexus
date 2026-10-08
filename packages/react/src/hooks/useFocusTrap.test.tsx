@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import type { RefObject } from "react";
 import { useFocusTrap } from "./useFocusTrap.js";
 
 /* ============================================================================
@@ -21,11 +20,10 @@ function TrapHarness({ onDismiss }: { onDismiss: () => void }) {
   return (
     <div>
       <button data-testid="outside">outside</button>
-      {/* The cast below is for the same reason as the one in
-          Drawer.tsx/CommandPalette.tsx: RefObject<T | null> only structurally
-          matches a DOM ref prop under @types/react 19, not 18. */}
+      {/* No cast: the hook's ref is a valid `ref` prop under @types/react 18
+          and 19 alike, and this repository typechecks against 18. */}
       {active && (
-        <div ref={ref as RefObject<HTMLDivElement>} data-testid="trap" tabIndex={-1}>
+        <div ref={ref} data-testid="trap" tabIndex={-1}>
           <button data-testid="first">first</button>
           <button data-testid="second">second</button>
         </div>
@@ -45,6 +43,24 @@ describe("useFocusTrap", () => {
     screen.getByTestId("second").focus();
     fireEvent.keyDown(screen.getByTestId("trap"), { key: "Tab" });
     expect(screen.getByTestId("first")).toHaveFocus();
+  });
+
+  it("swallows Tab when the trap has nothing focusable, so focus cannot escape it", () => {
+    function Empty() {
+      const ref = useFocusTrap<HTMLDivElement>(true);
+      return (
+        <div ref={ref} data-testid="empty" tabIndex={-1}>
+          nothing to focus
+        </div>
+      );
+    }
+    render(<Empty />);
+
+    // fireEvent returns false when the default was prevented.
+    expect(fireEvent.keyDown(screen.getByTestId("empty"), { key: "Tab" })).toBe(false);
+    expect(fireEvent.keyDown(screen.getByTestId("empty"), { key: "Tab", shiftKey: true })).toBe(
+      false,
+    );
   });
 
   it("wraps Shift+Tab from the first element back to the last", () => {
@@ -97,7 +113,7 @@ describe("useFocusTrap", () => {
         return (
           <div>
             <button data-testid="outside">outside</button>
-            <div ref={ref as RefObject<HTMLDivElement>} tabIndex={-1}>
+            <div ref={ref} tabIndex={-1}>
               <button data-testid="first">first</button>
               {extra && (
                 <button data-testid="extra" onClick={() => setExtra(false)}>
@@ -140,13 +156,13 @@ describe("useFocusTrap", () => {
       return (
         <div>
           <button data-testid="outside">outside</button>
-          <div ref={outerRef as RefObject<HTMLDivElement>} tabIndex={-1}>
+          <div ref={outerRef} tabIndex={-1}>
             <button data-testid="outer-btn" onClick={() => setInner(true)}>
               open inner
             </button>
           </div>
           {inner && (
-            <div ref={innerRef as RefObject<HTMLDivElement>} tabIndex={-1}>
+            <div ref={innerRef} tabIndex={-1}>
               <button data-testid="inner-btn">inner</button>
             </div>
           )}
@@ -185,7 +201,7 @@ describe("useFocusTrap", () => {
             open
           </button>
           {open && (
-            <div ref={ref as RefObject<HTMLDivElement>} tabIndex={-1} data-testid="trap">
+            <div ref={ref} tabIndex={-1} data-testid="trap">
               <button data-testid="inner">inner</button>
             </div>
           )}

@@ -6,7 +6,9 @@ is to run the same checks locally first.
 
 ## Setup
 
-Node 18 or later (CI uses 20) and npm. Docker is needed only for the browser
+Node 20.19 or later, or 22.12 or later (the dev tooling, Vite 7 and
+Vitest 4, needs it; CI uses 20), and npm. The published packages themselves
+still support Node 18 and up. Docker is needed only for the browser
 suite.
 
 ```bash

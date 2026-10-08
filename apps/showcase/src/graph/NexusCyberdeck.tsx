@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import type { RefObject } from "react";
 import { GraphCanvas, TIER_ZOOM } from "@nexus-cyberdeck/graph";
 import type {
   GraphController,
@@ -574,11 +573,7 @@ function InspectorDrawer({
   const titleId = useId();
   return (
     <div
-      // Cast for the same reason as the one in
-      // packages/react/src/components/Drawer/Drawer.tsx: useFocusTrap's
-      // RefObject<T | null> only structurally matches a DOM ref prop under
-      // @types/react 19, not the 18 this repo's devDependencies pin.
-      ref={trapRef as RefObject<HTMLDivElement>}
+      ref={trapRef}
       role="dialog"
       aria-modal="true"
       aria-labelledby={selected ? titleId : undefined}
