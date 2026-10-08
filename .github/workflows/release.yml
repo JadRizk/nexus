@@ -25,11 +25,34 @@ jobs:
           # Changesets needs the history to work out what has already shipped.
           fetch-depth: 0
 
+      # Publishing uses npm trusted publishing (OIDC), not a stored token: the
+      # registry trusts this repository's `release.yml` and nothing else, so
+      # there is no long-lived credential to leak or rotate, and provenance is
+      # attached automatically. It needs Node >= 22.14 and npm >= 11.5.1. Node
+      # 22 ships npm 10, so npm is pinned explicitly below. See "Releasing" in
+      # CONTRIBUTING.md for the one-time setup, and for why the first publish
+      # of each package is done by hand.
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           registry-url: https://registry.npmjs.org
+
+      - name: Install the npm that supports trusted publishing
+        run: npm install -g npm@11.21.0
+
+      # npm does not validate a trusted-publisher setup when it is saved, only
+      # when a publish is attempted, so a too-old npm would surface as an
+      # opaque auth failure in the middle of a release. Fail here instead.
+      - name: Check npm is new enough for trusted publishing
+        run: |
+          node -e '
+            const [a, b, c] = process.argv[1].split(".").map(Number);
+            if (a < 11 || (a === 11 && (b < 5 || (b === 5 && c < 1)))) {
+              console.error(`npm ${process.argv[1]} cannot do trusted publishing (need >= 11.5.1)`);
+              process.exit(1);
+            }
+          ' "$(npm --version)"
 
       - run: npm ci
 
@@ -67,6 +90,7 @@ jobs:
           title: "chore: version packages"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Unset until the packages go public — `changeset publish` skips
-          # private packages, so its absence is not an error today.
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # No NODE_AUTH_TOKEN or NPM_TOKEN on purpose: `npm publish` exchanges
+          # this job's OIDC token (`id-token: write` above) for a short-lived
+          # publish credential. Adding a token here would make npm use it
+          # instead and quietly turn trusted publishing off.
