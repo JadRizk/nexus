@@ -148,8 +148,8 @@ export async function focusVisible(target: Locator) {
  * them in between, moves nothing.
  */
 export function versionMask(page: Page): Locator[] {
-  // The figure counters (token and component counts, rendered on Home and in
-  // the footer) are masked for the same reason the version is: they change
+  // The figure counters (token and component counts, rendered on Home) are
+  // masked for the same reason the version is: they change
   // whenever a token or component is added, and a one-glyph change in a
   // full-page baseline at maxDiffPixels: 0 would otherwise force a re-record
   // on every such PR (NX-25 was the first to hit it).

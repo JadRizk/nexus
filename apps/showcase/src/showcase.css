@@ -1,0 +1,68 @@
+/* ============================================================================
+   showcase — site chrome styles
+   The few rules inline styles cannot express: hover and current states on the
+   docs sidebar. Showcase scaffolding, not part of @nexus-cyberdeck/react, and
+   written against the semantic layer only, so the theme switch reaches it.
+   ========================================================================== */
+
+/* Sticky, and no taller than <main>'s visible height (100cqh: <main> is a
+   size container on docs pages), scrolling on its own. The sidebar is
+   longer than most pages; without this it set the page's scroll height and
+   a short component page scrolled only to reveal the end of the sidebar. */
+.sc-sidebar {
+  position: sticky;
+  top: 0;
+  flex: 0 0 216px;
+  box-sizing: border-box;
+  max-height: 100cqh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--nx-space-2) var(--nx-space-4) var(--nx-space-7) var(--nx-space-6);
+  border-right: var(--nx-hairline) solid var(--nx-border-default);
+}
+
+.sc-sidebar__group {
+  padding: var(--nx-space-6) 0 var(--nx-space-3);
+  color: var(--nx-fg-default);
+  font-size: var(--nx-text-2xs);
+  font-weight: var(--nx-weight-bold);
+  letter-spacing: var(--nx-track-wider);
+  text-transform: uppercase;
+}
+
+.sc-sidebar__subgroup {
+  padding: var(--nx-space-4) var(--nx-space-4) var(--nx-space-2);
+  color: var(--nx-fg-muted);
+  font-size: var(--nx-text-2xs);
+  font-weight: var(--nx-weight-medium);
+  letter-spacing: var(--nx-track-wide);
+  text-transform: uppercase;
+}
+
+.sc-sidebar__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.sc-sidebar__link {
+  display: block;
+  padding: var(--nx-space-2) var(--nx-space-4);
+  border-left: 2px solid transparent;
+  color: var(--nx-fg-subtle);
+  text-decoration: none;
+  transition:
+    color var(--nx-dur-micro) var(--nx-ease),
+    background var(--nx-dur-micro) var(--nx-ease);
+}
+
+.sc-sidebar__link:hover {
+  color: var(--nx-fg-default);
+  background: var(--nx-bg-hover);
+}
+
+.sc-sidebar__link[aria-current="page"] {
+  color: var(--nx-fg-accent);
+  background: var(--nx-bg-active);
+  border-left-color: var(--nx-fg-accent);
+}
