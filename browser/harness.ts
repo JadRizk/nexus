@@ -15,14 +15,6 @@ export type Theme = (typeof THEMES)[number];
 
 export type Route = "home" | "graph" | "primitives" | "overlays" | "tokens";
 
-const NAV_LABEL: Record<Route, string> = {
-  home: "Home",
-  graph: "Graph",
-  primitives: "Primitives",
-  overlays: "Overlays",
-  tokens: "Tokens",
-};
-
 /**
  * Loads a showcase route in a known theme with CRT off.
  *
@@ -36,20 +28,17 @@ export async function gotoPage(
   theme: Theme = "hud-aa",
   { crt = false }: { crt?: boolean } = {},
 ) {
-  await page.goto("/");
+  // Every page has its own URL, so a test opens the page under test directly
+  // rather than landing on Home and clicking through the nav.
+  await page.goto(route === "home" ? "/" : `/#/${route}`);
 
-  // Theme and CRT live in the provider and persist across routes, so they are
-  // set once, from the header, before navigating to the route under test.
+  // Theme and CRT live in the provider, so they are set from the header once
+  // the page is up; the header is the same on every route.
   const crtButton = banner(page).getByRole("button", { name: "CRT", exact: true });
   if ((await crtButton.getAttribute("aria-pressed")) === String(!crt)) await crtButton.click();
   await expect(crtButton).toHaveAttribute("aria-pressed", String(crt));
 
   await setTheme(page, theme);
-
-  // The app lands on Home; every other route is one nav click away.
-  if (route !== "home") {
-    await page.getByRole("button", { name: NAV_LABEL[route], exact: true }).click();
-  }
 
   await settle(page);
 }
