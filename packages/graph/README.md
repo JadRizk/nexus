@@ -1,5 +1,9 @@
 # @nexus-cyberdeck/graph
 
+[![The Nexus Cyberdeck showcase: a docked console panel, an entity legend, a theme switcher and an open detail drawer, all acid green on near-black](https://raw.githubusercontent.com/JadRizk/nexus/main/docs/assets/hero.png)](https://jadrizk.github.io/nexus/)
+
+**[Live showcase →](https://jadrizk.github.io/nexus/)**
+
 A force-directed WebGL graph canvas for React, built on Three.js. Nodes are
 SDF-rendered glyphs in six silhouettes, links are curved with optional dash,
 arrowhead and packet-flow animation, and the whole frame can pass through a CRT

@@ -1,0 +1,60 @@
+name: Pages
+
+# The showcase is the component reference (there is no Storybook), so it is
+# deployed from main on every push. The base path is the repository name: a
+# project site is served from /<repo>/, not from the domain root.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Pages deployments are serialised. A newer push replaces a queued one, but a
+# deployment already in flight is allowed to finish rather than being cut off
+# half-published.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 20
+          cache: npm
+
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+
+      - run: npm ci
+
+      # The showcase resolves the workspace packages from source, so nothing
+      # else has to be built first.
+      - name: Build the showcase
+        run: npm run build -w apps/showcase -- --base=/nexus/
+
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: apps/showcase/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # The only job that can write to Pages, and only with the OIDC token the
+    # deployment needs; the build job above has read-only access.
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

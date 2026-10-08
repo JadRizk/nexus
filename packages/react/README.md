@@ -1,5 +1,9 @@
 # @nexus-cyberdeck/react
 
+[![The Nexus Cyberdeck showcase: a docked console panel, an entity legend, a theme switcher and an open detail drawer, all acid green on near-black](https://raw.githubusercontent.com/JadRizk/nexus/main/docs/assets/hero.png)](https://jadrizk.github.io/nexus/)
+
+**[Live showcase →](https://jadrizk.github.io/nexus/)**
+
 React components for the [Nexus Cyberdeck](https://github.com/JadRizk/nexus#readme)
 HUD design system: acid green on near-black, hairline borders, zero corner
 radius, corner ticks, monospace everything, and a WCAG AA theme that keeps the
