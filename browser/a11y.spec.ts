@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
-import { gotoPage, spec, settle } from "./harness.js";
+import { DOC_ROUTES, gotoPage, spec, settle } from "./harness.js";
 import type { Route } from "./harness.js";
 
 /* ============================================================================
@@ -52,8 +52,8 @@ function report(violations: Awaited<ReturnType<AxeBuilder["analyze"]>>["violatio
 // "graph" mounts GraphCanvas's WebGL scene (NX-13): the root's role/name,
 // the label pool's aria-hidden, and the tooltip's contrast are all only
 // live once boot() actually runs against a real GPU, which is exactly what
-// this route's axe pass now covers alongside the other four.
-const ROUTES: Route[] = ["home", "graph", "primitives", "overlays", "tokens"];
+// this route's axe pass covers alongside every documentation page.
+const ROUTES: Route[] = ["home", "labs/graph", ...DOC_ROUTES];
 
 for (const route of ROUTES) {
   test(`${route} has no axe violations`, async ({ page }) => {
@@ -69,22 +69,34 @@ for (const route of ROUTES) {
 // failure actionable: a page-level scan says "the Overlays page has a
 // violation", this says which component owns it.
 const COMPONENTS: Array<[Route, string]> = [
-  ["primitives", "Panel"],
-  ["primitives", "Typography"],
-  ["primitives", "Button"],
-  ["primitives", "TabStrip"],
-  ["primitives", "Slider"],
-  ["primitives", "ToggleRow"],
-  ["primitives", "Glyph"],
-  ["primitives", "LinkGlyph"],
-  ["primitives", "Tooltip"],
-  ["primitives", "KeyValue · Stat · HazardRule"],
-  ["overlays", "Drawer"],
-  ["overlays", "CommandPalette"],
-  ["overlays", "MeterRow"],
-  ["tokens", "Signature colours"],
-  ["tokens", "Muted ramp"],
-  ["tokens", "AA compliance"],
+  ["components/panel", "Panel"],
+  ["foundations/typography", "Typography"],
+  ["components/button", "Button"],
+  ["components/tab-strip", "TabStrip"],
+  ["components/slider", "Slider"],
+  ["components/toggle-row", "ToggleRow"],
+  ["components/glyph", "Glyph"],
+  ["components/link-glyph", "LinkGlyph"],
+  ["components/tooltip", "Tooltip"],
+  ["components/key-value", "KeyValue"],
+  ["components/stat", "Stat"],
+  ["components/hazard-rule", "HazardRule"],
+  ["components/section-heading", "SectionHeading"],
+  ["components/wordmark", "Wordmark"],
+  ["components/blink-cursor", "BlinkCursor"],
+  ["components/legend", "Legend"],
+  ["components/nexus-provider", "NexusProvider"],
+  ["components/drawer", "Drawer"],
+  ["components/command-palette", "CommandPalette"],
+  ["components/meter-row", "MeterRow"],
+  ["foundations/tokens", "Signature colours"],
+  ["foundations/tokens", "Muted ramp"],
+  ["foundations/tokens", "AA compliance"],
+  ["hooks/use-hotkey", "useHotkey"],
+  ["hooks/use-focus-trap", "useFocusTrap"],
+  ["hooks/rank-items", "rankItems"],
+  ["start", "Install"],
+  ["start", "First panel"],
 ];
 
 for (const [route, name] of COMPONENTS) {
@@ -100,7 +112,7 @@ for (const [route, name] of COMPONENTS) {
 
 test.describe("overlays while open", () => {
   test("drawer", async ({ page }) => {
-    await gotoPage(page, "overlays", "hud-aa");
+    await gotoPage(page, "components/drawer", "hud-aa");
     await page.getByRole("button", { name: "Open drawer" }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
     const { violations } = await audit(page).analyze();
@@ -108,7 +120,7 @@ test.describe("overlays while open", () => {
   });
 
   test("command palette with results", async ({ page }) => {
-    await gotoPage(page, "overlays", "hud-aa");
+    await gotoPage(page, "components/command-palette", "hud-aa");
     await page.getByRole("button", { name: "Open palette" }).click();
     await page.getByRole("combobox").fill("atlas");
     await expect(page.getByRole("option").first()).toBeVisible();
@@ -117,7 +129,7 @@ test.describe("overlays while open", () => {
   });
 
   test("command palette with no results still announces the count", async ({ page }) => {
-    await gotoPage(page, "overlays", "hud-aa");
+    await gotoPage(page, "components/command-palette", "hud-aa");
     await page.getByRole("button", { name: "Open palette" }).click();
     await page.getByRole("combobox").fill("zzzzz");
     await expect(page.getByRole("status")).toHaveText(/0 results/);
@@ -134,13 +146,13 @@ test.describe("the contrast trade-off between themes", () => {
   // ever gets checked in the direction you hope for is not being checked.
 
   test("hud-aa passes axe's colour-contrast rule", async ({ page }) => {
-    await gotoPage(page, "primitives", "hud-aa");
+    await gotoPage(page, "foundations/typography", "hud-aa");
     const { violations } = await new AxeBuilder({ page }).withRules(["color-contrast"]).analyze();
     expect(report(violations), report(violations)).toBe("");
   });
 
   test("hud genuinely fails it — the documented trade-off, not an oversight", async ({ page }) => {
-    await gotoPage(page, "primitives", "hud");
+    await gotoPage(page, "foundations/typography", "hud");
     const { violations } = await new AxeBuilder({ page }).withRules(["color-contrast"]).analyze();
     expect(
       violations.length,
@@ -161,11 +173,12 @@ test.describe("claims axe cannot make", () => {
   // that line in the rendered page: every one carries visible text, and the
   // one boundary that does identify a control (the palette's search field)
   // is drawn in the 3:1 token rather than the hairline.
-  test("every Button and Tab is identified by visible text, not by its hairline (WCAG 1.4.11)", async ({
-    page,
-  }) => {
-    const routes: Route[] = ["home", "primitives", "overlays", "tokens"];
-    for (const route of routes) {
+  // One test per page rather than one test looping them all: a single
+  // test over every page runs past any sensible timeout.
+  for (const route of ["home", ...DOC_ROUTES] as Route[]) {
+    test(`every Button and Tab on ${route} is identified by visible text, not by its hairline (WCAG 1.4.11)`, async ({
+      page,
+    }) => {
       await gotoPage(page, route, "hud-aa");
       const unlabelled = await page.evaluate(() =>
         [...document.querySelectorAll<HTMLElement>(".nx-btn, .nx-tab")]
@@ -173,13 +186,13 @@ test.describe("claims axe cannot make", () => {
           .map((el) => `${el.tagName.toLowerCase()}.${el.className}`),
       );
       expect(unlabelled, `${route}: controls with no visible text`).toEqual([]);
-    }
-  });
+    });
+  }
 
   test("the palette's search field is bounded by the 3:1 token, not the hairline", async ({
     page,
   }) => {
-    await gotoPage(page, "overlays", "hud-aa");
+    await gotoPage(page, "components/command-palette", "hud-aa");
     await page.getByRole("button", { name: "Open palette" }).click();
     const edge = await page.locator(".nx-palette__field").evaluate((el) => {
       const root = getComputedStyle(document.querySelector(".nx-root")!);
@@ -208,7 +221,7 @@ test.describe("claims axe cannot make", () => {
   test("the cursor blinks below the 3Hz seizure threshold (WCAG 2.3.1)", async ({ page }) => {
     // The prototype blinked at 9Hz. The cap lives on the token, not in the
     // component, so this reads the value the browser actually resolved.
-    await gotoPage(page, "primitives");
+    await gotoPage(page, "components/blink-cursor");
     const seconds = await page
       .locator(".nx-root")
       .evaluate((el) => parseFloat(getComputedStyle(el).getPropertyValue("--nx-blink")));
@@ -221,7 +234,7 @@ test.describe("claims axe cannot make", () => {
     // SVG geometry is the only way to know the silhouettes are actually
     // distinct — a palette swap would not touch this, and a copy-paste error
     // that duplicated a shape would pass every other test in the repo.
-    await gotoPage(page, "primitives");
+    await gotoPage(page, "components/glyph");
     const shapes = await spec(page, "Glyph")
       .locator("svg")
       .evaluateAll((svgs) =>
@@ -243,7 +256,7 @@ test.describe("claims axe cannot make", () => {
   test("the focus ring cannot be removed by a component (WCAG 2.4.7)", async ({ page }) => {
     // The ring is defined once, globally. Its value comes from tokens, so this
     // also catches the ring surviving but resolving to nothing.
-    await gotoPage(page, "primitives");
+    await gotoPage(page, "components/button");
     const ring = await page.locator(".nx-root").evaluate((el) => {
       const cs = getComputedStyle(el);
       return {
@@ -293,7 +306,7 @@ test.describe("claims axe cannot make", () => {
     // keyboard focus first (Tab, then focus() — a bare focus() never
     // satisfies :focus-visible in Chromium), because the claim under test is
     // about what a keyboard user sees, not merely that the CSS text exists.
-    await gotoPage(page, "primitives");
+    await gotoPage(page, "components/slider");
     const slider = spec(page, "Slider").getByRole("slider").first();
     await expect(slider).toBeAttached();
     await page.keyboard.press("Tab");
@@ -378,7 +391,7 @@ test.describe("claims axe cannot make", () => {
     // permanently lit ring would distinguish nothing — the panel appearing is
     // the indicator. Reading `outlineStyle` rather than the `outline`
     // shorthand for the same reason as the Slider test above.
-    await gotoPage(page, "overlays");
+    await gotoPage(page, "components/command-palette");
     await page.getByRole("button", { name: "Open palette" }).click();
     const input = page.getByRole("combobox");
     await expect(input).toBeAttached();
@@ -392,7 +405,7 @@ test.describe("claims axe cannot make", () => {
 
   test("prefers-reduced-motion collapses animation, including the blink", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
-    await gotoPage(page, "primitives");
+    await gotoPage(page, "components/blink-cursor");
     await settle(page);
 
     const blink = page.locator(".nx-blink").first();
@@ -419,7 +432,7 @@ test.describe("claims axe cannot make", () => {
     // emulation after mount covers the live listener, not just the read at
     // boot: the OS setting can change while the canvas is up.
     await page.emulateMedia({ reducedMotion: "reduce" });
-    await gotoPage(page, "graph");
+    await gotoPage(page, "labs/graph");
 
     const canvas = page.locator("canvas").first();
     await expect(canvas).toBeAttached();
@@ -454,7 +467,7 @@ test.describe("claims axe cannot make", () => {
     // WCAG 1.4.11: a track is a UI component boundary, so it may not use the
     // hairline. Comparing resolved colours rather than token names, because
     // what ships is whatever the cascade actually produced.
-    await gotoPage(page, "primitives");
+    await gotoPage(page, "components/slider");
     const slider = page.locator(".nx-slider").first();
     await expect(slider).toBeAttached();
 
@@ -473,21 +486,28 @@ test.describe("claims axe cannot make", () => {
     expect(colours.track).not.toBe(colours.hairline);
   });
 
-  test("every interactive control is reachable by keyboard", async ({ page }) => {
-    // axe checks that controls are labelled; it does not walk the tab order.
-    // A control that is focusable but visually covered by something else is a
-    // real defect, and one this showcase has had.
-    await gotoPage(page, "primitives");
-    const controls = page.locator(
-      ".nx-root button:not([disabled]), .nx-root input:not([disabled]), .nx-root a[href]",
-    );
-    const total = await controls.count();
-    expect(total).toBeGreaterThan(10);
+  // One test per page: the controls used to share two long pages, and now
+  // each component has its own.
+  for (const route of DOC_ROUTES) {
+    test(`every interactive control on ${route} is reachable by keyboard`, async ({ page }) => {
+      // axe checks that controls are labelled; it does not walk the tab order.
+      // A control that is focusable but visually covered by something else is a
+      // real defect, and one this showcase has had.
+      await gotoPage(page, route);
+      // Controls inside an inert subtree are excluded: a closed Drawer stays
+      // mounted with its close button, and that button being unreachable is
+      // the behaviour the Drawer promises, not a defect.
+      const controls = page.locator(
+        ":is(.nx-root button:not([disabled]), .nx-root input:not([disabled]), .nx-root a[href]):not([inert] *)",
+      );
+      const total = await controls.count();
+      expect(total).toBeGreaterThan(10);
 
-    for (let i = 0; i < total; i++) {
-      const control = controls.nth(i);
-      await control.focus();
-      await expect(control).toBeFocused();
-    }
-  });
+      for (let i = 0; i < total; i++) {
+        const control = controls.nth(i);
+        await control.focus();
+        await expect(control).toBeFocused();
+      }
+    });
+  }
 });

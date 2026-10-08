@@ -13,7 +13,44 @@ import { expect } from "@playwright/test";
 export const THEMES = ["hud-aa", "hud"] as const;
 export type Theme = (typeof THEMES)[number];
 
-export type Route = "home" | "graph" | "primitives" | "overlays" | "tokens";
+/**
+ * A showcase route: the hash path without "#/". "home" is the bare URL.
+ */
+export type Route = "home" | (typeof DOC_ROUTES)[number] | "labs/graph" | "labs/glitch";
+
+/**
+ * Every documentation page, in sidebar order. Listed by hand so tests can be
+ * declared per page; routing.spec.ts fails if it ever disagrees with the
+ * sidebar, so a page added to the site cannot quietly go untested.
+ */
+export const DOC_ROUTES = [
+  "start",
+  "foundations/tokens",
+  "foundations/typography",
+  "components",
+  "components/panel",
+  "components/hazard-rule",
+  "components/section-heading",
+  "components/wordmark",
+  "components/blink-cursor",
+  "components/button",
+  "components/tab-strip",
+  "components/slider",
+  "components/toggle-row",
+  "components/key-value",
+  "components/stat",
+  "components/meter-row",
+  "components/legend",
+  "components/tooltip",
+  "components/glyph",
+  "components/link-glyph",
+  "components/drawer",
+  "components/command-palette",
+  "components/nexus-provider",
+  "hooks/use-hotkey",
+  "hooks/use-focus-trap",
+  "hooks/rank-items",
+] as const;
 
 /**
  * Loads a showcase route in a known theme with CRT off.

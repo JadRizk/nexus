@@ -17,7 +17,7 @@ test.describe("focus rings", () => {
   // stray `outline: none` anywhere would silently delete it everywhere.
 
   test("button shows a focus ring on keyboard focus", async ({ page }) => {
-    await gotoPage(page, "primitives");
+    await gotoPage(page, "components/button");
     await focusVisible(spec(page, "Button").getByRole("button").first());
     await expect(spec(page, "Button")).toHaveScreenshot("focus-button.png");
   });
@@ -25,7 +25,7 @@ test.describe("focus rings", () => {
   test("slider thumb shows a focus ring", async ({ page }) => {
     // The thumb ring needs two vendor-prefixed pseudo-element rules to exist.
     // Losing one is invisible in every other kind of test.
-    await gotoPage(page, "primitives");
+    await gotoPage(page, "components/slider");
     await focusVisible(spec(page, "Slider").getByRole("slider").first());
     await expect(spec(page, "Slider")).toHaveScreenshot("focus-slider.png");
   });
@@ -33,13 +33,13 @@ test.describe("focus rings", () => {
   test("toggle row draws the ring on the row, not the hidden checkbox", async ({ page }) => {
     // The input is visually hidden, so the ring comes from :focus-within on the
     // label with a negative offset that keeps it inside a tightly stacked list.
-    await gotoPage(page, "primitives");
+    await gotoPage(page, "components/toggle-row");
     await focusVisible(spec(page, "ToggleRow").getByRole("checkbox").first());
     await expect(spec(page, "ToggleRow")).toHaveScreenshot("focus-togglerow.png");
   });
 
   test("tab strip shows the ring on the selected tab under roving tabindex", async ({ page }) => {
-    await gotoPage(page, "primitives");
+    await gotoPage(page, "components/tab-strip");
     await focusVisible(spec(page, "TabStrip").getByRole("tab").first());
     await expect(spec(page, "TabStrip")).toHaveScreenshot("focus-tabstrip.png");
   });
@@ -62,7 +62,7 @@ test.describe("focus rings", () => {
   });
 
   test("the skip link is off-screen until focused, then visible", async ({ page }) => {
-    await gotoPage(page, "primitives");
+    await gotoPage(page, "components/button");
     const skip = page.getByRole("link", { name: "Skip to content" });
 
     const offscreen = await skip.evaluate((el) => el.getBoundingClientRect().x);
@@ -83,13 +83,13 @@ test.describe("focus rings", () => {
 
 test.describe("hover states", () => {
   test("button hover", async ({ page }) => {
-    await gotoPage(page, "primitives");
+    await gotoPage(page, "components/button");
     await spec(page, "Button").getByRole("button").first().hover();
     await expect(spec(page, "Button")).toHaveScreenshot("hover-button.png");
   });
 
   test("toggle row hover", async ({ page }) => {
-    await gotoPage(page, "primitives");
+    await gotoPage(page, "components/toggle-row");
     // Hover the row, not the checkbox: the input is visually hidden at 1px and
     // clipped, so it is the label that actually receives the pointer.
     await spec(page, "ToggleRow").locator(".nx-row").first().hover();
@@ -144,7 +144,7 @@ test.describe("theme swap", () => {
   test("switching theme changes the muted ramp on screen, not just in the DOM", async ({
     page,
   }) => {
-    await gotoPage(page, "primitives", "hud-aa");
+    await gotoPage(page, "foundations/typography", "hud-aa");
 
     const disabled = () =>
       page
@@ -166,12 +166,12 @@ test.describe("theme swap", () => {
 
 test.describe("token reference", () => {
   test("the tokens page renders the full palette", async ({ page }) => {
-    await gotoPage(page, "tokens");
+    await gotoPage(page, "foundations/tokens");
     await expect(spec(page, "Signature colours")).toHaveScreenshot("tokens-signature.png");
   });
 
   test("the AA comparison table", async ({ page }) => {
-    await gotoPage(page, "tokens");
+    await gotoPage(page, "foundations/tokens");
     await expect(spec(page, "AA compliance")).toHaveScreenshot("tokens-aa.png");
   });
 });
@@ -185,7 +185,7 @@ test.describe("component tokens", () => {
     page.addStyleTag({ content: `.nx-root { ${css} } ` });
 
   test("a consumer retheme of Button reaches every state", async ({ page }) => {
-    await gotoPage(page, "primitives");
+    await gotoPage(page, "components/button");
     const button = spec(page, "Button").getByRole("button").first();
 
     const before = await button.evaluate((el) => getComputedStyle(el).borderTopColor);
@@ -202,7 +202,7 @@ test.describe("component tokens", () => {
   test("Panel's padding is reachable from a stylesheet", async ({ page }) => {
     // The specific complaint in the review: Panel styled itself inline, so its
     // padding could not be changed from CSS at all.
-    await gotoPage(page, "primitives");
+    await gotoPage(page, "components/panel");
     const panel = spec(page, "Panel").locator(".nx-panel").first();
 
     await expect(panel).toHaveCSS("padding-top", "12px");
@@ -213,7 +213,7 @@ test.describe("component tokens", () => {
   test("a component token override does not leak into the semantic layer", async ({ page }) => {
     // Component tokens are a layer below the semantic one: overriding a
     // button's border must not move --nx-border-default for anything else.
-    await gotoPage(page, "primitives");
+    await gotoPage(page, "components/button");
     await restyle(page, "--nx-btn-border: rgb(255, 0, 0);");
     const semantic = await page
       .locator(".nx-root")
@@ -231,7 +231,7 @@ test.describe('Panel corners="none" suppression', () => {
   // "generated, painting nothing" from "never generated", and jsdom does not
   // support pseudo-element computed styles at all, so this has to run here.
   test("no ::before pseudo-element is generated for a none-corners panel", async ({ page }) => {
-    await gotoPage(page, "primitives");
+    await gotoPage(page, "components/panel");
     const header = banner(page);
     await expect(header).toHaveAttribute("data-nx-corners", "none");
     const content = await header.evaluate((el) => getComputedStyle(el, "::before").content);
@@ -241,7 +241,7 @@ test.describe('Panel corners="none" suppression', () => {
   test("a corners panel does generate the pseudo-element", async ({ page }) => {
     // The contrasting case, so the assertion above is known to be
     // discriminating rather than trivially true for every element.
-    await gotoPage(page, "primitives");
+    await gotoPage(page, "components/panel");
     const panel = spec(page, "Panel").locator(".nx-panel").first();
     await expect(panel).toHaveAttribute("data-nx-corners", "tl br");
     const content = await panel.evaluate((el) => getComputedStyle(el, "::before").content);
