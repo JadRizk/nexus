@@ -22,12 +22,17 @@
   max-height: var(--nx-palette-max-height, 62vh);
 }
 
+/* The search input has no border of its own, so this underline is the only
+   boundary that says "a text field lives here". That makes it the one edge in
+   the palette that has to meet the 3:1 non-text floor (WCAG 1.4.11), which is
+   --nx-border-strong; the decorative hairline used by the other dividers does
+   not. */
 .nx-palette__field {
   display: flex;
   align-items: center;
   gap: var(--nx-space-4);
   padding: var(--nx-space-5);
-  border-bottom: var(--nx-hairline) solid var(--nx-palette-divider, var(--nx-border-default));
+  border-bottom: var(--nx-hairline) solid var(--nx-palette-divider, var(--nx-border-strong));
 }
 
 .nx-palette__prompt {
