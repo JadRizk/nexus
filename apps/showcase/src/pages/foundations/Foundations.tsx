@@ -2,7 +2,8 @@ import type { CSSProperties } from "react";
 import { SectionHeading } from "@nexus-cyberdeck/react";
 import { Spec } from "../../components/Spec.js";
 import { COMPONENT_LAYER } from "../../tokens/componentCss.js";
-import { THEME_META, tokenByName, tokensIn } from "../../tokens/model.js";
+import { contrastOf, THEME_META, tokenByName, tokensIn } from "../../tokens/model.js";
+import type { NexusTheme } from "@nexus-cyberdeck/tokens";
 import {
   BlinkSample,
   BorderSample,
@@ -22,6 +23,17 @@ import { componentHref, CopyName, TokenTable } from "../../tokens/TokenTable.js"
 const surface = tokenByName("--nx-bg-surface")!.values["hud-aa"];
 const floors = THEME_META["hud-aa"].wcag!;
 
+// The intro's claims about the text roles, computed rather than typed, so the
+// sentence cannot disagree with the table under it.
+const fgRoles = tokensIn("semantic", "fg");
+const ratiosIn = (theme: NexusTheme) =>
+  fgRoles.flatMap((t) => {
+    const r = contrastOf(t, theme);
+    return r === undefined ? [] : [{ name: t.name, r }];
+  });
+const lowestAA = ratiosIn("hud-aa").reduce((a, b) => (b.r < a.r ? b : a));
+const belowInHud = ratiosIn("hud").filter((x) => x.r < floors.text).length;
+
 export function ColourPage() {
   return (
     <>
@@ -30,11 +42,13 @@ export function ColourPage() {
         intro={
           <>
             What components colour text and glyphs with. Contrast is measured against the panel
-            surface ({surface}); the AA theme holds every role at or above {floors.text}:1, and the
-            HUD theme lets the muted roles fall below it.
+            surface ({surface}). In the AA theme the lowest role is <code>{lowestAA.name}</code> at{" "}
+            {lowestAA.r.toFixed(2)}:1
+            {lowestAA.r >= floors.text ? `, so every role clears ${floors.text}:1` : ""}; in the HUD
+            theme {belowInHud} {belowInHud === 1 ? "role falls" : "roles fall"} below it.
           </>
         }
-        tokens={tokensIn("semantic", "fg")}
+        tokens={fgRoles}
         preview={TextSample}
         contrast="text"
       />

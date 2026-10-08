@@ -1,12 +1,19 @@
-import { parseComponentCss } from "./model.js";
+import layer from "virtual:nx-component-layer";
 
-/* Each component's stylesheet, as text, read at build time. The component
-   token layer has no JSON source — it lives in these files as
-   var(--nx-x, fallback) hooks — so this is its source of truth. */
-const files = import.meta.glob<string>("../../../../packages/react/src/components/*/*.css", {
-  query: "?raw",
-  import: "default",
-  eager: true,
-});
+/* The component token layer, parsed at build time by
+   scripts/component-layer.mjs (see the nx-component-layer plugin in
+   vite.config.ts). The component layer has no JSON source: it lives in each
+   component's stylesheet as var(--nx-x, fallback) hooks. */
 
-export const COMPONENT_LAYER = parseComponentCss(files);
+export interface ComponentToken {
+  name: string;
+  /** The fallback the component uses when nothing sets the token. */
+  fallback: string;
+}
+
+export const COMPONENT_LAYER = {
+  /** Component → the --nx-* hooks it reads with a fallback. */
+  hooks: new Map<string, ComponentToken[]>(layer.hooks),
+  /** Global token → the components whose stylesheet references it. */
+  usedBy: new Map<string, string[]>(layer.usedBy),
+};

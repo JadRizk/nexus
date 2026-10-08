@@ -1,6 +1,10 @@
 import { BlinkCursor, SectionHeading, Wordmark } from "@nexus-cyberdeck/react";
 import { Row, Spec } from "../../components/Spec.js";
-import { tokensIn } from "../../tokens/model.js";
+import { tokenByName, tokensIn } from "../../tokens/model.js";
+
+// Read from the token rather than typed, so the intro moves with the scale.
+const scale = tokenByName("--nx-font-scale")!.values;
+const scaleUp = Math.round((Number(scale["hud-aa"]) / Number(scale.hud) - 1) * 100);
 import {
   FontSample,
   LeadingSample,
@@ -47,8 +51,8 @@ export function TypographyPage() {
       </Spec>
       <TokenTable
         caption="Type scale"
-        intro="Sizes are rem multiplied by the theme's font scale, so the AA theme sets every size
-             15% larger and browser zoom still applies on top."
+        intro={`Sizes are rem multiplied by the theme's font scale, so the AA theme sets every size
+               ${scaleUp}% larger than HUD, and browser zoom still applies on top.`}
         tokens={tokensIn("primitive", "text")}
         preview={SizeSample}
       />

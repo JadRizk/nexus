@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { Button, SectionHeading, useNexus } from "@nexus-cyberdeck/react";
 import { WCAG } from "@nexus-cyberdeck/tokens";
 import type { NexusTheme } from "@nexus-cyberdeck/tokens";
-import { COMPONENT_GROUPS } from "../site.js";
+import { componentPath } from "../catalogue.js";
 import { COMPONENT_LAYER } from "./componentCss.js";
 import { accessorOf, contrastOf, THEMES } from "./model.js";
 import type { Token } from "./model.js";
@@ -22,10 +22,10 @@ const dim: CSSProperties = { ...small, color: "var(--nx-fg-tertiary)" };
 const code: CSSProperties = { fontFamily: "var(--nx-font-mono)", color: "var(--nx-fg-default)" };
 const link: CSSProperties = { color: "var(--nx-fg-accent)" };
 
-/** Component name → its page, for "read by" links. */
+/** Component name → its page, for "used by" links. */
 export function componentHref(name: string): string | undefined {
-  const page = COMPONENT_GROUPS.flatMap((g) => g.pages).find((p) => p.title === name);
-  return page ? `#/${page.path}` : undefined;
+  const path = componentPath(name);
+  return path ? `#/${path}` : undefined;
 }
 
 export function ComponentLinks({ names }: { names: readonly string[] }) {
@@ -170,17 +170,40 @@ function NotesCell({ token }: { token: Token }) {
   );
 }
 
+type CopyState = "idle" | "copied" | "failed";
+
+const COPY_LABEL: Record<CopyState, string> = {
+  idle: "Copy",
+  copied: "Copied",
+  failed: "Copy failed",
+};
+
 export function CopyName({ name }: { name: string }) {
-  const [copied, setCopied] = useState(false);
+  const [state, setState] = useState<CopyState>("idle");
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(timer.current), []);
+
+  // One timer, restarted on every outcome: a second click inside the window
+  // keeps the label up for the full interval instead of having the first
+  // click's timer clear it early.
+  const show = (next: CopyState) => {
+    setState(next);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => setState("idle"), 1400);
+  };
+
   return (
     <>
       <Button
         aria-label={`Copy ${name}`}
         onClick={() => {
-          void navigator.clipboard?.writeText(name).then(() => {
-            setCopied(true);
-            setTimeout(() => setCopied(false), 1400);
-          });
+          // The Clipboard API is absent outside a secure context and can be
+          // refused by permission; both say so rather than failing silently.
+          if (!navigator.clipboard) return show("failed");
+          navigator.clipboard.writeText(name).then(
+            () => show("copied"),
+            () => show("failed"),
+          );
         }}
         style={
           {
@@ -189,10 +212,10 @@ export function CopyName({ name }: { name: string }) {
           } as CSSProperties
         }
       >
-        {copied ? "Copied" : "Copy"}
+        {COPY_LABEL[state]}
       </Button>
       <span className="nx-sr" aria-live="polite">
-        {copied ? `Copied ${name}` : ""}
+        {state === "copied" ? `Copied ${name}` : state === "failed" ? `Could not copy ${name}` : ""}
       </span>
     </>
   );
@@ -272,7 +295,7 @@ export function TokenTable({ caption, intro, tokens, preview, contrast }: TokenT
           {tokens.map((t) => {
             const accessor = accessorOf(t);
             return (
-              <tr key={t.name}>
+              <tr key={t.name} data-token={t.name}>
                 <td style={td}>{preview(t)}</td>
                 <th scope="row" style={{ ...td, textAlign: "left", fontWeight: "normal" }}>
                   <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap" }}>

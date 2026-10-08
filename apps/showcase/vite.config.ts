@@ -1,10 +1,29 @@
 import { defineConfig } from "vitest/config";
+import type { Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import { workspaceAlias } from "../../workspace-alias.mjs";
 import { componentCount, shortVersion, tokenCount } from "../../scripts/ds-figures.mjs";
+import { componentCssFiles, componentLayer } from "../../scripts/component-layer.mjs";
+
+// The component token layer as a module: parsed from the component
+// stylesheets here, at build time, so the bundle carries the result rather
+// than the raw CSS. Each stylesheet is watched, so editing one in dev
+// regenerates the module.
+const COMPONENT_LAYER_ID = "virtual:nx-component-layer";
+function componentLayerModule(): Plugin {
+  return {
+    name: "nx-component-layer",
+    resolveId: (id) => (id === COMPONENT_LAYER_ID ? `\0${id}` : undefined),
+    load(id) {
+      if (id !== `\0${COMPONENT_LAYER_ID}`) return undefined;
+      for (const file of componentCssFiles()) this.addWatchFile(file);
+      return `export default ${JSON.stringify(componentLayer())};`;
+    },
+  };
+}
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), componentLayerModule()],
   resolve: { alias: workspaceAlias },
   // The figures the chrome advertises, read from the code at build time so a
   // version bump or a new component can never leave the header stale. See

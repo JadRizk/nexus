@@ -1,9 +1,11 @@
 /// <reference types="node" />
 // Node types for this file only: the app itself runs in the browser.
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { accessorOf, contrastOf, parseComponentCss, tokenByName, TOKENS } from "./model.js";
+import { parseComponentCss } from "../../../../scripts/component-layer.mjs";
+import { COMPONENT_LAYER } from "./componentCss.js";
+import { accessorOf, contrastOf, tokenByName, TOKENS } from "./model.js";
 
 const generatedCss = readFileSync(
   fileURLToPath(new URL("../../../../packages/tokens/src/tokens.css", import.meta.url)),
@@ -57,37 +59,39 @@ describe("token model", () => {
 });
 
 describe("component layer", () => {
+  const globals = new Set(TOKENS.map((t) => t.name));
+
   it("separates a component's own hooks from the global tokens it reads", () => {
-    const layer = parseComponentCss({
-      "components/Button/Button.css": `
+    const layer = parseComponentCss(
+      {
+        "components/Button/Button.css": `
         /* var(--nx-commented-out, red) */
         .nx-btn { color: var(--nx-btn-fg, var(--nx-fg-muted));
                   padding: var(--nx-btn-padding, var(--nx-space-3) var(--nx-space-4)); }
         .nx-btn:hover { --nx-btn-fg: var(--nx-fg-accent); }`,
-    });
-    expect(layer.hooks.get("Button")).toEqual([
+      },
+      globals,
+    );
+    expect(new Map(layer.hooks).get("Button")).toEqual([
       { name: "--nx-btn-fg", fallback: "var(--nx-fg-muted)" },
       { name: "--nx-btn-padding", fallback: "var(--nx-space-3) var(--nx-space-4)" },
     ]);
-    expect(layer.usedBy.get("--nx-fg-accent")).toEqual(["Button"]);
-    expect(layer.usedBy.get("--nx-space-4")).toEqual(["Button"]);
+    const usedBy = new Map(layer.usedBy);
+    expect(usedBy.get("--nx-fg-accent")).toEqual(["Button"]);
+    expect(usedBy.get("--nx-space-4")).toEqual(["Button"]);
   });
 
-  it("finds hooks in the real component stylesheets", () => {
-    // Read from disk rather than through componentCss.ts: Vitest stubs CSS
-    // imports to empty strings, ?raw included. The glob itself is exercised
-    // by the browser suite, which renders the real page.
-    const dir = fileURLToPath(
-      new URL("../../../../packages/react/src/components/", import.meta.url),
+  it("reads the component name from either path separator", () => {
+    const layer = parseComponentCss(
+      { "C:\\repo\\components\\Stat\\Stat.css": ".a { color: var(--nx-stat-fg, red); }" },
+      globals,
     );
-    const files = Object.fromEntries(
-      readdirSync(dir, { recursive: true, encoding: "utf8" })
-        .filter((f) => f.endsWith(".css"))
-        .map((f) => [`components/${f}`, readFileSync(dir + f, "utf8")]),
-    );
-    const layer = parseComponentCss(files);
-    expect(layer.hooks.size).toBeGreaterThan(10);
-    expect(layer.hooks.get("Button")?.map((h) => h.name)).toContain("--nx-btn-fg");
-    expect(layer.usedBy.get("--nx-fg-accent")).toContain("Button");
+    expect(layer.hooks.map(([c]) => c)).toEqual(["Stat"]);
+  });
+
+  it("reaches the app through the build-time module with the real stylesheets", () => {
+    expect(COMPONENT_LAYER.hooks.size).toBeGreaterThan(10);
+    expect(COMPONENT_LAYER.hooks.get("Button")?.map((h) => h.name)).toContain("--nx-btn-fg");
+    expect(COMPONENT_LAYER.usedBy.get("--nx-fg-accent")).toContain("Button");
   });
 });
