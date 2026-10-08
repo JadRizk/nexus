@@ -69,6 +69,20 @@ test("back and forward move between pages", async ({ page }) => {
   await expect(h1(page, "Button")).toBeVisible();
 });
 
+test("every page renders when reached by client-side navigation", async ({ page }) => {
+  // Direct loads are covered page by page elsewhere; this walks the sidebar
+  // in one session, so each page mounts after a different one. A page whose
+  // hooks leaked into the shell rendered fine on a direct load and crashed
+  // the whole app here.
+  test.setTimeout(60_000);
+  await gotoPage(page, "start");
+  for (const route of DOC_ROUTES) {
+    await sidebar(page).locator(`a[href="#/${route}"]`).click();
+    await expect(page).toHaveURL(new RegExp(`#/${route}$`));
+    await expect(page.locator("main h1"), route).toBeVisible();
+  }
+});
+
 test("changing page starts the new one at the top, with focus in it", async ({ page }) => {
   await gotoPage(page, "foundations/tokens");
   const main = page.locator("main");
