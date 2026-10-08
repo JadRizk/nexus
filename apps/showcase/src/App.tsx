@@ -54,20 +54,18 @@ function titleOf(view: View): string {
   }
 }
 
-/* The header names the site's sections; the sidebar names the pages inside
-   the documentation ones. A section is current for any page under it. */
-const NAV: ReadonlyArray<{ label: string; path: string; section?: string }> = [
+/* The header names the site's destinations; the docs sidebar names the pages
+   inside the documentation. Docs is one entry, current for any page under any
+   of its sections, because every one of them opens the same sidebar layout. */
+const NAV: ReadonlyArray<{ label: string; path: string; sections?: readonly string[] }> = [
   { label: "Home", path: "" },
-  { label: "Get started", path: "start" },
-  { label: "Foundations", path: "foundations/tokens", section: "foundations" },
-  { label: "Components", path: "components", section: "components" },
-  { label: "Hooks", path: "hooks/use-hotkey", section: "hooks" },
+  { label: "Docs", path: "start", sections: ["start", "foundations", "components", "hooks"] },
   { label: "Graph", path: "labs/graph" },
   { label: "Glitch Lab", path: "labs/glitch" },
 ];
 
 const isCurrent = (item: (typeof NAV)[number], path: string) =>
-  path === item.path || (!!item.section && path.split("/")[0] === item.section);
+  path === item.path || !!item.sections?.includes(path.split("/")[0]!);
 
 function Shell() {
   const path = useRoute().join("/");
@@ -129,12 +127,8 @@ function Shell() {
         role="banner"
         corners="none"
         padded={false}
-        style={{
-          flexShrink: 0,
-          borderTop: 0,
-          borderLeft: 0,
-          borderRight: 0,
-        }}
+        // No border: the hazard rule below is the header's only edge.
+        style={{ flexShrink: 0, border: 0 }}
       >
         <div
           style={{
@@ -216,7 +210,14 @@ function Shell() {
         ref={main}
         id="main"
         tabIndex={0}
-        style={{ flex: 1, minHeight: 0, overflow: fullBleed ? "hidden" : "auto" }}
+        style={{
+          flex: 1,
+          minHeight: 0,
+          overflow: fullBleed ? "hidden" : "auto",
+          // A size container on docs pages, so the sticky sidebar can cap its
+          // height at <main>'s visible height (100cqh) and scroll on its own.
+          containerType: view.kind === "doc" ? "size" : undefined,
+        }}
       >
         {view.kind === "home" && <HomePage />}
         {view.kind === "graph" && <NexusCyberdeck />}
@@ -242,88 +243,53 @@ function Shell() {
           </div>
         )}
       </main>
-
-      {!fullBleed && (
-        <footer
-          style={{
-            flexShrink: 0,
-            padding: "var(--nx-space-6)",
-            color: "var(--nx-fg-tertiary)",
-            fontSize: "var(--nx-text-2xs)",
-            letterSpacing: "var(--nx-track-wider)",
-            textTransform: "uppercase",
-            borderTop: "var(--nx-hairline) solid var(--nx-border-default)",
-          }}
-        >
-          Zero runtime dependencies · <span data-nx-figure>{__NX_TOKENS__}</span> tokens ·{" "}
-          <span data-nx-figure>{__NX_COMPONENTS__}</span> components
-          {path === "components/command-palette" ? " · ⌘K opens the palette" : ""}
-        </footer>
-      )}
     </div>
   );
 }
 
 const PAGE = { padding: "var(--nx-space-7) var(--nx-space-6)", maxWidth: 980 } as const;
 
+/** The docs sidebar. Layout and states live in showcase.css (.sc-sidebar). */
 function DocsNav({ path }: { path: string }) {
-  const link = (page: DocPage) => {
-    const current = page.path === path;
-    return (
-      <li key={page.path}>
-        <a
-          href={`#/${page.path}`}
-          aria-current={current ? "page" : undefined}
-          style={{
-            display: "block",
-            padding: "var(--nx-space-2) var(--nx-space-4)",
-            borderLeft: `2px solid ${current ? "var(--nx-fg-accent)" : "transparent"}`,
-            color: current ? "var(--nx-fg-accent)" : "var(--nx-fg-subtle)",
-            textDecoration: "none",
-          }}
-        >
-          {page.navLabel ?? page.title}
-        </a>
-      </li>
-    );
-  };
-  const heading = (title: string, level: "group" | "sub") => (
-    <div
-      style={{
-        padding:
-          level === "group"
-            ? "var(--nx-space-6) 0 var(--nx-space-3)"
-            : "var(--nx-space-4) var(--nx-space-4) var(--nx-space-2)",
-        color: "var(--nx-fg-tertiary)",
-        fontSize: "var(--nx-text-2xs)",
-        letterSpacing: "var(--nx-track-wider)",
-        textTransform: "uppercase",
-      }}
-    >
-      {title}
-    </div>
+  const nav = useRef<HTMLElement>(null);
+
+  // The sidebar scrolls on its own, so a page near the end of the list (a deep
+  // link to Tooltip, say) would load with its own entry out of sight. Bring
+  // the current link into the sidebar's view: by setting the sidebar's own
+  // scrollTop, because scrollIntoView would scroll <main> as well.
+  useLayoutEffect(() => {
+    const box = nav.current;
+    const current = box?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!box || !current) return;
+    const top = current.offsetTop;
+    const bottom = top + current.offsetHeight;
+    if (top < box.scrollTop || bottom > box.scrollTop + box.clientHeight) {
+      box.scrollTop = top - box.clientHeight / 2;
+    }
+  }, [path]);
+
+  const link = (page: DocPage) => (
+    <li key={page.path}>
+      <a
+        href={`#/${page.path}`}
+        className="sc-sidebar__link"
+        aria-current={page.path === path ? "page" : undefined}
+      >
+        {page.navLabel ?? page.title}
+      </a>
+    </li>
   );
-  const list = { listStyle: "none", margin: 0, padding: 0 } as const;
 
   return (
-    <nav
-      aria-label="Documentation"
-      style={{
-        flex: "0 0 200px",
-        boxSizing: "border-box",
-        padding: "var(--nx-space-2) var(--nx-space-5) var(--nx-space-7) var(--nx-space-6)",
-        borderRight: "var(--nx-hairline) solid var(--nx-border-default)",
-        alignSelf: "stretch",
-      }}
-    >
+    <nav ref={nav} aria-label="Documentation" className="sc-sidebar">
       {DOC_GROUPS.map((group) => (
         <div key={group.title}>
-          {heading(group.title, "group")}
-          <ul style={list}>{group.pages.map(link)}</ul>
+          <div className="sc-sidebar__group">{group.title}</div>
+          <ul className="sc-sidebar__list">{group.pages.map(link)}</ul>
           {group.subgroups?.map((sub) => (
             <div key={sub.title}>
-              {heading(sub.title, "sub")}
-              <ul style={list}>{sub.pages.map(link)}</ul>
+              <div className="sc-sidebar__subgroup">{sub.title}</div>
+              <ul className="sc-sidebar__list">{sub.pages.map(link)}</ul>
             </div>
           ))}
         </div>

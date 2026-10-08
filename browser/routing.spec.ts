@@ -22,8 +22,8 @@ test("a deep link opens its page and marks it current in both navs", async ({ pa
     "aria-current",
     "page",
   );
-  // The header names the section, which is current for every page under it.
-  await expect(nav(page).getByRole("link", { name: "Components" })).toHaveAttribute(
+  // Docs is one header entry, current for every page under the sidebar.
+  await expect(nav(page).getByRole("link", { name: "Docs" })).toHaveAttribute(
     "aria-current",
     "true",
   );
@@ -32,10 +32,7 @@ test("a deep link opens its page and marks it current in both navs", async ({ pa
 test("the header nav is links with real hrefs, and Home is the bare URL", async ({ page }) => {
   await gotoPage(page, "home");
   await expect(nav(page).getByRole("link", { name: "Home" })).toHaveAttribute("href", "#/");
-  await expect(nav(page).getByRole("link", { name: "Components" })).toHaveAttribute(
-    "href",
-    "#/components",
-  );
+  await expect(nav(page).getByRole("link", { name: "Docs" })).toHaveAttribute("href", "#/start");
   await expect(nav(page).getByRole("link", { name: "Graph" })).toHaveAttribute(
     "href",
     "#/labs/graph",
@@ -55,7 +52,9 @@ test("the sidebar lists exactly the pages the suite tests", async ({ page }) => 
 
 test("back and forward move between pages", async ({ page }) => {
   await gotoPage(page, "home");
-  await nav(page).getByRole("link", { name: "Components" }).click();
+  await nav(page).getByRole("link", { name: "Docs" }).click();
+  await expect(page).toHaveURL(/#\/start$/);
+  await sidebar(page).getByRole("link", { name: "Overview" }).click();
   await expect(page).toHaveURL(/#\/components$/);
   await page
     .getByRole("link", { name: /^Button/ })
@@ -67,6 +66,27 @@ test("back and forward move between pages", async ({ page }) => {
   await expect(h1(page, "Components")).toBeVisible();
   await page.goForward();
   await expect(h1(page, "Button")).toBeVisible();
+});
+
+test("a short page does not scroll to fit the sidebar", async ({ page }) => {
+  // The sidebar is longer than most pages. It scrolls on its own, capped at
+  // <main>'s visible height, so it must never set the page's scroll height.
+  await gotoPage(page, "components/hazard-rule");
+  const main = page.locator("main");
+  const sizes = await main.evaluate((el) => {
+    const nav = el.querySelector<HTMLElement>(".sc-sidebar")!;
+    return { main: [el.scrollHeight, el.clientHeight], nav: [nav.scrollHeight, nav.clientHeight] };
+  });
+  expect(sizes.main[0]).toBe(sizes.main[1]);
+  expect(sizes.nav[0]).toBeGreaterThan(sizes.nav[1]);
+});
+
+test("a deep link scrolls its own sidebar entry into view, not the page", async ({ page }) => {
+  await gotoPage(page, "hooks/rank-items");
+  const current = sidebar(page).getByRole("link", { name: "rankItems" });
+  await expect(current).toHaveAttribute("aria-current", "page");
+  await expect(current).toBeInViewport();
+  expect(await page.locator("main").evaluate((el) => el.scrollTop)).toBe(0);
 });
 
 test("every page renders when reached by client-side navigation", async ({ page }) => {
