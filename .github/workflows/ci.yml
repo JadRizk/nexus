@@ -137,6 +137,15 @@ jobs:
       - name: React and graph compile against @types/react 19
         run: node scripts/check-react19-types.mjs
 
+      # The two checks above read the packages' source from inside the repo. A
+      # consumer reads the shipped .d.ts and exports map under their own
+      # @types/react, which is where useFocusTrap's ref type broke for React 18
+      # without anything here noticing. This installs the packed tarballs into
+      # clean React 18 and React 19 projects and uses them: ESM, CJS, a server
+      # render, and a strict compile of README-style code.
+      - name: Built packages work for a consumer on React 18 and 19
+        run: node scripts/check-consumer.mjs
+
       # A changeset is how a consumer finds out what changed. Asking for one on
       # the pull request is the only moment anybody remembers the reasoning; a
       # changelog reconstructed from commit messages at release time is written

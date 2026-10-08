@@ -1,5 +1,4 @@
 import { useEffect, useRef } from "react";
-import type { RefObject } from "react";
 
 // Every trap that is currently active, oldest first. Only the most recently
 // activated one enforces the document-level focus guard below: when a palette
@@ -25,23 +24,30 @@ const activeTraps: object[] = [];
  * without a focusin event; the modal's scrim has to prevent that by refusing
  * the mousedown, which Drawer's does.
  *
- * The return type is `RefObject<T | null>`, not `RefObject<T>`: that is what
- * `useRef<T>(null)` actually produces, and it is the only annotation that
- * reads correctly for both halves of the declared peer range. @types/react
- * 18 bakes `| null` into `RefObject<T>`'s own `current` field, so consumers
- * there never notice the difference; @types/react 19 made `RefObject<T>`
- * exact (`current: T`, no null), so a consumer on 19 reading the old
- * `RefObject<T>` annotation off this package's shipped `.d.ts` would believe
- * `current` can never be null, which is false the instant the modal closes
- * and focus restoration runs. See scripts/check-react19-types.mjs, which
- * typechecks this package's source against @types/react 19 in CI so this
- * cannot regress silently the way it arrived silently (CI only ever
- * typechecked against the @types/react 18 pinned in devDependencies).
+ * The return type is the object type `{ readonly current: T | null }`, which
+ * is what `useRef<T>(null)` produces on both halves of the declared peer
+ * range, written out rather than spelled `RefObject<...>` because that alias
+ * means different things in each. @types/react 18's `RefObject<T>` already
+ * bakes `| null` into `current`; 19 made it exact (`current: T`) and moved the
+ * nullability onto the ref-prop types, so `RefObject<T | null>` is the 19
+ * spelling. Declaring either one breaks the other half: `RefObject<T>` tells a
+ * 19 consumer `current` can never be null (false the instant the modal closes
+ * and focus restoration runs), while `RefObject<T | null>` is rejected on 18 by
+ * its alias-variance check when passed to `<div ref>`, even though the two
+ * shapes are identical. The inline type is assignable to the `ref` prop under
+ * both, so a consumer writes `<div ref={ref}>` on either with no cast.
+ *
+ * scripts/check-react19-types.mjs typechecks this package's source against
+ * @types/react 19, and scripts/check-consumer.mjs installs the built tarballs
+ * into clean React 18 and React 19 projects and compiles a consumer against
+ * them, which is the check that would have caught this: the repository's own
+ * typecheck only ever sees the @types/react 18 in devDependencies, and only
+ * reads this hook from inside the package.
  */
 export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
   active: boolean,
   onDismiss?: () => void,
-): RefObject<T | null> {
+): { readonly current: T | null } {
   const ref = useRef<T>(null);
   const restoreTo = useRef<Element | null>(null);
   const onDismissRef = useRef(onDismiss);
