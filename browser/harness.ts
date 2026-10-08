@@ -26,7 +26,12 @@ export type Route = "home" | (typeof DOC_ROUTES)[number] | "labs/graph" | "labs/
 export const DOC_ROUTES = [
   "start",
   "foundations/tokens",
+  "foundations/colour",
   "foundations/typography",
+  "foundations/space",
+  "foundations/motion",
+  "foundations/depth",
+  "foundations/component-tokens",
   "components",
   "components/panel",
   "components/hazard-rule",
