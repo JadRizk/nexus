@@ -37,12 +37,12 @@ const activeTraps: object[] = [];
  * shapes are identical. The inline type is assignable to the `ref` prop under
  * both, so a consumer writes `<div ref={ref}>` on either with no cast.
  *
- * scripts/check-react19-types.mjs typechecks this package's source against
- * @types/react 19, and scripts/check-consumer.mjs installs the built tarballs
- * into clean React 18 and React 19 projects and compiles a consumer against
- * them, which is the check that would have caught this: the repository's own
- * typecheck only ever sees the @types/react 18 in devDependencies, and only
- * reads this hook from inside the package.
+ * The repository typechecks this package's source on both majors (its own
+ * @types/react 19, and @types/react 18 through scripts/test-react.mjs), and
+ * scripts/check-consumer.mjs installs the built tarballs into clean React 18
+ * and React 19 projects and compiles a consumer against them, which is the
+ * check that would have caught this: a typecheck from inside the package only
+ * ever sees one @types/react, and only reads this hook as its author does.
  */
 export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
   active: boolean,
