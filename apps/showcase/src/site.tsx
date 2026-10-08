@@ -2,7 +2,14 @@ import type { ReactNode } from "react";
 import { COMPONENT_CATALOGUE } from "./catalogue.js";
 import type { ComponentSlug } from "./catalogue.js";
 import { GetStartedPage } from "./pages/GetStartedPage.js";
-import { TokensPage } from "./pages/TokensPage.js";
+import { TokensPage } from "./pages/foundations/TokensPage.js";
+import {
+  ColourPage,
+  ComponentTokensPage,
+  DepthPage,
+  MotionPage,
+  SpacePage,
+} from "./pages/foundations/Foundations.js";
 import { TypographyPage } from "./pages/foundations/TypographyPage.js";
 import {
   BlinkCursorPage,
@@ -112,8 +119,15 @@ export const DOC_GROUPS: DocGroup[] = [
         path: "foundations/tokens",
         title: "Tokens",
         summary:
-          "Three layers — primitive, semantic, component — read live from @nexus-cyberdeck/tokens.",
+          "Three layers — primitive, semantic, component — and two themes. Every figure on these pages is read from @nexus-cyberdeck/tokens.",
         render: TokensPage,
+      },
+      {
+        path: "foundations/colour",
+        title: "Colour",
+        summary:
+          "Text, surface, border and focus roles, the palette behind them, and their contrast in both themes.",
+        render: ColourPage,
       },
       {
         path: "foundations/typography",
@@ -121,6 +135,30 @@ export const DOC_GROUPS: DocGroup[] = [
         summary:
           "The type scale and the muted text ramp, the two things that change between themes.",
         render: TypographyPage,
+      },
+      {
+        path: "foundations/space",
+        title: "Space & shape",
+        summary: "The 2px spacing scale, hairlines, square corners and corner ticks.",
+        render: SpacePage,
+      },
+      {
+        path: "foundations/motion",
+        title: "Motion",
+        summary: "Three durations, one curve, and a blink capped below the flash threshold.",
+        render: MotionPage,
+      },
+      {
+        path: "foundations/depth",
+        title: "Depth & effects",
+        summary: "Glow, the overlay stacking order, the chromatic split and the CRT layer.",
+        render: DepthPage,
+      },
+      {
+        path: "foundations/component-tokens",
+        title: "Component tokens",
+        summary: "The hooks each component reads, for restyling it without forking it.",
+        render: ComponentTokensPage,
       },
     ],
   },

@@ -165,9 +165,20 @@ test.describe("theme swap", () => {
 });
 
 test.describe("token reference", () => {
-  test("the tokens page renders the full palette", async ({ page }) => {
-    await gotoPage(page, "foundations/tokens");
-    await expect(spec(page, "Signature colours")).toHaveScreenshot("tokens-signature.png");
+  // These tables are taller than the scrolling <main> at the default 800px,
+  // and an element screenshot is clipped to its scroll container, so the
+  // rows below the fold would be captured as blank. A viewport tall enough
+  // to hold the whole table is what makes the baseline cover every row.
+  test.use({ viewport: { width: 1280, height: 2400 } });
+
+  test("the palette table", async ({ page }) => {
+    await gotoPage(page, "foundations/colour");
+    await expect(spec(page, "Palette")).toHaveScreenshot("tokens-palette.png");
+  });
+
+  test("the text roles, graded in both themes", async ({ page }) => {
+    await gotoPage(page, "foundations/colour");
+    await expect(spec(page, "Text & icon roles")).toHaveScreenshot("tokens-text-roles.png");
   });
 
   test("the AA comparison table", async ({ page }) => {
