@@ -6,6 +6,17 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    # react and react-dom must move in lockstep: a react 19 / react-dom 18
+    # pair renders nothing ("Objects are not valid as a React child"), and
+    # Dependabot once bumped react and its types alone. Grouping them makes
+    # every bump one PR, version and security alike.
+    groups:
+      react:
+        applies-to: version-updates
+        patterns: ["react", "react-dom", "@types/react", "@types/react-dom"]
+      react-security:
+        applies-to: security-updates
+        patterns: ["react", "react-dom", "@types/react", "@types/react-dom"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
