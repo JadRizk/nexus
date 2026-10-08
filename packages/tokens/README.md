@@ -1,5 +1,9 @@
 # @nexus-cyberdeck/tokens
 
+[![The Nexus Cyberdeck showcase: a docked console panel, an entity legend, a theme switcher and an open detail drawer, all acid green on near-black](https://raw.githubusercontent.com/JadRizk/nexus/main/docs/assets/hero.png)](https://jadrizk.github.io/nexus/)
+
+**[Live showcase →](https://jadrizk.github.io/nexus/)**
+
 Design tokens for the [Nexus Cyberdeck](https://github.com/JadRizk/nexus#readme)
 HUD design system. Plain CSS custom properties with zero runtime dependencies,
 plus typed accessors for TypeScript, plus contrast ratios computed at build

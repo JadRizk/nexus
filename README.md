@@ -5,7 +5,9 @@ zero corner radius, corner ticks, monospace everything, and a WCAG AA mode
 that is enforced at build time rather than promised in a README. It ships with
 a force-directed WebGL graph canvas that speaks the same language.
 
-![The Nexus Cyberdeck showcase: a docked console panel, an entity legend, a theme switcher and an open detail drawer, all acid green on near-black](docs/assets/hero.png)
+[![The Nexus Cyberdeck showcase: a docked console panel, an entity legend, a theme switcher and an open detail drawer, all acid green on near-black](docs/assets/hero.png)](https://jadrizk.github.io/nexus/)
+
+**[Live showcase →](https://jadrizk.github.io/nexus/)** — every component, both themes, the graph canvas and the token reference, running.
 
 19 components, two hooks, a search ranker, 86 tokens, two themes. Dark
 only and desktop first, built for consoles, dashboards and visualisations
