@@ -115,4 +115,16 @@ describe("NexusProvider", () => {
     fireEvent.click(screen.getByText("crt on"));
     expect(root).toHaveAttribute("data-nx-crt", "on");
   });
+
+  it("falls back to the defaults, with inert setters, outside any provider", () => {
+    // useNexus() is callable anywhere; a component rendered outside a
+    // provider must read the documented defaults and be able to call the
+    // setters without throwing, rather than crashing on a missing context.
+    render(<Probe />);
+    expect(screen.getByTestId("state")).toHaveTextContent("hud-aa/on");
+
+    fireEvent.click(screen.getByText("to hud"));
+    fireEvent.click(screen.getByText("crt off"));
+    expect(screen.getByTestId("state")).toHaveTextContent("hud-aa/on");
+  });
 });

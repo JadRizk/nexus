@@ -27,10 +27,18 @@ export default defineConfig({
       // cost statements 0.7pp; the Drawer and CommandPalette tests more than
       // earned it back, and the floor moved up to 99/92/95. Branches rose to 94
       // once useHotkey's platform handling was tested.
+      //
+      // Vitest 4 then changed how v8 coverage is counted: it remaps to the
+      // source AST instead of line ranges, so the same code reports about 310
+      // statements where it used to report about 800. The percentages are not
+      // comparable across that change, and statements read 98.4 on the new
+      // counting with nothing less tested (the new counting also showed two
+      // real gaps, since closed). The floors below are set just under the new
+      // baseline, as above, so they ratchet from here.
       thresholds: {
-        statements: 99,
+        statements: 98,
         branches: 94,
-        functions: 95,
+        functions: 99,
         lines: 99,
       },
     },
