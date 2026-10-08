@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import {
   NexusProvider,
   Panel,
@@ -10,43 +10,70 @@ import {
 } from "@nexus-cyberdeck/react";
 import type { NexusTheme } from "@nexus-cyberdeck/react";
 import { HomePage } from "./pages/HomePage.js";
-import { PrimitivesPage } from "./pages/PrimitivesPage.js";
-import { OverlaysPage } from "./pages/OverlaysPage.js";
-import { TokensPage } from "./pages/TokensPage.js";
 import NexusCyberdeck from "./graph/NexusCyberdeck.js";
 import GlitchLab from "./effects/GlitchLab.jsx";
 import { href, useRoute } from "./router.js";
+import { DOC_GROUPS, findPage } from "./site.js";
+import type { DocPage } from "./site.js";
+import { PageHeader } from "./components/Spec.js";
 
-type Route = "home" | "graph" | "glitch" | "primitives" | "overlays" | "tokens" | "not-found";
-
-const ROUTES: ReadonlyArray<{ id: Exclude<Route, "not-found">; label: string }> = [
-  { id: "home", label: "Home" },
-  { id: "graph", label: "Graph" },
-  { id: "glitch", label: "Glitch Lab" },
-  { id: "primitives", label: "Primitives" },
-  { id: "overlays", label: "Overlays" },
-  { id: "tokens", label: "Tokens" },
-];
+type View =
+  | { kind: "home" }
+  | { kind: "graph" }
+  | { kind: "glitch" }
+  | { kind: "doc"; page: DocPage }
+  | { kind: "not-found" };
 
 // Home, Graph and Glitch Lab are self-contained full-viewport "console"
 // experiences — docked panels, no page-level padding or scroll. Graph and
 // Glitch Lab in particular render their own WebGL surfaces (see README:
 // "the graph itself ... is a product, not a design system") and ignore the
 // site CRT toggle — Glitch Lab especially, since CRT composite is itself
-// one of its shader effects, not something to layer a second time.
-const FULL_BLEED: ReadonlySet<Route> = new Set(["home", "graph", "glitch"]);
-
-// Home lives at the bare URL, so the address a visitor lands on and the one
-// the Home link points at are the same.
-const hrefFor = (id: Route) => (id === "home" ? href() : href(id));
-
-function resolve(segment: string | undefined): Route {
-  if (segment === undefined) return "home";
-  return ROUTES.some((r) => r.id === segment) ? (segment as Route) : "not-found";
+// one of its shader effects, not something to layer a second time. Every
+// other page is documentation, listed in site.tsx.
+function resolve(path: string): View {
+  if (path === "") return { kind: "home" };
+  if (path === "labs/graph") return { kind: "graph" };
+  if (path === "labs/glitch") return { kind: "glitch" };
+  const page = findPage(path);
+  return page ? { kind: "doc", page } : { kind: "not-found" };
 }
 
+function titleOf(view: View): string {
+  switch (view.kind) {
+    case "home":
+      return "Nexus Cyberdeck — Showcase";
+    case "graph":
+      return "Graph — Nexus Cyberdeck";
+    case "glitch":
+      return "Glitch Lab — Nexus Cyberdeck";
+    case "doc":
+      return `${view.page.title} — Nexus Cyberdeck`;
+    case "not-found":
+      return "Not found — Nexus Cyberdeck";
+  }
+}
+
+/* The header names the site's sections; the sidebar names the pages inside
+   the documentation ones. A section is current for any page under it. */
+const NAV: ReadonlyArray<{ label: string; path: string; section?: string }> = [
+  { label: "Home", path: "" },
+  { label: "Get started", path: "start" },
+  { label: "Foundations", path: "foundations/tokens", section: "foundations" },
+  { label: "Components", path: "components", section: "components" },
+  { label: "Hooks", path: "hooks/use-hotkey", section: "hooks" },
+  { label: "Graph", path: "labs/graph" },
+  { label: "Glitch Lab", path: "labs/glitch" },
+];
+
+const isCurrent = (item: (typeof NAV)[number], path: string) =>
+  path === item.path || (!!item.section && path.split("/")[0] === item.section);
+
 function Shell() {
-  const route = resolve(useRoute()[0]);
+  const path = useRoute().join("/");
+  const view = resolve(path);
+  const title = titleOf(view);
+  const fullBleed = view.kind === "home" || view.kind === "graph" || view.kind === "glitch";
   const { theme, setTheme, crt, setCrt } = useNexus();
   const main = useRef<HTMLElement>(null);
   // The route last shown. Null until the first one, which is the document's own
@@ -60,15 +87,20 @@ function Shell() {
   // focus — left on the nav link, the next Tab would go back into the header
   // instead of into the page just opened. The first render is the document's
   // own load, which already starts at the top with focus on the body.
-  useEffect(() => {
-    const label = ROUTES.find((r) => r.id === route)?.label ?? "Not found";
-    document.title = route === "home" ? "Nexus Cyberdeck — Showcase" : `${label} — Nexus Cyberdeck`;
-    if (shown.current !== null && shown.current !== route) {
+  //
+  // A layout effect, so the reset lands before any page's own effects run: a
+  // page that scrolls to an anchor of its own must not have that undone.
+  useLayoutEffect(() => {
+    if (shown.current !== null && shown.current !== path) {
       main.current?.scrollTo(0, 0);
       main.current?.focus({ preventScroll: true });
     }
-    shown.current = route;
-  }, [route]);
+    shown.current = path;
+  }, [path]);
+
+  useEffect(() => {
+    document.title = title;
+  }, [title]);
 
   return (
     <div
@@ -131,16 +163,18 @@ function Shell() {
                 in a new tab or copied. They wear the button class so the
                 header looks as it did; line-height and decoration are the two
                 things a <button> gets from the UA sheet that an <a> does not. */}
-            {ROUTES.map((r) => (
+            {NAV.map((item) => (
               <a
-                key={r.id}
-                href={hrefFor(r.id)}
+                key={item.label}
+                href={`#/${item.path}`}
                 className="nx-btn"
-                data-active={route === r.id ? "1" : "0"}
-                aria-current={route === r.id ? "page" : undefined}
+                data-active={isCurrent(item, path) ? "1" : "0"}
+                aria-current={
+                  path === item.path ? "page" : isCurrent(item, path) ? "true" : undefined
+                }
                 style={{ lineHeight: "normal", textDecoration: "none" }}
               >
-                {r.label}
+                {item.label}
               </a>
             ))}
           </nav>
@@ -182,22 +216,30 @@ function Shell() {
         ref={main}
         id="main"
         tabIndex={0}
-        style={{ flex: 1, minHeight: 0, overflow: FULL_BLEED.has(route) ? "hidden" : "auto" }}
+        style={{ flex: 1, minHeight: 0, overflow: fullBleed ? "hidden" : "auto" }}
       >
-        {route === "home" && <HomePage />}
-        {route === "graph" && <NexusCyberdeck />}
-        {route === "glitch" && <GlitchLab />}
-        {!FULL_BLEED.has(route) && (
-          <div style={{ padding: "var(--nx-space-7) var(--nx-space-6)", maxWidth: 980 }}>
-            {route === "primitives" && <PrimitivesPage />}
-            {route === "overlays" && <OverlaysPage />}
-            {route === "tokens" && <TokensPage />}
-            {route === "not-found" && <NotFoundPage />}
+        {view.kind === "home" && <HomePage />}
+        {view.kind === "graph" && <NexusCyberdeck />}
+        {view.kind === "glitch" && <GlitchLab />}
+        {view.kind === "doc" && (
+          <div style={{ display: "flex", alignItems: "flex-start" }}>
+            <DocsNav path={path} />
+            {/* Sized as the page column was before the sidebar existed: the
+                visual baselines capture each example at this width. */}
+            <div style={{ flex: "1 1 auto", minWidth: 0, ...PAGE }}>
+              <PageHeader title={view.page.title} lede={view.page.summary} />
+              {view.page.render()}
+            </div>
+          </div>
+        )}
+        {view.kind === "not-found" && (
+          <div style={PAGE}>
+            <NotFoundPage />
           </div>
         )}
       </main>
 
-      {!FULL_BLEED.has(route) && (
+      {!fullBleed && (
         <footer
           style={{
             flexShrink: 0,
@@ -211,10 +253,78 @@ function Shell() {
         >
           Zero runtime dependencies · <span data-nx-figure>{__NX_TOKENS__}</span> tokens ·{" "}
           <span data-nx-figure>{__NX_COMPONENTS__}</span> components
-          {route === "overlays" ? " · ⌘K opens the palette" : ""}
+          {path === "components/command-palette" ? " · ⌘K opens the palette" : ""}
         </footer>
       )}
     </div>
+  );
+}
+
+const PAGE = { padding: "var(--nx-space-7) var(--nx-space-6)", maxWidth: 980 } as const;
+
+function DocsNav({ path }: { path: string }) {
+  const link = (page: DocPage) => {
+    const current = page.path === path;
+    return (
+      <li key={page.path}>
+        <a
+          href={`#/${page.path}`}
+          aria-current={current ? "page" : undefined}
+          style={{
+            display: "block",
+            padding: "var(--nx-space-2) var(--nx-space-4)",
+            borderLeft: `2px solid ${current ? "var(--nx-fg-accent)" : "transparent"}`,
+            color: current ? "var(--nx-fg-accent)" : "var(--nx-fg-subtle)",
+            textDecoration: "none",
+          }}
+        >
+          {page.navLabel ?? page.title}
+        </a>
+      </li>
+    );
+  };
+  const heading = (title: string, level: "group" | "sub") => (
+    <div
+      style={{
+        padding:
+          level === "group"
+            ? "var(--nx-space-6) 0 var(--nx-space-3)"
+            : "var(--nx-space-4) var(--nx-space-4) var(--nx-space-2)",
+        color: "var(--nx-fg-tertiary)",
+        fontSize: "var(--nx-text-2xs)",
+        letterSpacing: "var(--nx-track-wider)",
+        textTransform: "uppercase",
+      }}
+    >
+      {title}
+    </div>
+  );
+  const list = { listStyle: "none", margin: 0, padding: 0 } as const;
+
+  return (
+    <nav
+      aria-label="Documentation"
+      style={{
+        flex: "0 0 200px",
+        boxSizing: "border-box",
+        padding: "var(--nx-space-2) var(--nx-space-5) var(--nx-space-7) var(--nx-space-6)",
+        borderRight: "var(--nx-hairline) solid var(--nx-border-default)",
+        alignSelf: "stretch",
+      }}
+    >
+      {DOC_GROUPS.map((group) => (
+        <div key={group.title}>
+          {heading(group.title, "group")}
+          <ul style={list}>{group.pages.map(link)}</ul>
+          {group.subgroups?.map((sub) => (
+            <div key={sub.title}>
+              {heading(sub.title, "sub")}
+              <ul style={list}>{sub.pages.map(link)}</ul>
+            </div>
+          ))}
+        </div>
+      ))}
+    </nav>
   );
 }
 

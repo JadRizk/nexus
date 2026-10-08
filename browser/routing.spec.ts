@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
-import { banner, gotoPage, settle } from "./harness.js";
+import { banner, DOC_ROUTES, gotoPage, settle } from "./harness.js";
 
 /* ============================================================================
    Routing.
@@ -11,57 +11,83 @@ import { banner, gotoPage, settle } from "./harness.js";
    ========================================================================== */
 
 const nav = (page: Page) => banner(page).getByRole("navigation", { name: "Sections" });
+const sidebar = (page: Page) => page.getByRole("navigation", { name: "Documentation" });
+const h1 = (page: Page, name: string) => page.getByRole("heading", { level: 1, name });
 
-test("a deep link opens its page and marks it current in the nav", async ({ page }) => {
-  await gotoPage(page, "tokens");
-  await expect(page.getByRole("heading", { level: 1, name: "Tokens" })).toBeVisible();
-  await expect(nav(page).getByRole("link", { name: "Tokens" })).toHaveAttribute(
+test("a deep link opens its page and marks it current in both navs", async ({ page }) => {
+  await gotoPage(page, "components/slider");
+  await expect(h1(page, "Slider")).toBeVisible();
+  await expect(page).toHaveTitle("Slider — Nexus Cyberdeck");
+  await expect(sidebar(page).getByRole("link", { name: "Slider" })).toHaveAttribute(
     "aria-current",
     "page",
   );
-  await expect(page).toHaveTitle("Tokens — Nexus Cyberdeck");
+  // The header names the section, which is current for every page under it.
+  await expect(nav(page).getByRole("link", { name: "Components" })).toHaveAttribute(
+    "aria-current",
+    "true",
+  );
 });
 
-test("the nav is links with real hrefs, and Home is the bare URL", async ({ page }) => {
+test("the header nav is links with real hrefs, and Home is the bare URL", async ({ page }) => {
   await gotoPage(page, "home");
   await expect(nav(page).getByRole("link", { name: "Home" })).toHaveAttribute("href", "#/");
-  await expect(nav(page).getByRole("link", { name: "Primitives" })).toHaveAttribute(
+  await expect(nav(page).getByRole("link", { name: "Components" })).toHaveAttribute(
     "href",
-    "#/primitives",
+    "#/components",
   );
+  await expect(nav(page).getByRole("link", { name: "Graph" })).toHaveAttribute(
+    "href",
+    "#/labs/graph",
+  );
+});
+
+test("the sidebar lists exactly the pages the suite tests", async ({ page }) => {
+  // DOC_ROUTES drives the per-page axe and keyboard tests. A page added to the
+  // site but not to that list would be reachable and untested; this is the
+  // check that stops it.
+  await gotoPage(page, "start");
+  const hrefs = await sidebar(page)
+    .getByRole("link")
+    .evaluateAll((links) => links.map((a) => a.getAttribute("href")));
+  expect(hrefs).toEqual(DOC_ROUTES.map((r) => `#/${r}`));
 });
 
 test("back and forward move between pages", async ({ page }) => {
   await gotoPage(page, "home");
-  await nav(page).getByRole("link", { name: "Primitives" }).click();
-  await expect(page).toHaveURL(/#\/primitives$/);
-  await nav(page).getByRole("link", { name: "Tokens" }).click();
+  await nav(page).getByRole("link", { name: "Components" }).click();
+  await expect(page).toHaveURL(/#\/components$/);
+  await page
+    .getByRole("link", { name: /^Button/ })
+    .first()
+    .click();
+  await expect(h1(page, "Button")).toBeVisible();
 
   await page.goBack();
-  await expect(page.getByRole("heading", { level: 1, name: "Primitives" })).toBeVisible();
+  await expect(h1(page, "Components")).toBeVisible();
   await page.goForward();
-  await expect(page.getByRole("heading", { level: 1, name: "Tokens" })).toBeVisible();
+  await expect(h1(page, "Button")).toBeVisible();
 });
 
 test("changing page starts the new one at the top, with focus in it", async ({ page }) => {
-  await gotoPage(page, "primitives");
+  await gotoPage(page, "foundations/tokens");
   const main = page.locator("main");
   await main.evaluate((el) => el.scrollTo(0, el.scrollHeight));
   expect(await main.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
 
-  await nav(page).getByRole("link", { name: "Overlays" }).click();
+  await sidebar(page).getByRole("link", { name: "Typography" }).click();
   await expect(main).toBeFocused();
   expect(await main.evaluate((el) => el.scrollTop)).toBe(0);
 });
 
 test("the skip link focuses the page without changing the route", async ({ page }) => {
-  await gotoPage(page, "tokens");
+  await gotoPage(page, "foundations/tokens");
   // gotoPage leaves focus on the theme button it clicked, so the skip link is
   // focused directly rather than reached by Tab.
   await page.getByRole("link", { name: "Skip to content" }).focus();
   await page.keyboard.press("Enter");
   await expect(page.locator("main")).toBeFocused();
-  await expect(page).toHaveURL(/#\/tokens$/);
+  await expect(page).toHaveURL(/#\/foundations\/tokens$/);
 });
 
 test("a malformed escape in the URL reaches the not-found page, not a blank one", async ({
@@ -73,9 +99,9 @@ test("a malformed escape in the URL reaches the not-found page, not a blank one"
 });
 
 test("an unknown route says so and links home", async ({ page }) => {
-  await page.goto("/#/nowhere");
+  await page.goto("/#/components/nowhere");
   await settle(page);
-  await expect(page.getByRole("heading", { level: 1, name: "No such page" })).toBeVisible();
+  await expect(h1(page, "No such page")).toBeVisible();
   await page.getByRole("link", { name: "Back to Home" }).click();
   await expect(page).toHaveURL(/#\/$/);
 });

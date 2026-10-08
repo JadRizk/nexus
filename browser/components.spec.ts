@@ -14,7 +14,7 @@ import { gotoPage, spec, THEMES } from "./harness.js";
 for (const theme of THEMES) {
   test.describe(`${theme}`, () => {
     test("panel corner ticks in all four configurations", async ({ page }) => {
-      await gotoPage(page, "primitives", theme);
+      await gotoPage(page, "components/panel", theme);
       await expect(spec(page, "Panel")).toHaveScreenshot(`panel-${theme}.png`);
     });
 
@@ -22,27 +22,27 @@ for (const theme of THEMES) {
       // The ramp is the visible difference between the two themes, and the
       // type scale is the other. Until the token generator landed, switching
       // theme changed neither — this pair is the regression guard for that.
-      await gotoPage(page, "primitives", theme);
+      await gotoPage(page, "foundations/typography", theme);
       await expect(spec(page, "Typography")).toHaveScreenshot(`typography-${theme}.png`);
     });
 
     test("buttons", async ({ page }) => {
-      await gotoPage(page, "primitives", theme);
+      await gotoPage(page, "components/button", theme);
       await expect(spec(page, "Button")).toHaveScreenshot(`button-${theme}.png`);
     });
 
     test("tab strip", async ({ page }) => {
-      await gotoPage(page, "primitives", theme);
+      await gotoPage(page, "components/tab-strip", theme);
       await expect(spec(page, "TabStrip")).toHaveScreenshot(`tabstrip-${theme}.png`);
     });
 
     test("slider", async ({ page }) => {
-      await gotoPage(page, "primitives", theme);
+      await gotoPage(page, "components/slider", theme);
       await expect(spec(page, "Slider")).toHaveScreenshot(`slider-${theme}.png`);
     });
 
     test("toggle rows", async ({ page }) => {
-      await gotoPage(page, "primitives", theme);
+      await gotoPage(page, "components/toggle-row", theme);
       await expect(spec(page, "ToggleRow")).toHaveScreenshot(`togglerow-${theme}.png`);
     });
 
@@ -50,17 +50,17 @@ for (const theme of THEMES) {
       // WCAG 1.4.1 lives here: six distinguishable shapes, so category never
       // depends on colour alone. A shape collapsing into another is invisible
       // to every other kind of test in this repo.
-      await gotoPage(page, "primitives", theme);
+      await gotoPage(page, "components/glyph", theme);
       await expect(spec(page, "Glyph")).toHaveScreenshot(`glyph-${theme}.png`);
     });
 
     test("link glyphs", async ({ page }) => {
-      await gotoPage(page, "primitives", theme);
+      await gotoPage(page, "components/link-glyph", theme);
       await expect(spec(page, "LinkGlyph")).toHaveScreenshot(`linkglyph-${theme}.png`);
     });
 
     test("meter rows", async ({ page }) => {
-      await gotoPage(page, "overlays", theme);
+      await gotoPage(page, "components/meter-row", theme);
       await expect(spec(page, "MeterRow")).toHaveScreenshot(`meterrow-${theme}.png`);
     });
   });
@@ -68,7 +68,7 @@ for (const theme of THEMES) {
 
 test.describe("overlays", () => {
   test("drawer", async ({ page }) => {
-    await gotoPage(page, "overlays", "hud-aa");
+    await gotoPage(page, "components/drawer", "hud-aa");
     await page.getByRole("button", { name: "Open drawer" }).click();
     const drawer = page.getByRole("dialog");
     await expect(drawer).toBeVisible();
@@ -78,7 +78,7 @@ test.describe("overlays", () => {
   test("drawer closed is hidden from assistive tech and off-screen", async ({ page }) => {
     // Mounted closed: that is the state the page loads in, and the one that
     // must not leave anything reachable.
-    await gotoPage(page, "overlays", "hud-aa");
+    await gotoPage(page, "components/drawer", "hud-aa");
     await expect(page.getByRole("dialog")).toBeHidden();
 
     await page.getByRole("button", { name: "Open drawer" }).click();
@@ -88,7 +88,7 @@ test.describe("overlays", () => {
   });
 
   test("command palette", async ({ page }) => {
-    await gotoPage(page, "overlays", "hud-aa");
+    await gotoPage(page, "components/command-palette", "hud-aa");
     await page.getByRole("button", { name: "Open palette" }).click();
     const palette = page.getByRole("dialog", { name: "SEARCH" });
     await expect(palette).toBeVisible();
@@ -96,7 +96,7 @@ test.describe("overlays", () => {
   });
 
   test("command palette with a query and a highlighted option", async ({ page }) => {
-    await gotoPage(page, "overlays", "hud-aa");
+    await gotoPage(page, "components/command-palette", "hud-aa");
     await page.getByRole("button", { name: "Open palette" }).click();
     await page.getByRole("combobox").fill("atlas");
     await page.getByRole("combobox").press("ArrowDown");

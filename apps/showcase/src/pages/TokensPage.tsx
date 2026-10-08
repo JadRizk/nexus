@@ -1,6 +1,6 @@
 import { useNexus } from "@nexus-cyberdeck/react";
 import { contrast, themeMeetsAA, WCAG } from "@nexus-cyberdeck/tokens";
-import { PageHeader, Row, Spec } from "../components/Spec.js";
+import { Row, Spec } from "../components/Spec.js";
 
 const SIGNATURE = [
   ["acid", "--nx-fg-accent"],
@@ -21,13 +21,6 @@ export function TokensPage() {
 
   return (
     <>
-      <PageHeader
-        title="Tokens"
-        lede={`Three layers — primitive, semantic, component. Components may reference only the
-              semantic layer, so switching theme (currently "${theme}") never touches component
-              code. Every figure below is read live from @nexus-cyberdeck/tokens, not hand-copied.`}
-      />
-
       <Spec
         name="Signature colours"
         note="Identical in both themes — acid, data, lime, sodium, violet, alarm and phosphor
