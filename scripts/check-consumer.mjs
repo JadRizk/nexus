@@ -5,8 +5,8 @@
 // and a strict TypeScript compile of code written the way the README says to
 // write it.
 //
-// Why this exists alongside check-react19-types.mjs and the workspace
-// typecheck: those read the packages' SOURCE, from inside the repository. A
+// Why this exists alongside the workspace typecheck and test-react.mjs: those
+// read the packages' SOURCE, from inside the repository. A
 // consumer reads the shipped `dist/*.d.ts` and `exports` map under whichever
 // @types/react they have, and several defects only exist from that side.
 // useFocusTrap returned `RefObject<T | null>`, which compiled everywhere in
@@ -36,8 +36,9 @@ for (const name of packages) {
 // could turn an unrelated pull request red on a day nobody touched React. The
 // compiler and three come from the repository's own lockfile; the two React
 // majors are literals, bumped deliberately (the same policy as the sibling
-// scripts). @types/react 18 is the lockfile's, because that is the 18 the
-// repository already builds against.
+// scripts). The React 19 types are the lockfile's, because that is the 19 the
+// repository builds against; the React 18 ones are literals too, since the
+// lockfile no longer holds an 18 — the same pins scripts/test-react.mjs uses.
 const lock = JSON.parse(readFileSync(join(root, "package-lock.json"), "utf8")).packages;
 const locked = (name) => {
   const version = lock[`node_modules/${name}`]?.version;
@@ -51,11 +52,11 @@ const locked = (name) => {
 const MAJORS = [
   {
     label: "React 18",
-    deps: ["react@18.3.1", "react-dom@18.3.1", locked("@types/react"), locked("@types/react-dom")],
+    deps: ["react@18.3.1", "react-dom@18.3.1", "@types/react@18.3.31", "@types/react-dom@18.3.7"],
   },
   {
     label: "React 19",
-    deps: ["react@19.3.0", "react-dom@19.3.0", "@types/react@19.3.0", "@types/react-dom@19.3.0"],
+    deps: ["react@19.3.0", "react-dom@19.3.0", locked("@types/react"), locked("@types/react-dom")],
   },
 ];
 
