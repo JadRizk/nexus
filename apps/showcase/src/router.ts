@@ -21,12 +21,19 @@ function getHash() {
   return window.location.hash;
 }
 
+// A malformed escape ("%E0") makes decodeURIComponent throw, and this runs
+// during render: unguarded, one bad link blanks the whole site. Keeping the raw
+// segment instead lets it fall through to the not-found page.
+function decode(segment: string): string {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
+  }
+}
+
 export function parseHash(hash: string): string[] {
-  return hash
-    .replace(/^#\/?/, "")
-    .split("/")
-    .filter(Boolean)
-    .map((s) => decodeURIComponent(s));
+  return hash.replace(/^#\/?/, "").split("/").filter(Boolean).map(decode);
 }
 
 /** The current route as path segments, re-rendering on every hash change. */

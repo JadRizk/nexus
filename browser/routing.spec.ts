@@ -64,6 +64,14 @@ test("the skip link focuses the page without changing the route", async ({ page 
   await expect(page).toHaveURL(/#\/tokens$/);
 });
 
+test("a malformed escape in the URL reaches the not-found page, not a blank one", async ({
+  page,
+}) => {
+  await page.goto("/#/%E0");
+  await settle(page);
+  await expect(page.getByRole("heading", { level: 1, name: "No such page" })).toBeVisible();
+});
+
 test("an unknown route says so and links home", async ({ page }) => {
   await page.goto("/#/nowhere");
   await settle(page);

@@ -49,7 +49,10 @@ function Shell() {
   const route = resolve(useRoute()[0]);
   const { theme, setTheme, crt, setCrt } = useNexus();
   const main = useRef<HTMLElement>(null);
-  const firstRender = useRef(true);
+  // The route last shown. Null until the first one, which is the document's own
+  // load. Comparing routes rather than counting runs is what keeps StrictMode's
+  // double-invoked effect in development from reading as a navigation.
+  const shown = useRef<string | null>(null);
 
   // A route change replaces the page, not the document, so the things a full
   // navigation would reset have to be reset by hand: the title a screen reader
@@ -60,12 +63,11 @@ function Shell() {
   useEffect(() => {
     const label = ROUTES.find((r) => r.id === route)?.label ?? "Not found";
     document.title = route === "home" ? "Nexus Cyberdeck — Showcase" : `${label} — Nexus Cyberdeck`;
-    if (firstRender.current) {
-      firstRender.current = false;
-      return;
+    if (shown.current !== null && shown.current !== route) {
+      main.current?.scrollTo(0, 0);
+      main.current?.focus({ preventScroll: true });
     }
-    main.current?.scrollTo(0, 0);
-    main.current?.focus({ preventScroll: true });
+    shown.current = route;
   }, [route]);
 
   return (

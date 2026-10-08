@@ -14,6 +14,10 @@ describe("parseHash", () => {
     expect(parseHash("#//components//button")).toEqual(["components", "button"]);
   });
 
+  it("keeps a malformed escape as-is rather than throwing", () => {
+    expect(parseHash("#/components/%E0")).toEqual(["components", "%E0"]);
+  });
+
   it("accepts a hash without the leading slash", () => {
     expect(parseHash("#tokens")).toEqual(["tokens"]);
   });
