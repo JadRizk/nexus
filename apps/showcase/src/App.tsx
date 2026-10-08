@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import {
   NexusProvider,
   Panel,
@@ -13,7 +13,7 @@ import { HomePage } from "./pages/HomePage.js";
 import NexusCyberdeck from "./graph/NexusCyberdeck.js";
 import GlitchLab from "./effects/GlitchLab.jsx";
 import { href, useRoute } from "./router.js";
-import { COMPONENT_GROUPS, DOC_GROUPS, findPage } from "./site.js";
+import { DOC_GROUPS, findPage } from "./site.js";
 import type { DocPage } from "./site.js";
 import { PageHeader } from "./components/Spec.js";
 
@@ -91,13 +91,16 @@ function Shell() {
   // A layout effect, so the reset lands before any page's own effects run: a
   // page that scrolls to an anchor of its own must not have that undone.
   useLayoutEffect(() => {
-    document.title = title;
     if (shown.current !== null && shown.current !== path) {
       main.current?.scrollTo(0, 0);
       main.current?.focus({ preventScroll: true });
     }
     shown.current = path;
-  }, [path, title]);
+  }, [path]);
+
+  useEffect(() => {
+    document.title = title;
+  }, [title]);
 
   return (
     <div
@@ -312,19 +315,13 @@ function DocsNav({ path }: { path: string }) {
       {DOC_GROUPS.map((group) => (
         <div key={group.title}>
           {heading(group.title, "group")}
-          {group.title === "Components" ? (
-            <>
-              <ul style={list}>{link(group.pages[0]!)}</ul>
-              {COMPONENT_GROUPS.map((sub) => (
-                <div key={sub.title}>
-                  {heading(sub.title, "sub")}
-                  <ul style={list}>{sub.pages.map(link)}</ul>
-                </div>
-              ))}
-            </>
-          ) : (
-            <ul style={list}>{group.pages.map(link)}</ul>
-          )}
+          <ul style={list}>{group.pages.map(link)}</ul>
+          {group.subgroups?.map((sub) => (
+            <div key={sub.title}>
+              {heading(sub.title, "sub")}
+              <ul style={list}>{sub.pages.map(link)}</ul>
+            </div>
+          ))}
         </div>
       ))}
     </nav>

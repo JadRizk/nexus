@@ -1,19 +1,9 @@
 import { useState } from "react";
-import {
-  Button,
-  CommandPalette,
-  Drawer,
-  Glyph,
-  MeterRow,
-  SectionHeading,
-  useHotkey,
-} from "@nexus-cyberdeck/react";
+import { Button, CommandPalette, useHotkey } from "@nexus-cyberdeck/react";
 import type { PaletteItem } from "@nexus-cyberdeck/react";
+import { DetailDrawer, hexOf } from "../../components/DetailDrawer.js";
 import { Row, Spec } from "../../components/Spec.js";
 import { ITEMS } from "../../data.js";
-
-const hexOf = (item: PaletteItem) =>
-  (((Number(item.id) * 2654435761) >>> 0) % 65536).toString(16).toUpperCase().padStart(4, "0");
 
 const hint = {
   color: "var(--nx-fg-tertiary)",
@@ -45,63 +35,13 @@ export function DrawerPage() {
         </Row>
       </Spec>
 
-      <Drawer
+      <DetailDrawer
         open={open}
         onClose={() => setOpen(false)}
-        title={picked.label}
-        subtitle={`0x${hexOf(picked)} · ${picked.code}`}
-        colour={picked.colour}
-        icon={<Glyph shape={picked.shape} colour={picked.colour} />}
-        footer={
-          <>
-            <Button style={{ flex: 1 }}>Focus</Button>
-            <Button style={{ flex: 1 }} active>
-              Isolate
-            </Button>
-          </>
-        }
-      >
-        <SectionHeading>/// relation profile</SectionHeading>
-        <MeterRow label="LINK" value={5} total={7} colour="#3AC6D4" />
-        <MeterRow label="CITE" value={2} total={7} tone="warning" />
-        <div style={{ height: "var(--nx-space-5)" }} />
-        <SectionHeading>/// adjacency [7]</SectionHeading>
-        {ITEMS.slice(3, 10).map((it) => (
-          <button
-            key={it.id}
-            type="button"
-            className="nx-row"
-            onClick={() => setPicked(it)}
-            style={{
-              width: "100%",
-              background: "none",
-              border: 0,
-              textAlign: "left",
-              paddingLeft: 0,
-            }}
-          >
-            <span aria-hidden="true" style={{ color: it.colour, width: 8 }}>
-              ▸
-            </span>
-            <Glyph shape={it.shape} colour={it.colour} size={10} />
-            <span
-              style={{
-                flex: 1,
-                color: it.colour,
-                textTransform: "uppercase",
-                letterSpacing: "var(--nx-track-normal)",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              {it.label}
-            </span>
-            <span style={{ color: "var(--nx-fg-tertiary)", fontSize: "var(--nx-text-2xs)" }}>
-              {it.code}
-            </span>
-          </button>
-        ))}
-      </Drawer>
+        item={picked}
+        related={ITEMS.slice(3, 10)}
+        onPick={setPicked}
+      />
     </>
   );
 }

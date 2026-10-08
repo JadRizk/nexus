@@ -2,12 +2,10 @@ import { useState } from "react";
 import {
   Button,
   CommandPalette,
-  Drawer,
   Glyph,
   HazardRule,
   KeyValue,
   LinkGlyph,
-  MeterRow,
   Panel,
   SectionHeading,
   Slider,
@@ -20,6 +18,7 @@ import {
 } from "@nexus-cyberdeck/react";
 import type { NexusTheme, PaletteItem } from "@nexus-cyberdeck/react";
 import { CLASSES, ITEMS, RELATIONS } from "../home-data.js";
+import { DetailDrawer } from "../components/DetailDrawer.js";
 
 /* ============================================================================
    Home — the landing-page console
@@ -56,11 +55,6 @@ export function HomePage() {
     setPal(true);
     setDrawer(false);
   });
-
-  const hex = (((Number(picked.id) * 2654435761) >>> 0) % 65536)
-    .toString(16)
-    .toUpperCase()
-    .padStart(4, "0");
 
   return (
     <div style={{ height: "100%", overflow: "auto", position: "relative" }}>
@@ -294,63 +288,13 @@ export function HomePage() {
         ⌘K search · tab through everything · toggle HUD to see what AA fixes
       </div>
 
-      <Drawer
+      <DetailDrawer
         open={drawer}
         onClose={() => setDrawer(false)}
-        title={picked.label}
-        subtitle={`0x${hex} · ${picked.code}`}
-        colour={picked.colour}
-        icon={<Glyph shape={picked.shape} colour={picked.colour} />}
-        footer={
-          <>
-            <Button style={{ flex: 1 }}>Focus</Button>
-            <Button style={{ flex: 1 }} active>
-              Isolate
-            </Button>
-          </>
-        }
-      >
-        <SectionHeading>/// relation profile</SectionHeading>
-        <MeterRow label="LINK" value={5} total={7} colour="#3AC6D4" />
-        <MeterRow label="CITE" value={2} total={7} tone="warning" />
-        <div style={{ height: "var(--nx-space-5)" }} />
-        <SectionHeading>/// adjacency [7]</SectionHeading>
-        {ITEMS.slice(2, 8).map((it) => (
-          <button
-            key={it.id}
-            type="button"
-            className="nx-row"
-            onClick={() => setPicked(it)}
-            style={{
-              width: "100%",
-              background: "none",
-              border: 0,
-              textAlign: "left",
-              paddingLeft: 0,
-            }}
-          >
-            <span aria-hidden="true" style={{ color: it.colour, width: 8 }}>
-              ▸
-            </span>
-            <Glyph shape={it.shape} colour={it.colour} size={10} />
-            <span
-              style={{
-                flex: 1,
-                color: it.colour,
-                textTransform: "uppercase",
-                letterSpacing: "var(--nx-track-normal)",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              {it.label}
-            </span>
-            <span style={{ color: "var(--nx-fg-tertiary)", fontSize: "var(--nx-text-2xs)" }}>
-              {it.code}
-            </span>
-          </button>
-        ))}
-      </Drawer>
+        item={picked}
+        related={ITEMS.slice(2, 8)}
+        onPick={setPicked}
+      />
 
       <CommandPalette
         open={pal}

@@ -123,7 +123,7 @@ nexus/
 │   │       ├── colour.ts                the tone/colour resolver
 │   │       └── styles.css               generated · concatenated components
 │   └── graph/           @nexus-cyberdeck/graph    force-directed WebGL canvas
-├── apps/showcase/       Home · Graph · Glitch Lab · Primitives · Overlays · Tokens
+├── apps/showcase/       Home · Get started · Foundations · a page per component · Hooks · Graph · Glitch Lab
 ├── browser/             visual regression + axe suite (Playwright, pinned container)
 ├── docs/                getting-started guide and README assets
 ├── reference/           preview.jsx — the whole system in one generated file

@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import { COMPONENT_CATALOGUE } from "./catalogue.js";
+import type { ComponentSlug } from "./catalogue.js";
 import { GetStartedPage } from "./pages/GetStartedPage.js";
 import { TokensPage } from "./pages/TokensPage.js";
 import { TypographyPage } from "./pages/foundations/TypographyPage.js";
@@ -53,137 +55,43 @@ export interface DocPage {
 export interface DocGroup {
   title: string;
   pages: DocPage[];
+  /** Nested groups, listed after `pages` under their own headings. */
+  subgroups?: DocGroup[];
 }
 
-const component = (
-  slug: string,
-  title: string,
-  summary: string,
-  render: () => ReactNode,
-): DocPage => ({ path: `components/${slug}`, title, summary, render });
+/** Each component's page. Keyed by slug, so a catalogue entry without a page is a type error. */
+const COMPONENT_PAGES: Record<ComponentSlug, () => ReactNode> = {
+  panel: PanelPage,
+  "hazard-rule": HazardRulePage,
+  "section-heading": SectionHeadingPage,
+  wordmark: WordmarkPage,
+  "blink-cursor": BlinkCursorPage,
+  button: ButtonPage,
+  "tab-strip": TabStripPage,
+  slider: SliderPage,
+  "toggle-row": ToggleRowPage,
+  "key-value": KeyValuePage,
+  stat: StatPage,
+  "meter-row": MeterRowPage,
+  legend: LegendPage,
+  tooltip: TooltipPage,
+  glyph: GlyphPage,
+  "link-glyph": LinkGlyphPage,
+  drawer: DrawerPage,
+  "command-palette": CommandPalettePage,
+  "nexus-provider": NexusProviderPage,
+};
 
 /** The component groups, which the sidebar and the index both show. */
-export const COMPONENT_GROUPS: DocGroup[] = [
-  {
-    title: "Layout & type",
-    pages: [
-      component(
-        "panel",
-        "Panel",
-        "The signature surface: hairline border, corner ticks, inset glow.",
-        PanelPage,
-      ),
-      component(
-        "hazard-rule",
-        "HazardRule",
-        "Decorative striped divider between chrome and content.",
-        HazardRulePage,
-      ),
-      component(
-        "section-heading",
-        "SectionHeading",
-        "A dense panel label that stays out of the heading outline.",
-        SectionHeadingPage,
-      ),
-      component("wordmark", "Wordmark", "Stencil display type for the product name.", WordmarkPage),
-      component(
-        "blink-cursor",
-        "BlinkCursor",
-        "Block cursor blinking under the 3Hz flash limit.",
-        BlinkCursorPage,
-      ),
-    ],
-  },
-  {
-    title: "Controls",
-    pages: [
-      component(
-        "button",
-        "Button",
-        "Action or toggle; the active state inverts to the accent.",
-        ButtonPage,
-      ),
-      component(
-        "tab-strip",
-        "TabStrip",
-        "WAI-ARIA tabs with roving focus and arrow-key movement.",
-        TabStripPage,
-      ),
-      component(
-        "slider",
-        "Slider",
-        "A restyled native range input with a formatted value.",
-        SliderPage,
-      ),
-      component(
-        "toggle-row",
-        "ToggleRow",
-        "A filter row backed by a real checkbox.",
-        ToggleRowPage,
-      ),
-    ],
-  },
-  {
-    title: "Data display",
-    pages: [
-      component(
-        "key-value",
-        "KeyValue",
-        "Label and value on one row, truncating when narrow.",
-        KeyValuePage,
-      ),
-      component("stat", "Stat", "A single labelled figure with an optional tone.", StatPage),
-      component(
-        "meter-row",
-        "MeterRow",
-        "A proportional bar with a real role=meter.",
-        MeterRowPage,
-      ),
-      component("legend", "Legend", "Grouped filter rows, each group a fieldset.", LegendPage),
-      component(
-        "tooltip",
-        "Tooltip",
-        "Pointer-following label keyed to its subject's class.",
-        TooltipPage,
-      ),
-      component(
-        "glyph",
-        "Glyph",
-        "Six silhouettes so category never relies on colour alone.",
-        GlyphPage,
-      ),
-      component(
-        "link-glyph",
-        "LinkGlyph",
-        "Relation marks that pair colour with dash and arrow.",
-        LinkGlyphPage,
-      ),
-    ],
-  },
-  {
-    title: "Overlays",
-    pages: [
-      component("drawer", "Drawer", "Right-hand detail panel with a focus trap.", DrawerPage),
-      component(
-        "command-palette",
-        "CommandPalette",
-        "Ranked search in the ARIA combobox pattern.",
-        CommandPalettePage,
-      ),
-    ],
-  },
-  {
-    title: "App",
-    pages: [
-      component(
-        "nexus-provider",
-        "NexusProvider",
-        "The root: theme and CRT state for everything below it.",
-        NexusProviderPage,
-      ),
-    ],
-  },
-];
+export const COMPONENT_GROUPS: DocGroup[] = COMPONENT_CATALOGUE.map((group) => ({
+  title: group.group,
+  pages: group.components.map((c) => ({
+    path: `components/${c.slug}`,
+    title: c.title,
+    summary: c.summary,
+    render: COMPONENT_PAGES[c.slug],
+  })),
+}));
 
 export const DOC_GROUPS: DocGroup[] = [
   {
@@ -226,8 +134,8 @@ export const DOC_GROUPS: DocGroup[] = [
         summary: "Every component in @nexus-cyberdeck/react, by what it is for.",
         render: () => <ComponentsIndex />,
       },
-      ...COMPONENT_GROUPS.flatMap((g) => g.pages),
     ],
+    subgroups: COMPONENT_GROUPS,
   },
   {
     title: "Hooks & utilities",
@@ -254,7 +162,12 @@ export const DOC_GROUPS: DocGroup[] = [
   },
 ];
 
-export const DOC_PAGES: DocPage[] = DOC_GROUPS.flatMap((g) => g.pages);
+const pagesOf = (group: DocGroup): DocPage[] => [
+  ...group.pages,
+  ...(group.subgroups ?? []).flatMap(pagesOf),
+];
+
+export const DOC_PAGES: DocPage[] = DOC_GROUPS.flatMap(pagesOf);
 
 export const findPage = (path: string) => DOC_PAGES.find((p) => p.path === path);
 
