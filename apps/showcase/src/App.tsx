@@ -228,7 +228,11 @@ function Shell() {
                 visual baselines capture each example at this width. */}
             <div style={{ flex: "1 1 auto", minWidth: 0, ...PAGE }}>
               <PageHeader title={view.page.title} lede={view.page.summary} />
-              {view.page.render()}
+              {/* Mounted as a component, never called as a function: a page's
+                  hooks must belong to the page, or moving between pages with
+                  different hooks breaks the shell's own hook order. Keyed by
+                  path so each page starts from fresh state. */}
+              <view.page.render key={path} />
             </div>
           </div>
         )}
