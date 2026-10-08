@@ -129,6 +129,46 @@ Maintainers only. Merging to `main` with pending changesets opens a "Version
 Packages" pull request; merging that is the release. See the
 [README](README.md#releasing).
 
+### How publishing is authorised
+
+Releases publish through npm [trusted publishing][tp] (OIDC), not a stored
+token. npm trusts this repository's `release.yml` workflow and nothing else:
+the job exchanges its GitHub identity for a short-lived publish credential at
+the moment it runs, and provenance is attached automatically. There is no
+`NPM_TOKEN` secret, so there is nothing to leak and nothing to rotate or let
+expire. The workflow needs Node 22.14+ and npm 11.5.1+, which is why
+`release.yml` installs a pinned npm and fails early if it is too old.
+
+Trusted publishing can only be configured for a package that already exists,
+so a package's **first** publish is done by hand, from a maintainer's machine,
+`@nexus-cyberdeck/tokens` before `@nexus-cyberdeck/react` (which depends on
+it). After that, for each of the three packages, on npmjs.com under
+_Settings → Trusted Publisher_:
+
+| Field        | Value           |
+| ------------ | --------------- |
+| Provider     | GitHub Actions  |
+| Organisation | `JadRizk`       |
+| Repository   | `nexus`         |
+| Workflow     | `release.yml`   |
+| Environment  | _(leave blank)_ |
+
+Three things that go wrong quietly:
+
+- **It expires if unused.** A newly saved trusted-publisher configuration must
+  complete a publish within two days or it lapses, so set it up when the next
+  release is ready, not weeks ahead.
+- **npm does not validate it when you save.** A typo in the workflow filename
+  or repository only appears as an authentication failure at publish time.
+  `repository.url` in each `package.json` must also match the repository
+  exactly; it does.
+- **Do not add a token.** If `NODE_AUTH_TOKEN` or `NPM_TOKEN` is set on the
+  publish step, npm uses it and trusted publishing is silently bypassed. If a
+  token is ever unavoidable, scope it to publish on these three packages only,
+  and set `NPM_CONFIG_PROVENANCE=true` so provenance is still attached.
+
+[tp]: https://docs.npmjs.com/trusted-publishers
+
 ## Design tooling
 
 `@nexus-cyberdeck/react` is wired to a [Claude Design](https://claude.ai/design)
