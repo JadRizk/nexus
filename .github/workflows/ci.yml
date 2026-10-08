@@ -160,6 +160,26 @@ jobs:
   # what stops the image tag from being a second, independently-maintained
   # copy of the version scripts/browser-tests.mjs already derives: both read
   # the same lockfile field, so a version bump can only go stale in one place.
+  # The packages promise `react: ^18.3.0 || ^19.0.0`, and the `test` job above
+  # installs the React 18 pinned in devDependencies, so on its own it only ever
+  # runs a component on 18. This runs the same typecheck and the same unit
+  # tests on a real React 19, in a scratch copy so nothing here touches the
+  # lockfile. It does not need `npm ci` of its own: the script installs into
+  # the copy. A separate job so a React 19 failure is named as one.
+  test-react-19:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Typecheck and unit tests on React 19
+        run: node scripts/test-react19.mjs
+
   playwright-version:
     runs-on: ubuntu-latest
     timeout-minutes: 5
