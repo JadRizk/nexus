@@ -205,6 +205,11 @@ function useFocusTrap(active, onDismiss) {
 // packages/react/src/hooks/useHotkey.ts
 import { useEffect as useEffect2, useRef as useRef2 } from "react";
 var MODIFIER_KEYWORDS = /* @__PURE__ */ new Set(["mod", "shift", "ctrl", "alt", "meta"]);
+function usesCmdAsMod() {
+  if (typeof navigator === "undefined") return false;
+  const hinted = navigator.userAgentData;
+  return /mac|iphone|ipad|ipod/i.test(hinted?.platform || navigator.platform || "");
+}
 function useHotkey(combo, handler) {
   const handlerRef = useRef2(handler);
   useEffect2(() => {
@@ -225,16 +230,18 @@ function useHotkey(combo, handler) {
   const wantCtrl = modifierParts.includes("ctrl");
   const wantAlt = modifierParts.includes("alt");
   const wantMeta = modifierParts.includes("meta");
+  if (wantMod && (wantCtrl || wantMeta)) {
+    throw new Error(
+      `useHotkey: "mod" cannot be combined with "${wantCtrl ? "ctrl" : "meta"}" in "${combo}". "mod" already means Cmd on Apple platforms and Ctrl elsewhere. Use one or the other, or write "meta+ctrl+${key}" to require both keys.`
+    );
+  }
   useEffect2(() => {
     const on = (e) => {
       if (wantShift !== e.shiftKey) return;
       if (wantAlt !== e.altKey) return;
-      if (wantMod) {
-        if (!(e.metaKey || e.ctrlKey)) return;
-      } else {
-        if (wantCtrl !== e.ctrlKey) return;
-        if (wantMeta !== e.metaKey) return;
-      }
+      const cmdIsMod = wantMod && usesCmdAsMod();
+      if ((wantCtrl || wantMod && !cmdIsMod) !== e.ctrlKey) return;
+      if ((wantMeta || cmdIsMod) !== e.metaKey) return;
       if (e.key.toLowerCase() !== key) return;
       if (!wantMod && !wantCtrl && !wantAlt && !wantMeta) {
         const t = e.target;

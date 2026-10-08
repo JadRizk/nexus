@@ -6,10 +6,29 @@ import { useEffect, useRef } from "react";
 // not a hotkey that silently degrades to its bare, unmodified key.
 const MODIFIER_KEYWORDS = new Set(["mod", "shift", "ctrl", "alt", "meta"]);
 
+// Whether `mod` means Cmd here. `userAgentData` is the supported source where
+// it exists; `navigator.platform` is deprecated but is still the only answer in
+// Safari and Firefox. iPadOS reports "MacIntel", which is the right answer for
+// it too: its hardware keyboards use Cmd. Read when a listener is armed, never
+// during render, so nothing a server rendered can depend on it.
+function usesCmdAsMod(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const hinted = (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData;
+  return /mac|iphone|ipad|ipod/i.test(hinted?.platform || navigator.platform || "");
+}
+
 /**
- * Global shortcut. `"mod+k"` maps to Cmd on macOS and Ctrl elsewhere.
- * `ctrl`, `alt` and `meta` match their `KeyboardEvent` counterpart exactly —
- * unlike `mod`, they are not satisfied by whichever of Cmd/Ctrl is down.
+ * Global shortcut. `"mod+k"` is Cmd+K on Apple platforms and Ctrl+K
+ * everywhere else, and only that one: Ctrl+K on a Mac (kill-line in a native
+ * text field) and the Windows or Super key elsewhere do not match it.
+ *
+ * Every modifier is matched exactly against its own `KeyboardEvent` flag, so
+ * `shift+k` does not fire for Shift+Alt+K. `ctrl`, `alt` and `meta` name a
+ * specific key; `mod` names whichever of Cmd/Ctrl is the platform's. Because
+ * `mod` already is one of Cmd and Ctrl, combining it with `ctrl` or `meta`
+ * is contradictory and throws; write `meta+ctrl+k` to require both. `mod+alt`
+ * and `mod+shift` are fine.
+ *
  * Unmodified keys are ignored while the user is typing in a field, so `/`
  * can open a palette without hijacking every text input on the page.
  * A modified combo is not subject to that, because nobody types Cmd+K.
@@ -46,23 +65,35 @@ export function useHotkey(combo: string, handler: (e: KeyboardEvent) => void): v
   const wantAlt = modifierParts.includes("alt");
   const wantMeta = modifierParts.includes("meta");
 
+  // `mod` is one of Cmd and Ctrl by definition, so asking for it alongside an
+  // explicit `ctrl` or `meta` has no single meaning: "both", "the platform's
+  // key and also Ctrl" (which is just `ctrl` on most machines) and "Cmd on a
+  // Mac" are all defensible readings. Silently picking one is how `mod+ctrl+k`
+  // ended up firing on Cmd alone, so it is an error instead. Throwing is also
+  // the reversible choice: it can become a feature later without breaking a
+  // caller, whereas the reverse would.
+  if (wantMod && (wantCtrl || wantMeta)) {
+    throw new Error(
+      `useHotkey: "mod" cannot be combined with "${wantCtrl ? "ctrl" : "meta"}" in "${combo}". ` +
+        `"mod" already means Cmd on Apple platforms and Ctrl elsewhere. Use one or the other, ` +
+        `or write "meta+ctrl+${key}" to require both keys.`,
+    );
+  }
+
   useEffect(() => {
     const on = (e: KeyboardEvent) => {
       if (wantShift !== e.shiftKey) return;
       if (wantAlt !== e.altKey) return;
 
-      // `mod` is satisfied by either Cmd or Ctrl, so once it is requested we
-      // stop checking `ctrlKey`/`metaKey` individually — either one being
-      // down (and the other not being requested on its own) is exactly what
-      // `mod` means. Without `mod`, `ctrl` and `meta` are distinct: each must
-      // match its own `KeyboardEvent` flag exactly, so `ctrl+k` does not fire
-      // for Cmd, and a plain `k` does not fire while either is held.
-      if (wantMod) {
-        if (!(e.metaKey || e.ctrlKey)) return;
-      } else {
-        if (wantCtrl !== e.ctrlKey) return;
-        if (wantMeta !== e.metaKey) return;
-      }
+      // `mod` resolves to exactly one of the two keys for this platform, and
+      // from there Ctrl and Meta are matched the same way as every other
+      // modifier: each flag must equal what was asked for, so `mod+k` is not
+      // satisfied by the other key, and a plain `k` does not fire while
+      // either is held. (`wantMod` never coexists with `wantCtrl`/`wantMeta`;
+      // that combination throws above.)
+      const cmdIsMod = wantMod && usesCmdAsMod();
+      if ((wantCtrl || (wantMod && !cmdIsMod)) !== e.ctrlKey) return;
+      if ((wantMeta || cmdIsMod) !== e.metaKey) return;
 
       if (e.key.toLowerCase() !== key) return;
 
