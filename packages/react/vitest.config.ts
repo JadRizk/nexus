@@ -25,10 +25,11 @@ export default defineConfig({
       // add coverage, it stopped twenty re-export files from hiding it). The
       // Prettier sweep then expanded lines without changing what runs, which
       // cost statements 0.7pp; the Drawer and CommandPalette tests more than
-      // earned it back, and the floor moved up to 99/92/95.
+      // earned it back, and the floor moved up to 99/92/95. Branches rose to 94
+      // once useHotkey's platform handling was tested.
       thresholds: {
         statements: 99,
-        branches: 92,
+        branches: 94,
         functions: 95,
         lines: 99,
       },
