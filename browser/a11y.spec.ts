@@ -155,6 +155,56 @@ test.describe("the contrast trade-off between themes", () => {
 /* ------------------------------------------- claims axe cannot check for us */
 
 test.describe("claims axe cannot make", () => {
+  // The decorative hairline (--nx-border-default) is 1.61:1 and exempt from the
+  // 3:1 non-text floor, which is only sound while no control is identified by
+  // it. Buttons and tabs are identified by their text instead, so this holds
+  // that line in the rendered page: every one carries visible text, and the
+  // one boundary that does identify a control (the palette's search field)
+  // is drawn in the 3:1 token rather than the hairline.
+  test("every Button and Tab is identified by visible text, not by its hairline (WCAG 1.4.11)", async ({
+    page,
+  }) => {
+    const routes: Route[] = ["home", "primitives", "overlays", "tokens"];
+    for (const route of routes) {
+      await gotoPage(page, route, "hud-aa");
+      const unlabelled = await page.evaluate(() =>
+        [...document.querySelectorAll<HTMLElement>(".nx-btn, .nx-tab")]
+          .filter((el) => (el.textContent ?? "").trim() === "")
+          .map((el) => `${el.tagName.toLowerCase()}.${el.className}`),
+      );
+      expect(unlabelled, `${route}: controls with no visible text`).toEqual([]);
+    }
+  });
+
+  test("the palette's search field is bounded by the 3:1 token, not the hairline", async ({
+    page,
+  }) => {
+    await gotoPage(page, "overlays", "hud-aa");
+    await page.getByRole("button", { name: "Open palette" }).click();
+    const edge = await page.locator(".nx-palette__field").evaluate((el) => {
+      const root = getComputedStyle(document.querySelector(".nx-root")!);
+      const cs = getComputedStyle(el);
+      return {
+        underline: cs.borderBottomColor,
+        strong: root.getPropertyValue("--nx-border-strong").trim(),
+        hairline: root.getPropertyValue("--nx-border-default").trim(),
+      };
+    });
+    // Resolve both tokens through a throwaway element so the comparison is on
+    // computed rgb(), not on whatever spelling the custom property uses.
+    const rgb = async (value: string) =>
+      page.evaluate((v) => {
+        const probe = document.createElement("i");
+        probe.style.color = v;
+        document.body.append(probe);
+        const out = getComputedStyle(probe).color;
+        probe.remove();
+        return out;
+      }, value);
+    expect(edge.underline).toBe(await rgb(edge.strong));
+    expect(edge.underline).not.toBe(await rgb(edge.hairline));
+  });
+
   test("the cursor blinks below the 3Hz seizure threshold (WCAG 2.3.1)", async ({ page }) => {
     // The prototype blinked at 9Hz. The cap lives on the token, not in the
     // component, so this reads the value the browser actually resolved.
