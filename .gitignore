@@ -27,10 +27,6 @@ codebase-analysis-docs/
 # Backups live outside the repo entirely, under ~/.local/state/yardmaster/<project>/.
 # The loops are the yardmaster plugin's skills (/ym-implement, /ym-review);
 # this repo's conventions for them live in .board/PROJECT.md.
-#
-# NOTE: .claude/release-board.html is ALREADY TRACKED (baa6024) — a dead export
-# of the retired hosted board. Untrack with `git rm --cached` when convenient;
-# it stays in history either way, as RELEASE-PIPELINE.md does.
 # ---------------------------------------------------------------------------
 .board/
 .claude/worktrees/
