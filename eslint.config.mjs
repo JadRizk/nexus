@@ -74,6 +74,7 @@ const stricterRules = Object.fromEntries(
     .flatMap((config) => Object.entries(config.rules ?? {}))
     .filter(([rule]) => !(rule in recommendedRules))
     .map(([rule, setting]) => {
+      // Core rules the TS versions replace stay off.
       if (setting === "off") return [rule, setting];
       const options = Array.isArray(setting) ? setting.slice(1) : [];
       return [rule, ["warn", ...options]];
@@ -179,20 +180,6 @@ export default tseslint.config(
     },
   },
 
-  // The extension is the closest stand-in for "React component", and
-  // cognitive complexity already catches the components that need splitting.
-  {
-    files: ["**/*.{tsx,jsx}", ...TEST_FILES],
-    ignores: NOT_YET_STYLED,
-    rules: { "max-lines-per-function": "off" },
-  },
-
-  {
-    files: TEST_FILES,
-    ignores: NOT_YET_STYLED,
-    rules: { "@typescript-eslint/no-empty-function": "off" },
-  },
-
   // Type-aware, so only where a tsconfig covers the file. Properties are
   // left alone so public props keep their names.
   {
@@ -222,8 +209,30 @@ export default tseslint.config(
           types: ["boolean"],
           format: null,
         },
+        {
+          selector: "parameter",
+          modifiers: ["unused"],
+          types: ["boolean"],
+          format: null,
+        },
       ],
     },
+  },
+
+  // Promotions go above this point; exemptions stay last so a promotion can't re-enable them.
+
+  // The extension is the closest stand-in for "React component", and
+  // cognitive complexity already catches the components that need splitting.
+  {
+    files: ["**/*.{tsx,jsx}", ...TEST_FILES],
+    ignores: NOT_YET_STYLED,
+    rules: { "max-lines-per-function": "off" },
+  },
+
+  {
+    files: TEST_FILES,
+    ignores: NOT_YET_STYLED,
+    rules: { "@typescript-eslint/no-empty-function": "off" },
   },
 
   prettier,

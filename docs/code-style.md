@@ -1,7 +1,10 @@
 # Code style
 
 What review holds code to. Where a lint rule enforces a line, it is named; "—"
-means review only. `packages/graph` is not yet covered by the new rules.
+means review only. The new rules don't yet cover `packages/graph` or
+`.design-sync`, and the naming rule runs on TypeScript files only, so `.js` and
+`.jsx` files such as the Glitch Lab aren't checked for naming until they're
+converted.
 
 **The ratchet.** New rules land as warnings. Once a package reaches zero
 warnings for a rule, that rule becomes an error for that package.
