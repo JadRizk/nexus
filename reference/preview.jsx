@@ -1082,9 +1082,10 @@ body {
    @nexus-cyberdeck/tokens — crt.css
    A CSS-only approximation of the PoC's four-pass shader pipeline.
 
-   The real thing renders to a texture, bright-passes, blurs twice, then
-   composites with barrel distortion, chromatic aberration, an aperture grille,
-   a rolling refresh bar, grain and glitch slicing. You cannot run that behind
+   The real thing renders to a texture, runs a thresholded horizontal blur
+   (the bright-pass) and a vertical blur, then composites with barrel
+   distortion, chromatic aberration, an aperture grille, a rolling refresh
+   bar, grain and glitch slicing. You cannot run that behind
    every panel in an application — it is a full-screen GPU pipeline.
 
    This gets ~80% of the read for one extra composited pseudo-element and no
@@ -2099,7 +2100,7 @@ const PALETTE_SWATCHES = [
   ["phosphor","#DFF5C7",16.84],
 ];
 const RAMPS = {
-  "hud-aa": [["grey-100","#2F382B",1.61],["grey-200","#53624B",3.01],["grey-300","#6B7F61",4.52],
+  "hud-aa": [["grey-100","#2F382B",1.61],["grey-200","#57664F",3.19],["grey-300","#6F8465",4.82],
              ["grey-400","#788E6D",5.50],["grey-500","#8DA084",7.00],["grey-600","#B0BDA9",10.00]],
   "hud":    [["grey-100","#1B2318",1.21],["grey-200","#2C3729",1.57],["grey-300","#3D4C39",2.14],
              ["grey-400","#4A5C46",2.72],["grey-500","#5E7359",3.80],["grey-600","#6E8768",4.98]],
@@ -2333,7 +2334,7 @@ function TokensPage() {
       </Spec>
       <Spec name={`Muted ramp — ${theme}`} note="Solved against exact contrast targets rather than picked by eye: hue 100°, saturation 13%, binary-searched per step. Switch the theme in the header to see what the prototype's ramp actually looked like."
         a11y={aa ? "This ramp meets AA: disabled text clears 4.5:1 and UI boundaries clear 3:1 (WCAG 1.4.11)."
-                 : "This ramp fails AA. Eight of nine muted tokens sit below 4.5:1, and the border token used for slider tracks sits at 1.21:1 against a required 3:1."}>
+                 : `This ramp fails AA. ${ramp.filter(([, , r]) => r < 4.5).length} of its ${ramp.length} steps sit below 4.5:1, and the border token used for slider tracks sits at 1.57:1 against a required 3:1.`}>
         <Row>{ramp.map(([n, v, r]) => <Swatch key={n} name={n} value={v} ratio={r} />)}</Row>
       </Spec>
       <Spec name="Restricted colour" note="Magenta is reserved for alarm states — unresolved items and conflicts, nothing else. In the token graph it is reachable only through --nx-fg-critical; there is no general accent alias, so it cannot quietly become a button colour."

@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { Panel, SectionHeading, useNexus } from "@nexus-cyberdeck/react";
-import { themeMeetsAA, WCAG } from "@nexus-cyberdeck/tokens";
+import { themeMeetsAA } from "@nexus-cyberdeck/tokens";
 import { Row, Spec } from "../../components/Spec.js";
 import { COMPONENT_LAYER } from "../../tokens/componentCss.js";
 import { THEME_META, THEMES, TOKENS } from "../../tokens/model.js";
@@ -47,6 +47,9 @@ const Arrow = () => (
 export function TokensPage() {
   const { theme } = useNexus();
   const meetsAA = themeMeetsAA(theme);
+  // The floors themeMeetsAA() compares against: the theme's own, declared in
+  // tokens.json and generated into `themeTargets` — not the WCAG constants.
+  const floors = THEME_META[theme].wcag;
 
   return (
     <>
@@ -187,7 +190,11 @@ import { tone, space } from "@nexus-cyberdeck/tokens";
 
       <Spec
         name="AA compliance"
-        note={`themeMeetsAA() checks disabled text against ${WCAG.AA_TEXT}:1 and UI boundaries against ${WCAG.AA_NON_TEXT}:1.`}
+        note={
+          floors
+            ? `themeMeetsAA() checks disabled text against ${floors.text}:1 and UI boundaries against ${floors.nonText}:1 — the floors "${theme}" declares for itself in tokens.json, not fixed WCAG constants.`
+            : `themeMeetsAA() checks a theme against the floors it declares for itself in tokens.json. "${theme}" declares none, so it is not AA by definition.`
+        }
         code={`import { themeMeetsAA } from "@nexus-cyberdeck/tokens";\nthemeMeetsAA("${theme}") // ${meetsAA}`}
       >
         <div style={{ color: meetsAA ? "var(--nx-fg-accent)" : "var(--nx-fg-critical)" }}>

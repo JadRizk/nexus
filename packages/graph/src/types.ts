@@ -70,7 +70,7 @@ export interface LinkCategory {
   /** Packet-flow speed/direction along the edge; negative reverses direction. 0 disables the flow animation. */
   flow?: number;
   curve?: number;
-  /** Jitter amount for the "contradicts"-style unstable-edge look. */
+  /** Jitter amount for the "contradicts"-style unstable-edge look: a travelling sine at 11 rad/s along the edge, scaled to zero under prefers-reduced-motion. */
   jit?: number;
 }
 
@@ -168,7 +168,7 @@ export interface GraphCanvasProps<T = unknown> {
   /** Fires when the user clicks a node (or clicks empty space, with `null`) — update `selectedId` in response. */
   onSelect?: (node: GraphNodeSnapshot<T> | null) => void;
   onStats?: (stats: GraphStats) => void;
-  /** Called once if WebGL setup throws (including an invalid graph: an edge to an unknown node id, a duplicate node id, or a category id missing from the maps) or the WebGL context is lost — the canvas renders nothing further after this. */
+  /** Called once if WebGL setup throws (including an invalid graph: an edge to an unknown node id, a duplicate node id, or a category id missing from the maps) or the WebGL context is lost — the canvas renders nothing further after this. Context loss is terminal by design: three's renderer asks the browser to restore the context (it calls preventDefault on webglcontextlost), but the canvas does not resume when it is restored; remount it to recover. */
   onFatal?: (message: string) => void;
   /** Accessible name for the canvas, exposed via `role="img"`. The label pool and tooltip are `aria-hidden` — this is the one name assistive tech gets for the whole graph. */
   ariaLabel?: string;

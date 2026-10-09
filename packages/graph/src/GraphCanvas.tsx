@@ -1377,12 +1377,17 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
         raf = requestAnimationFrame(frame);
         disposables.push(() => cancelAnimationFrame(raf));
 
-        // A lost context can't be drawn to. No preventDefault here, so the
-        // browser isn't asked to restore it: the frame loop stops and the
-        // failure surfaces the same way a thrown boot does, through the halt
-        // panel and onFatal. Unmount still drains everything above. Registered
-        // last so it is the first thing removed on teardown — the
-        // forceContextLoss() in cleanup fires this very event.
+        // A lost context can't be drawn to. three's WebGLRenderer registers its
+        // own listeners on this canvas: its webglcontextlost handler calls
+        // preventDefault() — so the browser IS asked to restore the context —
+        // and its webglcontextrestored handler re-initialises three's GL state.
+        // This component deliberately does not resume: the frame loop stops
+        // here and the failure surfaces the same way a thrown boot does,
+        // through the halt panel and onFatal, and nothing in this component
+        // listens for webglcontextrestored (a future change could, and restart
+        // the loop). Unmount still drains everything above. Registered last so
+        // it is the first thing removed on teardown — the forceContextLoss() in
+        // cleanup fires this very event.
         const onContextLost = () => {
           cancelAnimationFrame(raf);
           const message = "WebGL context lost";

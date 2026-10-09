@@ -21,8 +21,9 @@ npm install @nexus-cyberdeck/react @nexus-cyberdeck/tokens
 
 React 18.3 or 19 is a peer dependency.
 
-> Not published yet. Until the first release, install from `npm pack` output —
-> see the [getting-started guide](https://github.com/JadRizk/nexus/blob/main/docs/getting-started.md).
+> Not published yet: the package is held `"private": true` until its first
+> publish, so install from `npm pack` output in the meantime — see the
+> [getting-started guide](https://github.com/JadRizk/nexus/blob/main/docs/getting-started.md).
 
 ## Use
 

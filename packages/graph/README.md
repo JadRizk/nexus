@@ -19,8 +19,9 @@ canvas is domain-agnostic: you supply the node and link categories.
 npm install @nexus-cyberdeck/graph three
 ```
 
-> Not published yet. Until the first release, install from `npm pack` output —
-> see the [getting-started guide](https://github.com/JadRizk/nexus/blob/main/docs/getting-started.md).
+> Not published yet: the package is held `"private": true` until its first
+> publish, so install from `npm pack` output in the meantime — see the
+> [getting-started guide](https://github.com/JadRizk/nexus/blob/main/docs/getting-started.md).
 
 React 18.3 or 19 and Three.js 0.170 or later are peer dependencies.
 
@@ -160,7 +161,9 @@ content, so `hiddenNodeCategories={["note"]}` written in place costs nothing.
   at which labels appear, and `size`, `charge`, `mass` feed the solver.
 - **`LinkCategory`**: `color`, `width`, rest distance (`dist`, a multiplier of
   `physics.linkDistance`), `strength`, and optional `dash`, `arrow`, `flow`
-  (packet direction and speed, negative reverses), `curve` and `jit`.
+  (packet direction and speed, negative reverses), `curve` and `jit` (an
+  unstable-edge wobble — a travelling sine at 11 rad/s — scaled to zero under
+  `prefers-reduced-motion`).
 
 ### Colour space
 
@@ -199,7 +202,7 @@ state.
 | `isolateId`                                    | show only this node and its neighbours                                                                                                                                                                                                                                                          |
 | `selectedId`                                   | the selected node; update it from `onSelect`                                                                                                                                                                                                                                                    |
 | `running`                                      | run the physics solver; `false` pauses it (dragging still works). Default `true`                                                                                                                                                                                                                |
-| `onSelect`, `onStats`, `onFatal`               | selection, per-frame stats, WebGL setup failure or context loss                                                                                                                                                                                                                                 |
+| `onSelect`, `onStats`, `onFatal`               | selection, per-frame stats, WebGL setup failure or context loss. A lost context is terminal: three asks the browser to restore it, but the canvas does not resume when it does — remount it to recover                                                                                          |
 | `ariaLabel`                                    | accessible name for the canvas. When supplied, the root carries `role="img"` + `aria-label`; when omitted, the root carries neither, so a screen reader never meets a nameless image. The label pool and tooltip are always `aria-hidden`, so this prop is the only name assistive tech can get |
 
 ### Controller
@@ -229,7 +232,9 @@ a remount. The split is the one the CSS CRT layer in `@nexus-cyberdeck/react`
 makes, motion versus texture:
 
 - **Goes to zero**: the glitch bands (15 Hz), the grain (re-rolled at 24 Hz),
-  the rolling refresh bar, and the trails, so every frame starts clean.
+  the rolling refresh bar, the trails, and the edge `jit` wobble (a travelling
+  sine at 11 rad/s), so every frame starts clean and every edge sits on its
+  true path.
 - **Clamped**: the HOT-node flicker re-rolls at 0.94 Hz instead of 9 Hz —
   the same cap the tokens layer puts on its blink, under the 3 Hz flash
   threshold in WCAG 2.3.1 — and its trough is lifted so a node blinks rather
@@ -248,8 +253,11 @@ state is mirrored onto the `<canvas>` as `data-nx-reduced-motion="true"` or
 
 ## Notes
 
-- Set `optics.curve` to `0` to disable the barrel warp entirely; the CRT pass
-  is four render targets and is meant for a hero canvas, not a thumbnail.
+- Set `optics.curve` to `0` to disable the barrel warp entirely. That removes
+  the warp, not the cost: the CRT pipeline is three offscreen render targets
+  and four passes per frame (render to texture, a thresholded horizontal blur,
+  a vertical blur, then the full-screen composite), all of which run regardless
+  of `curve`. It is meant for a hero canvas, not a thumbnail.
 - The physics solver, camera maths and shader sources are exported too
   (`createPhysics`, `project`, `unproject`, `NODE_FS`, …) for anyone who
   wants to build a different renderer on the same engine.
