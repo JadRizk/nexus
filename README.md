@@ -9,7 +9,7 @@ a force-directed WebGL graph canvas that speaks the same language.
 
 **[Live showcase →](https://jadrizk.github.io/nexus/)** — every component, both themes, the graph canvas and the token reference, running.
 
-19 components, two hooks, a search ranker, 86 tokens, two themes. Dark
+20 components, two hooks, a search ranker, 86 tokens, two themes. Dark
 only and desktop first, built for consoles, dashboards and visualisations
 rather than marketing pages. React 18.3 or 19.
 
@@ -50,7 +50,7 @@ down.
 | Package                                                | What it is                                                                                                                                                                                                                              |
 | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [`@nexus-cyberdeck/tokens`](packages/tokens/README.md) | CSS custom properties for both themes, typed accessors, contrast ratios computed at build time. Zero dependencies.                                                                                                                      |
-| [`@nexus-cyberdeck/react`](packages/react/README.md)   | The 19 components, `useFocusTrap`, `useHotkey`, `rankItems`. Depends only on tokens.                                                                                                                                                    |
+| [`@nexus-cyberdeck/react`](packages/react/README.md)   | The 20 components, `useFocusTrap`, `useHotkey`, `rankItems`. Depends only on tokens.                                                                                                                                                    |
 | [`@nexus-cyberdeck/graph`](packages/graph/README.md)   | Force-directed WebGL canvas on Three.js: SDF glyph nodes, links that carry kind in form and direction in their ends, CRT post-process, and keyboard and screen-reader navigation. Versioned separately; no dependency on the other two. |
 
 Not using React? `@nexus-cyberdeck/tokens` is plain CSS. Set `data-nx-theme`
@@ -117,7 +117,7 @@ nexus/
 │   │       ├── base.css                 hand-authored base + focus rules
 │   │       ├── crt.css                  CSS-only CRT layer
 │   │       └── index.ts                 typed accessors
-│   ├── react/           @nexus-cyberdeck/react    19 components, no runtime deps
+│   ├── react/           @nexus-cyberdeck/react    20 components, no runtime deps
 │   │   ├── build-styles.mjs             assembles the shipped stylesheet
 │   │   └── src/
 │   │       ├── components/<Name>/       one folder per component:

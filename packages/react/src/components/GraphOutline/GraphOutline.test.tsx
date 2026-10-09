@@ -127,4 +127,35 @@ describe("GraphOutline", () => {
     expect(new Set(ids).size).toBe(ids.length);
     for (const id of ids) expect(id).not.toMatch(/[\s"]/);
   });
+
+  it("accepts a callback ref, and renders without any ref", () => {
+    let seen: HTMLElement | null = null;
+    const { unmount } = render(
+      <GraphOutline
+        ref={(el) => {
+          seen = el;
+        }}
+        data={data}
+      />,
+    );
+    expect(seen).toBeInstanceOf(HTMLElement);
+    unmount();
+    expect(seen).toBeNull();
+    expect(() => render(<GraphOutline data={data} />)).not.toThrow();
+  });
+
+  it("merges a className and keeps its own", () => {
+    const { container } = render(<GraphOutline data={data} className="mine" />);
+    expect(container.firstElementChild).toHaveClass("nx-graph-outline", "mine");
+  });
+
+  it("does nothing when a connection points at a node the outline leaves out", async () => {
+    // A filtered outline can still name a node it doesn't list.
+    const filtered: GraphOutlineData = { ...data, groups: [data.groups[0]!] };
+    render(<GraphOutline data={filtered} />);
+    const before = document.activeElement;
+    await userEvent.click(screen.getByRole("button", { name: "archive-1" }));
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "archive-1" }));
+    expect(before).not.toBeNull();
+  });
 });

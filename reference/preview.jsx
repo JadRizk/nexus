@@ -497,19 +497,115 @@ var Drawer = forwardRef7(function Drawer2({
 });
 Drawer.displayName = "Drawer";
 
+// packages/react/src/components/GraphOutline/GraphOutline.tsx
+import { forwardRef as forwardRef8, useId as useId3, useRef as useRef4 } from "react";
+var GraphOutline = forwardRef8(function GraphOutline2({
+  data,
+  label = "Graph as a list",
+  selectedId = null,
+  onSelect,
+  headingLevel = 3,
+  style,
+  className
+}, ref) {
+  const base = useId3();
+  const root = useRef4(null);
+  const Heading = `h${headingLevel}`;
+  const keyOf = (id) => `${base}-n-${encodeURIComponent(String(id))}`;
+  const jumpTo = (id) => {
+    const entry = root.current?.querySelector(`[id="${keyOf(id)}"]`);
+    if (!entry) return;
+    entry.open = true;
+    entry.querySelector("summary")?.focus();
+  };
+  return /* @__PURE__ */ React.createElement(
+    "section",
+    {
+      ref: (el) => {
+        root.current = el;
+        if (typeof ref === "function") ref(el);
+        else if (ref) ref.current = el;
+      },
+      "aria-label": label,
+      className: ["nx-graph-outline", className].filter(Boolean).join(" "),
+      style
+    },
+    /* @__PURE__ */ React.createElement("p", { className: "nx-graph-outline__summary" }, data.summary),
+    data.groups.map((group) => {
+      const headingId = `${base}-g-${group.categoryId}`;
+      return /* @__PURE__ */ React.createElement(
+        "section",
+        {
+          key: group.categoryId,
+          "aria-labelledby": headingId,
+          className: "nx-graph-outline__group"
+        },
+        /* @__PURE__ */ React.createElement(Heading, { id: headingId, className: "nx-graph-outline__heading" }, group.label, " ", /* @__PURE__ */ React.createElement("span", { className: "nx-graph-outline__count" }, "(", group.nodes.length, ")")),
+        /* @__PURE__ */ React.createElement("ul", { className: "nx-graph-outline__nodes" }, group.nodes.map((node) => {
+          const selected = node.id === selectedId;
+          return /* @__PURE__ */ React.createElement("li", { key: String(node.id) }, /* @__PURE__ */ React.createElement(
+            "details",
+            {
+              id: keyOf(node.id),
+              className: "nx-graph-outline__node",
+              "data-selected": selected || void 0,
+              open: selected || void 0
+            },
+            /* @__PURE__ */ React.createElement(
+              "summary",
+              {
+                "aria-label": selected ? `${node.description}, selected` : node.description
+              },
+              /* @__PURE__ */ React.createElement("span", { className: "nx-graph-outline__label" }, node.label),
+              /* @__PURE__ */ React.createElement("span", { className: "nx-graph-outline__meta" }, node.connections.length, " ", node.connections.length === 1 ? "connection" : "connections", selected ? " \xB7 selected" : "")
+            ),
+            onSelect && /* @__PURE__ */ React.createElement(
+              "button",
+              {
+                type: "button",
+                className: "nx-graph-outline__select",
+                "aria-pressed": selected,
+                onClick: () => onSelect(node.id)
+              },
+              selected ? "Selected in graph" : "Select in graph"
+            ),
+            node.connections.length > 0 && /* @__PURE__ */ React.createElement(
+              "ul",
+              {
+                className: "nx-graph-outline__connections",
+                "aria-label": `Connections of ${node.label}`
+              },
+              node.connections.map((c, i) => /* @__PURE__ */ React.createElement("li", { key: `${String(c.id)}-${i}` }, /* @__PURE__ */ React.createElement("span", { className: "nx-graph-outline__relation" }, c.relation), " ", /* @__PURE__ */ React.createElement(
+                "button",
+                {
+                  type: "button",
+                  className: "nx-graph-outline__jump",
+                  onClick: () => jumpTo(c.id)
+                },
+                c.label
+              ), " ", /* @__PURE__ */ React.createElement("span", { className: "nx-graph-outline__kind" }, c.kind)))
+            )
+          ));
+        }))
+      );
+    })
+  );
+});
+GraphOutline.displayName = "GraphOutline";
+
 // packages/react/src/components/KeyValue/KeyValue.tsx
-import { forwardRef as forwardRef8 } from "react";
-var KeyValue = forwardRef8(function KeyValue2({ label, value, style }, ref) {
+import { forwardRef as forwardRef9 } from "react";
+var KeyValue = forwardRef9(function KeyValue2({ label, value, style }, ref) {
   return /* @__PURE__ */ React.createElement("div", { ref, className: "nx-kv", style }, /* @__PURE__ */ React.createElement("span", { className: "nx-kv__label" }, label), /* @__PURE__ */ React.createElement("span", { className: "nx-kv__value" }, value));
 });
 KeyValue.displayName = "KeyValue";
 
 // packages/react/src/components/Legend/Legend.tsx
-import { forwardRef as forwardRef10 } from "react";
+import { forwardRef as forwardRef11 } from "react";
 
 // packages/react/src/components/SectionHeading/SectionHeading.tsx
-import { forwardRef as forwardRef9 } from "react";
-var SectionHeading = forwardRef9(
+import { forwardRef as forwardRef10 } from "react";
+var SectionHeading = forwardRef10(
   function SectionHeading2({ as: Tag = "div", children, className = "", ...rest }, ref) {
     return /* @__PURE__ */ React.createElement(Tag, { ref, className: mergeClassName("nx-heading", className), ...rest }, children);
   }
@@ -517,14 +613,14 @@ var SectionHeading = forwardRef9(
 SectionHeading.displayName = "SectionHeading";
 
 // packages/react/src/components/Legend/Legend.tsx
-var Legend = forwardRef10(function Legend2({ groups, style }, ref) {
+var Legend = forwardRef11(function Legend2({ groups, style }, ref) {
   return /* @__PURE__ */ React.createElement("div", { ref, className: "nx-legend", style }, groups.map((group) => /* @__PURE__ */ React.createElement("fieldset", { key: group.title, className: "nx-legend__group" }, /* @__PURE__ */ React.createElement("legend", { className: "nx-legend__title" }, /* @__PURE__ */ React.createElement(SectionHeading, { as: "span" }, "/// ", group.title)), group.rows)));
 });
 Legend.displayName = "Legend";
 
 // packages/react/src/components/LinkGlyph/LinkGlyph.tsx
-import { forwardRef as forwardRef11 } from "react";
-var LinkGlyph = forwardRef11(function LinkGlyph2({ tone: tone2, colour, dashed = false, arrow = false, width = 1.2, muted = false, size = 13, title }, ref) {
+import { forwardRef as forwardRef12 } from "react";
+var LinkGlyph = forwardRef12(function LinkGlyph2({ tone: tone2, colour, dashed = false, arrow = false, width = 1.2, muted = false, size = 13, title }, ref) {
   const c = resolveColour({ tone: tone2, colour, muted }, "var(--nx-fg-info)");
   return /* @__PURE__ */ React.createElement(
     "svg",
@@ -553,8 +649,8 @@ var LinkGlyph = forwardRef11(function LinkGlyph2({ tone: tone2, colour, dashed =
 LinkGlyph.displayName = "LinkGlyph";
 
 // packages/react/src/components/MeterRow/MeterRow.tsx
-import { forwardRef as forwardRef12 } from "react";
-var MeterRow = forwardRef12(function MeterRow2({ label, value, total, tone: tone2, colour, muted, labelWidth }, ref) {
+import { forwardRef as forwardRef13 } from "react";
+var MeterRow = forwardRef13(function MeterRow2({ label, value, total, tone: tone2, colour, muted, labelWidth }, ref) {
   const pct = total > 0 ? Math.min(100, Math.max(0, value / total * 100)) : 0;
   return /* @__PURE__ */ React.createElement(
     "div",
@@ -585,7 +681,7 @@ var MeterRow = forwardRef12(function MeterRow2({ label, value, total, tone: tone
 MeterRow.displayName = "MeterRow";
 
 // packages/react/src/components/NexusProvider/NexusProvider.tsx
-import { createContext, forwardRef as forwardRef13, useContext, useMemo as useMemo2, useState as useState2 } from "react";
+import { createContext, forwardRef as forwardRef14, useContext, useMemo as useMemo2, useState as useState2 } from "react";
 var Ctx = createContext({
   theme: "hud-aa",
   crt: true,
@@ -595,7 +691,7 @@ var Ctx = createContext({
   }
 });
 var useNexus = () => useContext(Ctx);
-var NexusProvider = forwardRef13(function NexusProvider2({ theme = "hud-aa", crt = true, children, className = "", ...rest }, ref) {
+var NexusProvider = forwardRef14(function NexusProvider2({ theme = "hud-aa", crt = true, children, className = "", ...rest }, ref) {
   const [t, setTheme] = useState2(theme);
   const [c, setCrt] = useState2(crt);
   const value = useMemo2(() => ({ theme: t, crt: c, setTheme, setCrt }), [t, c]);
@@ -614,9 +710,9 @@ var NexusProvider = forwardRef13(function NexusProvider2({ theme = "hud-aa", crt
 NexusProvider.displayName = "NexusProvider";
 
 // packages/react/src/components/Slider/Slider.tsx
-import { forwardRef as forwardRef14, useId as useId3 } from "react";
-var Slider = forwardRef14(function Slider2({ label, value, min, max, step = 1, onChange, format, style }, ref) {
-  const id = useId3();
+import { forwardRef as forwardRef15, useId as useId4 } from "react";
+var Slider = forwardRef15(function Slider2({ label, value, min, max, step = 1, onChange, format, style }, ref) {
+  const id = useId4();
   const shown = format ? format(value) : String(value);
   return /* @__PURE__ */ React.createElement("div", { className: "nx-slider-field", style }, /* @__PURE__ */ React.createElement("div", { className: "nx-slider-row" }, /* @__PURE__ */ React.createElement("label", { htmlFor: id, className: "nx-slider-label" }, label), /* @__PURE__ */ React.createElement("span", { "aria-hidden": "true", className: "nx-slider-value" }, shown)), /* @__PURE__ */ React.createElement(
     "input",
@@ -637,8 +733,8 @@ var Slider = forwardRef14(function Slider2({ label, value, min, max, step = 1, o
 Slider.displayName = "Slider";
 
 // packages/react/src/components/Stat/Stat.tsx
-import { forwardRef as forwardRef15 } from "react";
-var Stat = forwardRef15(function Stat2({ label, value, tone: tone2, colour, muted, style }, ref) {
+import { forwardRef as forwardRef16 } from "react";
+var Stat = forwardRef16(function Stat2({ label, value, tone: tone2, colour, muted, style }, ref) {
   return /* @__PURE__ */ React.createElement(
     "div",
     {
@@ -656,11 +752,11 @@ var Stat = forwardRef15(function Stat2({ label, value, tone: tone2, colour, mute
 Stat.displayName = "Stat";
 
 // packages/react/src/components/TabStrip/TabStrip.tsx
-import { forwardRef as forwardRef16, useId as useId4, useRef as useRef4 } from "react";
+import { forwardRef as forwardRef17, useId as useId5, useRef as useRef5 } from "react";
 function TabStripInner({ tabs, value, onChange, label = "View", style, id, panelId }, ref) {
-  const generatedId = useId4();
+  const generatedId = useId5();
   const baseId = id ?? generatedId;
-  const refs = useRef4([]);
+  const refs = useRef5([]);
   const idx = tabs.findIndex((t) => t.value === value);
   const move = (delta) => {
     const n = (idx + delta + tabs.length) % tabs.length;
@@ -724,12 +820,12 @@ function TabStripInner({ tabs, value, onChange, label = "View", style, id, panel
     ))
   );
 }
-var TabStrip = forwardRef16(TabStripInner);
+var TabStrip = forwardRef17(TabStripInner);
 TabStrip.displayName = "TabStrip";
 
 // packages/react/src/components/ToggleRow/ToggleRow.tsx
-import { forwardRef as forwardRef17 } from "react";
-var ToggleRow = forwardRef17(function ToggleRow2({ checked, onChange, icon, label, meta, style }, ref) {
+import { forwardRef as forwardRef18 } from "react";
+var ToggleRow = forwardRef18(function ToggleRow2({ checked, onChange, icon, label, meta, style }, ref) {
   return /* @__PURE__ */ React.createElement("label", { ref, className: "nx-row", "data-checked": checked ? "1" : "0", style }, /* @__PURE__ */ React.createElement(
     "input",
     {
@@ -743,8 +839,8 @@ var ToggleRow = forwardRef17(function ToggleRow2({ checked, onChange, icon, labe
 ToggleRow.displayName = "ToggleRow";
 
 // packages/react/src/components/Tooltip/Tooltip.tsx
-import { forwardRef as forwardRef18 } from "react";
-var Tooltip = forwardRef18(function Tooltip2({ x, y, tone: tone2, colour, muted, children, style, id }, ref) {
+import { forwardRef as forwardRef19 } from "react";
+var Tooltip = forwardRef19(function Tooltip2({ x, y, tone: tone2, colour, muted, children, style, id }, ref) {
   return /* @__PURE__ */ React.createElement(
     "div",
     {
@@ -765,8 +861,8 @@ var Tooltip = forwardRef18(function Tooltip2({ x, y, tone: tone2, colour, muted,
 Tooltip.displayName = "Tooltip";
 
 // packages/react/src/components/Wordmark/Wordmark.tsx
-import { forwardRef as forwardRef19 } from "react";
-var Wordmark = forwardRef19(function Wordmark2({ children, size, skew = -9, className = "", style, ...rest }, ref) {
+import { forwardRef as forwardRef20 } from "react";
+var Wordmark = forwardRef20(function Wordmark2({ children, size, skew = -9, className = "", style, ...rest }, ref) {
   return /* @__PURE__ */ React.createElement(
     "span",
     {
@@ -790,6 +886,7 @@ export {
   Drawer,
   GLYPH_SHAPES,
   Glyph,
+  GraphOutline,
   HazardRule,
   KeyValue,
   Legend,
@@ -1606,6 +1703,97 @@ body {
   flex-shrink: 0;
 }
 
+/* -------------------------------------------------------------- GraphOutline */
+/* The graph as a list. Plain document styles on purpose: this is the text
+   alternative, read top to bottom, so it looks like text rather than a HUD. */
+.nx-graph-outline {
+  font-family: var(--nx-font-mono);
+  font-size: var(--nx-text-md);
+  color: var(--nx-fg-default);
+}
+
+.nx-graph-outline__summary {
+  margin: 0 0 var(--nx-space-4);
+  color: var(--nx-fg-muted);
+}
+
+.nx-graph-outline__group + .nx-graph-outline__group {
+  margin-top: var(--nx-space-5);
+}
+
+.nx-graph-outline__heading {
+  margin: 0 0 var(--nx-space-2);
+  font-size: var(--nx-text-sm);
+  letter-spacing: var(--nx-track-wide);
+  text-transform: uppercase;
+  color: var(--nx-fg-accent);
+}
+
+.nx-graph-outline__count,
+.nx-graph-outline__meta,
+.nx-graph-outline__kind {
+  color: var(--nx-fg-muted);
+}
+
+.nx-graph-outline__nodes,
+.nx-graph-outline__connections {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.nx-graph-outline__node {
+  border-top: var(--nx-hairline) solid var(--nx-border-default);
+}
+
+.nx-graph-outline__node > summary {
+  display: flex;
+  gap: var(--nx-space-3);
+  align-items: baseline;
+  padding: var(--nx-space-2) 0;
+  cursor: pointer;
+}
+
+.nx-graph-outline__node > summary:focus-visible,
+.nx-graph-outline__select:focus-visible,
+.nx-graph-outline__jump:focus-visible {
+  outline: var(--nx-focus-width) solid var(--nx-focus-ring);
+  outline-offset: var(--nx-focus-offset);
+}
+
+.nx-graph-outline__node[data-selected] .nx-graph-outline__label {
+  color: var(--nx-fg-accent);
+}
+
+.nx-graph-outline__meta {
+  margin-left: auto;
+  font-size: var(--nx-text-sm);
+}
+
+.nx-graph-outline__connections {
+  padding: 0 0 var(--nx-space-3) var(--nx-space-4);
+}
+
+.nx-graph-outline__connections > li {
+  padding: var(--nx-space-1) 0;
+}
+
+.nx-graph-outline__select,
+.nx-graph-outline__jump {
+  font: inherit;
+  color: var(--nx-fg-info);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.nx-graph-outline__select {
+  margin: 0 0 var(--nx-space-2) var(--nx-space-4);
+}
+
 /* ---------------------------------------------------------------- HazardRule */
 .nx-hazard {
   height: var(--nx-hazard-height, 5px);
@@ -2413,7 +2601,7 @@ function Shell() {
       <footer style={{ padding: "var(--nx-space-6)", color: "var(--nx-fg-tertiary)",
         fontSize: "var(--nx-text-2xs)", letterSpacing: "var(--nx-track-wider)", textTransform: "uppercase",
         borderTop: "var(--nx-hairline) solid var(--nx-border-default)" }}>
-        Zero runtime dependencies · 86 tokens · 19 components · ⌘K opens the palette anywhere
+        Zero runtime dependencies · 86 tokens · 20 components · ⌘K opens the palette anywhere
       </footer>
     </div>
   );

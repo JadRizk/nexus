@@ -193,7 +193,7 @@ export function navigate(s: NavState, action: NavAction, ctx: NavContext): [NavS
     }
 
     case "back": {
-      const entry = s.history.at(-1);
+      const entry = s.history[s.history.length - 1];
       if (!entry) return [s, { announce: "Start of path" }];
       const next: NavState = {
         ...s,
