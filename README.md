@@ -5,10 +5,6 @@ zero corner radius, corner ticks, monospace everything, and a WCAG AA mode
 that is enforced at build time rather than promised in a README. It ships with
 a force-directed WebGL graph canvas that speaks the same language.
 
-[![The Nexus Cyberdeck showcase: a docked console panel, an entity legend, a theme switcher and an open detail drawer, all acid green on near-black](docs/assets/hero.png)](https://jadrizk.github.io/nexus/)
-
-**[Live showcase →](https://jadrizk.github.io/nexus/)** — every component, both themes, the graph canvas and the token reference, running.
-
 19 components, two hooks, a search ranker, 86 tokens, two themes. Dark
 only and desktop first, built for consoles, dashboards and visualisations
 rather than marketing pages. React 18.3 or 19.
@@ -100,7 +96,9 @@ remounting it.
 - [Tokens reference](packages/tokens/README.md): every custom property, the typed accessors, the DTCG-shaped source file.
 - [Graph reference](packages/graph/README.md): data model, props, controller.
 - [STYLING.md](packages/react/STYLING.md): the rule behind the component-token layer and the specificity trap it avoids.
-- The showcase (`npm run dev`) renders every component live, most with a rationale note and a code sample and some with an accessibility note, plus the graph and a shader lab.
+- The showcase (`npm run dev`) has a docs section (getting started, seven Foundations pages generated from the tokens, a page per component and a page per hook), plus the Graph and Glitch Lab. Component pages render live examples, most with a rationale note and a code sample and some with an accessibility note.
+- [BRAND.md](brand/BRAND.md): the identity behind the mark, palette and voice.
+- [CONTRIBUTING.md](CONTRIBUTING.md): how to contribute, and how releases are authorised.
 
 ## Repository layout
 
@@ -115,6 +113,7 @@ nexus/
 │   │       ├── tokens.css               generated · both themes
 │   │       ├── contrast.gen.ts          generated · computed ratios
 │   │       ├── base.css                 hand-authored base + focus rules
+│   │       ├── roles.ts                 semantic role names
 │   │       ├── crt.css                  CSS-only CRT layer
 │   │       └── index.ts                 typed accessors
 │   ├── react/           @nexus-cyberdeck/react    19 components, no runtime deps
@@ -127,14 +126,19 @@ nexus/
 │   │       ├── colour.ts                the tone/colour resolver
 │   │       └── styles.css               generated · concatenated components
 │   └── graph/           @nexus-cyberdeck/graph    force-directed WebGL canvas
-├── apps/showcase/       Home · Get started · Foundations · a page per component · Hooks · Graph · Glitch Lab
+├── apps/showcase/       Home · Docs (start, Foundations, components, hooks) · Graph · Glitch Lab
+├── brand/               BRAND.md, PALETTE.md and the generated mark and social assets
 ├── browser/             visual regression + axe suite (Playwright, pinned container)
-├── docs/                getting-started guide and README assets
+├── docs/                getting-started guide
 ├── reference/           preview.jsx — the whole system in one generated file
-└── scripts/             build-preview, check-docs, ds-figures, browser-tests
+├── scripts/             build-preview, brand-*, check-docs, check-changeset, ds-figures, browser-tests, …
+└── .changeset/          pending release notes (see Releasing)
 ```
 
 ## Developing
+
+Node 22.12 or newer. The repo develops against React 19; CI also runs the
+typecheck and unit tests against React 18.
 
 ```bash
 npm install
