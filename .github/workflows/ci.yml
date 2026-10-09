@@ -162,7 +162,8 @@ jobs:
   # typecheck and the same unit tests on a real React 18 with its own @types,
   # in a scratch copy so nothing here touches the lockfile. It does not need
   # `npm ci` of its own: the script installs into the copy. A separate job so
-  # a React 18 failure is named as one.
+  # a React 18 failure is named as one. It covers the published packages only:
+  # the showcase is a private app pinned to React 19 and makes no such promise.
   test-react-18:
     runs-on: ubuntu-latest
     timeout-minutes: 15
