@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { computeNeighbourhood, TIER_NEARBY, type NeighbourhoodGraph } from "./neighbourhood.js";
+import {
+  computeNeighbourhood,
+  isolationSet,
+  TIER_NEARBY,
+  type NeighbourhoodGraph,
+} from "./neighbourhood.js";
 
 type Edge = [number, number];
 
@@ -8,13 +13,12 @@ function buildGraph(n: number, edges: Edge[], hiddenIdx: number[] = []): Neighbo
   const m = edges.length;
   const eA = new Int32Array(m),
     eB = new Int32Array(m);
-  const inc: Array<Array<{ e: number; other: number; categoryId: string; out: boolean }>> =
-    Array.from({ length: n }, () => []);
+  const inc: Array<Array<{ edge: number; other: number }>> = Array.from({ length: n }, () => []);
   edges.forEach(([a, b], e) => {
     eA[e] = a;
     eB[e] = b;
-    inc[a]!.push({ e, other: b, categoryId: "", out: true });
-    inc[b]!.push({ e, other: a, categoryId: "", out: false });
+    inc[a]!.push({ edge: e, other: b });
+    inc[b]!.push({ edge: e, other: a });
   });
   const hidden = new Float32Array(n);
   for (const i of hiddenIdx) hidden[i] = 1;
@@ -125,5 +129,17 @@ describe("computeNeighbourhood", () => {
     expect([...depth]).toEqual([1, 0, 3, 2]);
     // Edge (3,2) reaches depth 3, outside NEARBY_DEPTH, so it stays unrelated.
     expect(tier[3]).toBe(0);
+  });
+});
+
+describe("isolationSet", () => {
+  it("keeps the node and everything one edge away, either end, and nothing when -1", () => {
+    // 0—1—2—3, plus 4—1: isolating 1 keeps 0, 1, 2 and 4, not 3.
+    const eA = Int32Array.from([0, 1, 2, 4]),
+      eB = Int32Array.from([1, 2, 3, 1]);
+    expect([...isolationSet(1, eA, eB)!].sort()).toEqual([0, 1, 2, 4]);
+    expect(isolationSet(-1, eA, eB)).toBeNull();
+    // A node with no edges keeps only itself.
+    expect([...isolationSet(5, eA, eB)!]).toEqual([5]);
   });
 });

@@ -502,6 +502,37 @@ describe("GraphCanvas keyboard and screen-reader navigation", () => {
     expect(focusTarget()!.getAttribute("aria-label")).toBe("A, atlas, 0 connections");
   });
 
+  it("only rebuilds the focus target's name when something it depends on changes", () => {
+    const describeNode = vi.fn((node: { label: string }) => node.label);
+    mount(undefined, props({ describeNode }));
+    act(() => focusTarget()!.focus());
+    const calls = describeNode.mock.calls.length;
+    // Help, describe-free steps and refreshes that leave the node, its
+    // selection and what is visible alone don't call describeNode again.
+    for (let k = 0; k < 5; k++) press("?");
+    expect(describeNode.mock.calls.length).toBe(calls);
+    press(" ");
+    expect(describeNode.mock.calls.length).toBeGreaterThan(calls);
+  });
+
+  it("lists a self-loop from both ends in getNode(), as 1.x did", () => {
+    const ref = createRef<GraphController>();
+    mount(undefined, {
+      ...props(),
+      ref,
+      edges: [
+        { a: "a", b: "b", categoryId: "refs" },
+        { a: "a", b: "a", categoryId: "refs" },
+      ],
+    } as Partial<GraphCanvasProps>);
+    const rows = ref.current!.getNode("a")!.groups[0]!.rows;
+    expect(rows.map((r) => [r.id, r.out])).toEqual([
+      ["a", true],
+      ["a", false],
+      ["b", true],
+    ]);
+  });
+
   it("uses describeNode and rankConnections when given", () => {
     mount(
       undefined,

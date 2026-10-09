@@ -6,7 +6,7 @@ import { mulberry32, seedFromIds } from "./random.js";
 import { glyphRadiusPx, project, unproject, ZOOM_MAX, ZOOM_MIN } from "./camera.js";
 import { createCameraRig } from "./camera-rig.js";
 import type { FitInset } from "./camera.js";
-import { computeNeighbourhood, TIER_NEARBY } from "./neighbourhood.js";
+import { computeNeighbourhood, isolationSet, TIER_NEARBY } from "./neighbourhood.js";
 import { pickNode } from "./picking.js";
 import { createLabelPlacer } from "./labels.js";
 import type { LabelView, PlacedLabel } from "./labels.js";
@@ -49,6 +49,7 @@ import type {
   GraphCanvasProps,
   GraphController,
   GraphNodeSnapshot,
+  FrameGeometry,
   GraphStats,
   PhysicsConfig,
   OpticsConfig,
@@ -1014,17 +1015,35 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           return unproject(sx, sy, rig.live.zoom, rig.live.x, rig.live.y, viewport);
         };
 
-        const inc: Array<Array<{ e: number; other: number; categoryId: string; out: boolean }>> =
-          Array.from({ length: n }, () => []);
-        for (let e = 0; e < m; e++) {
-          inc[eA[e]!]!.push({ e, other: eB[e]!, categoryId: eCategoryId[e]!, out: true });
-          inc[eB[e]!]!.push({ e, other: eA[e]!, categoryId: eCategoryId[e]!, out: false });
-        }
+        // Every node's connections, ranked as the keyboard reads them. The one
+        // adjacency structure: the neighbourhood walk, the tooltip, selection
+        // framing and getNode() read it too, so "who is connected to whom"
+        // has a single answer.
+        const nodeLabels = nodes.map((node) => node.label);
+        // A consumer's ranking sees nodes and edges, not dense indices.
+        const userRank = rankConnectionsRef.current;
+        const toPublic = (c: NavConnection) => ({
+          other: nodes[c.other]!,
+          edge: liveEdges[c.edge]!,
+          categoryId: c.categoryId,
+          direction: c.direction,
+          strength: c.strength,
+        });
+        const connections = buildConnections(
+          n,
+          eA,
+          eB,
+          eCategoryId,
+          linkCategories,
+          userRank
+            ? (a, b) => userRank(toPublic(a), toPublic(b))
+            : defaultRank(nodeLabels, linkCategoryIds),
+        );
         // Hidden edges (a hidden link category, or a selection-scoped one off
         // the selection) carry no neighbourhood, as they carry no keyboard
         // connection: pointer and keyboard readers see the same one.
         const neighbourhoodGraph = {
-          inc,
+          inc: connections,
           eA,
           eB,
           hidden: nHide,
@@ -1039,7 +1058,9 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           clock = 0,
           glitchUntil = -1,
           drawnLinks = m,
-          drawnNodes = n;
+          drawnNodes = n,
+          // Bumped by every refilter(), so anything cached on visibility knows to rebuild.
+          visibilityEpoch = 0;
 
         const kick = (d: number) => {
           glitchUntil = clock + d;
@@ -1085,11 +1106,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           const scopedLink = new Set(scopedLinkRef.current ?? []);
           const isoId = isolateRef.current;
           const iso = isoId === null || isoId === undefined ? -1 : (idToIndex.get(isoId) ?? -1);
-          let allow: Set<number> | null = null;
-          if (iso >= 0 && iso < n) {
-            allow = new Set([iso]);
-            for (const it of inc[iso]!) allow.add(it.other);
-          }
+          const allow = isolationSet(iso, eA, eB);
           let shownNodes = 0;
           for (let i = 0; i < n; i++) {
             nHide[i] = hiddenNode.has(nCategoryId[i]!) || (allow !== null && !allow.has(i)) ? 1 : 0;
@@ -1107,6 +1124,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
             if (vis) shown++;
           }
           drawnLinks = shown;
+          visibilityEpoch++;
           syncNodes();
           aEP2.needsUpdate = true;
         }
@@ -1212,7 +1230,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
             h = tip.offsetHeight;
           let toRight = 0,
             toLeft = 0;
-          for (const it of inc[idx]!) {
+          for (const it of connections[idx]!) {
             if (pos[it.other * 2]! >= pos[idx * 2]!) toRight++;
             else toLeft++;
           }
@@ -1263,7 +1281,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
             if (idx >= 0)
               rig.frameAround(
                 idx,
-                inc[idx]!.map((it) => it.other),
+                connections[idx]!.map((it) => it.other),
               );
             else rig.release();
           }
@@ -1276,14 +1294,31 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           const groups = linkCategoryIds
             .map((categoryId) => ({
               categoryId,
-              rows: inc[i]!.filter((it) => it.categoryId === categoryId)
-                .map((it) => ({
-                  id: nodes[it.other]!.id,
-                  label: nodes[it.other]!.label,
-                  categoryId: nCategoryId[it.other]!,
-                  out: it.out,
-                }))
-                .sort((a, b) => a.label.localeCompare(b.label)),
+              // From the ranked connections, re-sorted by label, then edge
+              // order with the `a` end first: the order rows had when they
+              // were built straight from the edge list. A self-loop is one
+              // connection but, as before, a row from each end.
+              rows: connections[i]!.filter((c) => c.categoryId === categoryId)
+                .flatMap((c) =>
+                  c.other === i
+                    ? [
+                        { c, out: true },
+                        { c, out: false },
+                      ]
+                    : [{ c, out: c.out }],
+                )
+                .sort(
+                  (x, y) =>
+                    nodeLabels[x.c.other]!.localeCompare(nodeLabels[y.c.other]!) ||
+                    x.c.edge - y.c.edge ||
+                    Number(y.out) - Number(x.out),
+                )
+                .map(({ c, out }) => ({
+                  id: nodes[c.other]!.id,
+                  label: nodes[c.other]!.label,
+                  categoryId: nCategoryId[c.other]!,
+                  out,
+                })),
             }))
             .filter((g) => g.rows.length > 0);
           return {
@@ -1305,27 +1340,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
          the start, because its history also backs controller.back() for
          mouse readers. The DOM it speaks through arrives with the focus
          layer (phase 7); until then its announcements go nowhere.          */
-        const nodeLabels = nodes.map((node) => node.label);
         const categoryLabel = (i: number) => nodeCategories[nCategoryId[i]!]!.label;
-        // A consumer's ranking sees nodes and edges, not dense indices.
-        const userRank = rankConnectionsRef.current;
-        const toPublic = (c: NavConnection) => ({
-          other: nodes[c.other]!,
-          edge: liveEdges[c.edge]!,
-          categoryId: c.categoryId,
-          direction: c.direction,
-          strength: c.strength,
-        });
-        const connections = buildConnections(
-          n,
-          eA,
-          eB,
-          eCategoryId,
-          linkCategories,
-          userRank
-            ? (a, b) => userRank(toPublic(a), toPublic(b))
-            : defaultRank(nodeLabels, linkCategoryIds),
-        );
         const isVisible = (i: number) => i >= 0 && i < n && nHide[i] === 0;
         const isEdgeVisible = (e: number) => eP2[e * 4 + A_HIDE] === 0;
         // The node a reader lands on when there's nowhere better: the most
@@ -1413,6 +1428,12 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
          */
         let hlTarget = -2,
           hlCursorEdge = -1;
+        // What the focus target's name was last built from. The name depends
+        // on the node, its selection, what is visible and the consumer's
+        // describeNode, never on the pointer: rebuilding it on every hover
+        // change called describeNode for nothing.
+        let labelKey = "",
+          labelFn: typeof describeNodeRef.current | null = null;
         function refresh(force = false) {
           const f = focusedNode();
           const target = f >= 0 ? f : selIdx >= 0 ? selIdx : hoverIdx;
@@ -1424,7 +1445,8 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           if (force || target !== hlTarget || cursorEdge !== hlCursorEdge) {
             highlight(target);
             if (c) {
-              for (const it of inc[f]!) eP2[it.e * 4 + A_TIER] = it.e === c.edge ? 1 : TIER_NEARBY;
+              for (const it of connections[f]!)
+                eP2[it.edge * 4 + A_TIER] = it.edge === c.edge ? 1 : TIER_NEARBY;
               aEP2.needsUpdate = true;
             }
             hlTarget = target;
@@ -1433,12 +1455,19 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           marks();
           if (overlay && nav) {
             const sel = nav.current >= 0 && nav.selected === nav.current;
-            // With no node to stand on (an empty graph, or everything
-            // filtered out), the focus target is named for the graph instead.
-            overlay.setNode(
-              nav.current >= 0 ? navContext.text.node(nav.current, sel) : navContext.text.summary(),
-              sel,
-            );
+            const key = `${nav.current}|${sel}|${visibilityEpoch}`;
+            if (key !== labelKey || describeNodeRef.current !== labelFn) {
+              labelKey = key;
+              labelFn = describeNodeRef.current;
+              // With no node to stand on (an empty graph, or everything
+              // filtered out), the focus target is named for the graph instead.
+              overlay.setNode(
+                nav.current >= 0
+                  ? navContext.text.node(nav.current, sel)
+                  : navContext.text.summary(),
+                sel,
+              );
+            }
             overlay.setHints(overlay.focused && keyHintsRef.current, fitInsetRef.current);
           }
         }
@@ -1727,6 +1756,16 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           fT = 0;
 
         const screenPos = new Map<number, PlacedLabel>();
+        // Handed to onFrame every frame and mutated in place, like the arrays
+        // inside it: the frame loop allocates nothing for a consumer to collect.
+        const frameGeometry: FrameGeometry = {
+          ids: denseIds,
+          positions: pos,
+          hidden: nHide,
+          radii: nRadius,
+          camera: { x: 0, y: 0, zoom: 1 },
+          viewport,
+        };
         const FOCUS_OUT: [number, number] = [0, 0];
 
         function frame(now: number) {
@@ -1757,14 +1796,12 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           camera.position.x = rig.live.x;
           camera.position.y = rig.live.y;
           const camZoom = rig.live.zoom;
-          onFrameRef.current?.({
-            ids: denseIds,
-            positions: pos,
-            hidden: nHide,
-            radii: nRadius,
-            camera: { x: rig.live.x, y: rig.live.y, zoom: camZoom },
-            viewport,
-          });
+          if (onFrameRef.current) {
+            frameGeometry.camera.x = rig.live.x;
+            frameGeometry.camera.y = rig.live.y;
+            frameGeometry.camera.zoom = camZoom;
+            onFrameRef.current(frameGeometry);
+          }
           camera.zoom = camZoom;
           camera.updateProjectionMatrix();
           px = 1 / camZoom;

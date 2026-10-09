@@ -406,6 +406,9 @@ list.
 - The physics solver, camera maths, framing and shader sources are exported too
   (`createPhysics`, `project`, `fitBounds`, `NODE_FS`, …) for anyone who wants
   to build a different renderer on the same engine.
+- So is the seeded generator the layout scatters with, `mulberry32`, and
+  `seedFromIds`, the default seed for a set of node ids, for sample or test
+  data that should come out the same on every load.
 
 ## License
 

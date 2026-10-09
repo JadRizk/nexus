@@ -16,6 +16,7 @@
 import { buildConnections, defaultRank, visibleConnections } from "./a11y/adjacency.js";
 import type { DirectionFilter, NavConnection } from "./a11y/adjacency.js";
 import { validateGraph } from "./validate.js";
+import { isolationSet } from "./neighbourhood.js";
 import type { Connection, GraphEdge, GraphNode, LinkCategory, NodeCategory } from "./types.js";
 
 /** What `describeNode` is given beyond the node itself. */
@@ -196,17 +197,9 @@ export function describeGraph<T = unknown>(input: DescribeGraphInput<T>): GraphO
     : defaultRank(labels, Object.keys(linkCategories));
   const lists = buildConnections(nodes.length, eA, eB, eCategoryId, linkCategories, rank);
 
-  // Isolation as GraphCanvas resolves it: the node plus everything one edge
-  // away, over any edge, hidden category or not.
+  // Isolation by the canvas's own rule (isolationSet), so the two agree.
   const iso = input.isolateId == null ? -1 : (idToIndex.get(input.isolateId) ?? -1);
-  let allow: Set<number> | null = null;
-  if (iso >= 0) {
-    allow = new Set([iso]);
-    for (let e = 0; e < edges.length; e++) {
-      if (eA[e] === iso) allow.add(eB[e]!);
-      if (eB[e] === iso) allow.add(eA[e]!);
-    }
-  }
+  const allow = isolationSet(iso, eA, eB);
   const isVisible = (i: number) =>
     !hiddenNode.has(nodes[i]!.categoryId) && (allow === null || allow.has(i));
   const isEdgeVisible = (e: number) => !hiddenLink.has(eCategoryId[e]!);

@@ -24,7 +24,8 @@ export const NEARBY_DEPTH = 2;
 export const TIER_NEARBY = 0.45;
 
 export interface NeighbourhoodGraph {
-  inc: ReadonlyArray<ReadonlyArray<{ e: number; other: number; categoryId: string; out: boolean }>>;
+  /** Each node's connections. The navigator's ranked lists serve as they are: only `edge` and `other` are read. */
+  inc: ReadonlyArray<ReadonlyArray<{ edge: number; other: number }>>;
   eA: Int32Array;
   eB: Int32Array;
   /** 1 = hidden, 0 = visible. Hidden nodes are never visited and never earn a depth. */
@@ -61,13 +62,13 @@ export function computeNeighbourhood(
       d = outDepth[v]!;
     if (d >= 3) continue;
     for (const it of inc[v]!) {
-      if (outDepth[it.other]! < -0.5 && hidden[it.other] === 0 && !edgeHidden?.(it.e)) {
+      if (outDepth[it.other]! < -0.5 && hidden[it.other] === 0 && !edgeHidden?.(it.edge)) {
         outDepth[it.other] = d + 1;
         q.push(it.other);
       }
     }
   }
-  for (const it of inc[idx]!) outTier[it.e] = 1;
+  for (const it of inc[idx]!) outTier[it.edge] = 1;
   // The BFS above already walks outDepth to 3; this spends what it computes.
   // Without it hover is a spotlight rather than a neighbourhood you can read.
   //
@@ -83,4 +84,21 @@ export function computeNeighbourhood(
       outTier[e] = TIER_NEARBY;
     }
   }
+}
+
+/**
+ * The nodes `isolateId` keeps on screen: the node itself and everything one
+ * edge away, over any edge, whatever its category. The one rule both the
+ * canvas and `describeGraph` use, so the outline lists what the canvas draws.
+ *
+ * @returns the kept node indices, or null when `iso` is -1 (nothing isolated).
+ */
+export function isolationSet(iso: number, eA: Int32Array, eB: Int32Array): Set<number> | null {
+  if (iso < 0) return null;
+  const keep = new Set([iso]);
+  for (let e = 0; e < eA.length; e++) {
+    if (eA[e] === iso) keep.add(eB[e]!);
+    if (eB[e] === iso) keep.add(eA[e]!);
+  }
+  return keep;
 }

@@ -53,7 +53,14 @@ describe("relationText", () => {
 });
 
 describe("connectionText", () => {
-  const conn = { edge: 0, other: 1, categoryId: "c", direction: "out" as const, strength: 1 };
+  const conn = {
+    edge: 0,
+    other: 1,
+    categoryId: "c",
+    direction: "out" as const,
+    out: true,
+    strength: 1,
+  };
   const uses = cat({ verb: "uses" });
 
   it("reads relation, far node, kind and position, marking the first of several as strongest", () => {

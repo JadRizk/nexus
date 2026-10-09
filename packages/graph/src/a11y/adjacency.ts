@@ -25,6 +25,8 @@ export interface NavConnection {
   categoryId: string;
   /** "out" when this node is the edge's `a`, "in" when it is `b`, "both" for an undirected category. */
   direction: ConnectionDirection;
+  /** True when this node is the edge's `a` end, whether or not the category has a direction. */
+  out: boolean;
   /** The category's weight: |gain| × strength. */
   strength: number;
 }
@@ -72,6 +74,7 @@ export function buildConnections(
       other: b,
       categoryId,
       direction: directed ? "out" : "both",
+      out: true,
       strength,
     });
     if (a !== b)
@@ -80,6 +83,7 @@ export function buildConnections(
         other: a,
         categoryId,
         direction: directed ? "in" : "both",
+        out: false,
         strength,
       });
   }

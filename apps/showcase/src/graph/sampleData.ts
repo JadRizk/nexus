@@ -1,3 +1,7 @@
+// The package's own generator, so "the same data on every load" uses the
+// one implementation the layout seeds from: the screenshot baselines and a
+// reader's sense of where things are both hold still.
+import { mulberry32 } from "@nexus-cyberdeck/graph";
 import type { GraphEdge, GraphNode, LinkCategory, NodeCategory } from "@nexus-cyberdeck/graph";
 
 /* ============================================================================
@@ -197,22 +201,6 @@ const AGENTS = [
   "ADEYEMI",
 ];
 const SRC = ["ARXIV", "DUMP", "INTERCEPT", "FIELDLOG", "TRANSCRIPT", "DATASET", "ARCHIVE", "LEAK"];
-/**
- * mulberry32, the same generator @nexus-cyberdeck/graph seeds its layout
- * with. Inlined because the package keeps its PRNG internal: the showcase
- * only needs the same data on every load, so the screenshot baselines and
- * a reader's sense of where things are both hold still.
- */
-function mulberry32(seed: number): () => number {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
 /** The seed the showcase's sample graph is generated from. */
 export const SAMPLE_SEED = 0x6e657875; // "nexu"
 

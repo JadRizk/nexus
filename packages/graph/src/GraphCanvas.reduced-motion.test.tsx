@@ -448,11 +448,17 @@ describe("props from qrntn: drop mode, scoped links, drawnNodes, onFrame", () =>
     expect(g.positions).toHaveLength(6);
     expect(g.radii).toHaveLength(3);
     expect(g.camera.zoom).toBeGreaterThan(0);
+    // One object, refilled every frame: nothing for the collector per frame.
+    tick();
+    expect(first.mock.calls[1]![0]).toBe(g);
+    expect(first.mock.calls[1]![0].camera).toBe(g.camera);
+    first.mockClear();
     const second = vi.fn();
     mountWith({ onFrame: second });
     tick();
     expect(second).toHaveBeenCalledTimes(1);
-    expect(first).toHaveBeenCalledTimes(1);
+    // The old callback isn't called again once it is replaced.
+    expect(first).not.toHaveBeenCalled();
   });
 });
 
