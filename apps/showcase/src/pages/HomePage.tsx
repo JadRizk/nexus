@@ -1,311 +1,113 @@
-import { useState } from "react";
-import {
-  Button,
-  CommandPalette,
-  Glyph,
-  HazardRule,
-  KeyValue,
-  LinkGlyph,
-  Panel,
-  SectionHeading,
-  Slider,
-  TabStrip,
-  ToggleRow,
-  Wordmark,
-  BlinkCursor,
-  useHotkey,
-  useNexus,
-} from "@nexus-cyberdeck/react";
-import type { NexusTheme, PaletteItem } from "@nexus-cyberdeck/react";
-import { CLASSES, ITEMS, RELATIONS } from "../home-data.js";
-import { DetailDrawer } from "../components/DetailDrawer.js";
+import type { CSSProperties } from "react";
+import { Wordmark } from "@nexus-cyberdeck/react";
+import { SignalMonitor } from "../components/SignalMonitor.js";
 
 /* ============================================================================
-   Home — the landing-page console
-   Three docked panels (console · legend · theme), a Drawer opened from the
-   console and a command palette, all driven by the shared NexusProvider theme/CRT state so
-   the site-wide header toggles and this page's own theme panel stay in sync.
+   Home — the landing page
+   A hero that says what this is and lets you play with it, the routes into
+   the site under it, and a footer. Every claim is the README's; every figure
+   is a build-time constant (scripts/ds-figures.mjs), never typed here. Theme,
+   CRT and search are the site palette's (⌘K, or Search in the header).
    ========================================================================== */
 
-type OpticsTab = "optics" | "solver";
+const REPO = "https://github.com/JadRizk/nexus";
+
+const ROUTES: ReadonlyArray<{ path: string; label: string; blurb: string }> = [
+  { path: "start", label: "Get started", blurb: "Install and render a first panel." },
+  { path: "foundations/tokens", label: "Tokens", blurb: "Every token, both themes." },
+  { path: "components", label: "Components", blurb: "Each one live, with a11y notes." },
+  { path: "labs/graph", label: "Graph", blurb: "The WebGL canvas, running." },
+  { path: "labs/glitch", label: "Glitch Lab", blurb: "The signal path, every knob." },
+];
+
+const BODY: CSSProperties = {
+  margin: 0,
+  color: "var(--nx-fg-subtle)",
+  lineHeight: "var(--nx-leading-body)",
+};
 
 export function HomePage() {
-  const { theme, setTheme, crt, setCrt } = useNexus();
-  const [tab, setTab] = useState<OpticsTab>("optics");
-  const [drawer, setDrawer] = useState(false);
-  const [pal, setPal] = useState(false);
-  const [scan, setScan] = useState(0.55);
-  const [bloom, setBloom] = useState(0.85);
-  const [on, setOn] = useState<Record<string, boolean>>(
-    Object.fromEntries(CLASSES.map((c) => [c.key, true])),
-  );
-  const [rel, setRel] = useState<Record<string, boolean>>(
-    Object.fromEntries(RELATIONS.map((r) => [r.key, true])),
-  );
-  const [picked, setPicked] = useState<PaletteItem>(ITEMS[2]!);
-
-  useHotkey("mod+k", () =>
-    setPal((v) => {
-      const next = !v;
-      if (next) setDrawer(false);
-      return next;
-    }),
-  );
-  useHotkey("/", () => {
-    setPal(true);
-    setDrawer(false);
-  });
-
   return (
-    <div style={{ height: "100%", overflow: "auto", position: "relative" }}>
-      <div
-        style={{
-          display: "flex",
-          gap: "var(--nx-space-5)",
-          padding: "var(--nx-space-5)",
-          alignItems: "flex-start",
-          flexWrap: "wrap",
-          maxWidth: 760,
-        }}
-      >
-        {/* ------------------------------------------------------ console */}
-        <Panel padded={false} style={{ width: 218, flexShrink: 0 }}>
-          <div
+    <div className="sc-home">
+      <section aria-labelledby="home-title" className="sc-home__hero">
+        <div className="sc-home__pitch">
+          <h1
+            id="home-title"
             style={{
-              padding: "var(--nx-space-5)",
-              borderBottom: "var(--nx-hairline) solid var(--nx-border-default)",
+              margin: 0,
+              color: "var(--nx-fg-default)",
+              fontFamily: "var(--nx-font-stencil)",
+              fontSize: "calc(var(--nx-text-xl) * 1.75)",
+              fontWeight: "var(--nx-weight-regular)" as CSSProperties["fontWeight"],
+              lineHeight: "var(--nx-leading-tight)",
+              letterSpacing: "var(--nx-track-normal)",
+              textTransform: "uppercase",
             }}
           >
-            <div
-              style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}
-            >
-              <Wordmark>NEXUS</Wordmark>
-              <span
-                style={{
-                  fontFamily: "var(--nx-font-stencil)",
-                  fontSize: "var(--nx-text-xl)",
-                  lineHeight: 0.8,
-                  color: "var(--nx-fg-accent)",
-                }}
-              >
-                60
-              </span>
-            </div>
-            <div
-              style={{
-                marginTop: "var(--nx-space-2)",
-                color: "var(--nx-fg-tertiary)",
-                fontSize: "var(--nx-text-2xs)",
-                letterSpacing: "var(--nx-track-wider)",
-              }}
-            >
-              DESIGN SYSTEM v<span data-nx-version>{__NX_VERSION__}</span> <BlinkCursor />
-            </div>
-          </div>
-
-          <HazardRule />
-
-          <div
+            A HUD design system for React
+          </h1>
+          <p style={{ ...BODY, marginTop: "var(--nx-space-5)", fontSize: "var(--nx-text-md)" }}>
+            Acid green on near-black, hairline borders, monospace everything — and an accessible
+            mode that is enforced at build time, not promised. It ships with a WebGL graph canvas
+            that speaks the same language.
+          </p>
+          <p
             style={{
-              padding: "var(--nx-space-4) var(--nx-space-5) 0",
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "1px var(--nx-space-4)",
+              ...BODY,
+              marginTop: "var(--nx-space-5)",
+              color: "var(--nx-fg-muted)",
+              fontSize: "var(--nx-text-xs)",
+              letterSpacing: "var(--nx-track-wide)",
+              textTransform: "uppercase",
             }}
           >
-            <KeyValue label="TOKENS" value={<span data-nx-figure>{__NX_TOKENS__}</span>} />
-            <KeyValue label="THEMES" value="2" />
-            <KeyValue label="COMPS" value={<span data-nx-figure>{__NX_COMPONENTS__}</span>} />
-            <KeyValue label="DEPS" value="0" />
-          </div>
-
-          <div style={{ padding: "var(--nx-space-4) var(--nx-space-5)" }}>
-            <TabStrip
-              value={tab}
-              onChange={setTab}
-              tabs={
-                [
-                  { value: "optics", label: "Optics" },
-                  { value: "solver", label: "Solver" },
-                ] as const
-              }
-            />
-          </div>
-
-          <div style={{ padding: "0 var(--nx-space-5)" }}>
-            {tab === "optics" ? (
-              <>
-                <Slider
-                  label="scanlines"
-                  value={scan}
-                  min={0}
-                  max={1}
-                  step={0.02}
-                  onChange={setScan}
-                  format={(v) => v.toFixed(2)}
-                />
-                <Slider
-                  label="bloom"
-                  value={bloom}
-                  min={0}
-                  max={2.5}
-                  step={0.05}
-                  onChange={setBloom}
-                  format={(v) => v.toFixed(2)}
-                />
-              </>
-            ) : (
-              <>
-                <Slider
-                  label="repulsion"
-                  value={900}
-                  min={100}
-                  max={2200}
-                  step={20}
-                  onChange={() => {}}
-                />
-                <Slider
-                  label="link length"
-                  value={78}
-                  min={20}
-                  max={200}
-                  step={2}
-                  onChange={() => {}}
-                />
-              </>
-            )}
-          </div>
-
+            <span data-nx-figure>{__NX_COMPONENTS__}</span> components ·{" "}
+            <span data-nx-figure>{__NX_TOKENS__}</span> tokens · 2 themes · React 18.3 or 19
+          </p>
           <div
-            style={{
-              display: "flex",
-              gap: "var(--nx-space-2)",
-              padding: "var(--nx-space-4) var(--nx-space-5)",
-            }}
+            style={{ display: "flex", gap: "var(--nx-space-3)", marginTop: "var(--nx-space-6)" }}
           >
-            <Button style={{ flex: 1 }} onClick={() => setPal(true)}>
-              Search
-            </Button>
-            <Button style={{ flex: 1 }} onClick={() => setDrawer((d) => !d)}>
-              Drawer
-            </Button>
+            {/* Links wearing the button class, as the header's are: they go
+                somewhere, so they can be opened in a new tab or copied. */}
+            <a href="#/start" className="nx-btn sc-cta" data-active="1">
+              Get started
+            </a>
+            <a href="#/components" className="nx-btn sc-cta">
+              Browse components
+            </a>
           </div>
-        </Panel>
+        </div>
+        <SignalMonitor />
+      </section>
 
-        {/* ------------------------------------------------------- legend */}
-        <Panel style={{ width: 190, flexShrink: 0 }}>
-          <fieldset style={{ border: 0, margin: 0, padding: 0 }}>
-            <legend style={{ padding: 0 }}>
-              <SectionHeading>/// entity class</SectionHeading>
-            </legend>
-            {CLASSES.map((c) => (
-              <ToggleRow
-                key={c.key}
-                checked={!!on[c.key]}
-                onChange={(v) => setOn((p) => ({ ...p, [c.key]: v }))}
-                icon={<Glyph shape={c.shape} colour={c.colour} muted={!on[c.key]} />}
-                label={c.label}
-                meta={c.code}
-              />
-            ))}
-          </fieldset>
-          <div style={{ height: "var(--nx-space-4)" }} />
-          <fieldset style={{ border: 0, margin: 0, padding: 0 }}>
-            <legend style={{ padding: 0 }}>
-              <SectionHeading>/// relation</SectionHeading>
-            </legend>
-            {RELATIONS.map((r) => (
-              <ToggleRow
-                key={r.key}
-                checked={!!rel[r.key]}
-                onChange={(v) => setRel((p) => ({ ...p, [r.key]: v }))}
-                icon={
-                  <LinkGlyph
-                    colour={r.colour}
-                    muted={!rel[r.key]}
-                    dashed={r.dashed}
-                    arrow={r.arrow}
-                    width={r.width}
-                  />
-                }
-                label={r.label}
-              />
-            ))}
-          </fieldset>
-        </Panel>
+      <nav aria-label="Where to go" className="sc-home__routes">
+        {ROUTES.map((r) => (
+          <a key={r.path} href={`#/${r.path}`} className="sc-route">
+            <span className="sc-route__label">{r.label} →</span>
+            <span className="sc-route__blurb">{r.blurb}</span>
+          </a>
+        ))}
+      </nav>
 
-        {/* --------------------------------------------------- theme switch */}
-        <Panel style={{ width: 190, flexShrink: 0 }}>
-          <SectionHeading>/// theme</SectionHeading>
-          <div
-            style={{ display: "flex", gap: "var(--nx-space-2)", marginBottom: "var(--nx-space-5)" }}
-          >
-            {(["hud-aa", "hud"] as NexusTheme[]).map((t) => (
-              <Button key={t} style={{ flex: 1 }} active={theme === t} onClick={() => setTheme(t)}>
-                {t === "hud-aa" ? "AA" : "HUD"}
-              </Button>
-            ))}
-          </div>
-          <SectionHeading>/// crt layer</SectionHeading>
-          <div
-            style={{ display: "flex", gap: "var(--nx-space-2)", marginBottom: "var(--nx-space-5)" }}
-          >
-            <Button style={{ flex: 1 }} active={crt} onClick={() => setCrt(true)}>
-              On
-            </Button>
-            <Button style={{ flex: 1 }} active={!crt} onClick={() => setCrt(false)}>
-              Off
-            </Button>
-          </div>
-          <SectionHeading>/// muted ramp</SectionHeading>
-          {(["default", "muted", "subtle", "tertiary", "disabled"] as const).map((t) => (
-            <div
-              key={t}
-              style={{
-                color: `var(--nx-fg-${t})`,
-                letterSpacing: "var(--nx-track-wide)",
-                textTransform: "uppercase",
-                padding: "1px 0",
-              }}
-            >
-              {t} — the quick brown fox
-            </div>
-          ))}
-        </Panel>
-      </div>
-
-      <div
-        style={{
-          position: "absolute",
-          bottom: "var(--nx-space-5)",
-          left: "var(--nx-space-5)",
-          color: "var(--nx-fg-tertiary)",
-          fontSize: "var(--nx-text-2xs)",
-          letterSpacing: "var(--nx-track-wider)",
-          textTransform: "uppercase",
-        }}
-      >
-        ⌘K search · tab through everything · toggle HUD to see what AA fixes
-      </div>
-
-      <DetailDrawer
-        open={drawer}
-        onClose={() => setDrawer(false)}
-        item={picked}
-        related={ITEMS.slice(2, 8)}
-        onPick={setPicked}
-      />
-
-      <CommandPalette
-        open={pal}
-        onClose={() => setPal(false)}
-        items={ITEMS}
-        onSelect={(it) => {
-          setPicked(it);
-          setDrawer(true);
-          setPal(false);
-        }}
-      />
+      <footer className="sc-footer">
+        <div className="sc-footer__brand">
+          <Wordmark size="var(--nx-text-md)">NEXUS</Wordmark>
+          <span>
+            v<span data-nx-version>{__NX_VERSION__}</span> · MIT
+          </span>
+        </div>
+        <ul className="sc-footer__links" aria-label="Project">
+          <li>
+            <a href={REPO}>GitHub</a>
+          </li>
+          <li>
+            <a href={`${REPO}/blob/main/docs/getting-started.md`}>Guide</a>
+          </li>
+          <li>
+            <a href={`${REPO}/blob/main/LICENSE`}>License</a>
+          </li>
+        </ul>
+      </footer>
     </div>
   );
 }

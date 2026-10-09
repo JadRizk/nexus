@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
-import { banner, focusVisible, gotoPage, setTheme, spec, settle, versionMask } from "./harness.js";
+import { banner, focusVisible, gotoPage, homeMask, setTheme, spec, settle } from "./harness.js";
 
 /* ============================================================================
    Interaction states, the CRT layer, and the theme swap.
@@ -104,22 +104,16 @@ test.describe("CRT layer", () => {
 
   test("off", async ({ page }) => {
     await gotoPage(page, "home");
-    await expect(page).toHaveScreenshot("crt-off.png", {
-      fullPage: false,
-      mask: versionMask(page),
-    });
+    await expect(page).toHaveScreenshot("crt-off.png", { fullPage: false, mask: homeMask(page) });
   });
 
   test("on", async ({ page }) => {
     // Enabled before navigating, like the theme, so the shot is of the page
     // as it loads rather than of a toggle being clicked.
     await gotoPage(page, "home", "hud-aa", { crt: true });
-    await expect(banner(page).getByRole("button", { name: "CRT", exact: true })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    await expect(page.locator(".nx-root")).toHaveAttribute("data-nx-crt", "on");
     await settle(page);
-    await expect(page).toHaveScreenshot("crt-on.png", { fullPage: false, mask: versionMask(page) });
+    await expect(page).toHaveScreenshot("crt-on.png", { fullPage: false, mask: homeMask(page) });
   });
 });
 
@@ -129,16 +123,17 @@ test.describe("theme swap", () => {
   // was declared once on :root — so the attribute changed and nothing a
   // component reads moved. These two shots must differ.
 
-  test("the console in the AA theme", async ({ page }) => {
+  // The baselines keep their console-* names from when Home was a console.
+  test("Home in the AA theme", async ({ page }) => {
     await gotoPage(page, "home", "hud-aa");
-    await expect(page).toHaveScreenshot("console-hud-aa.png", { mask: versionMask(page) });
+    await expect(page).toHaveScreenshot("console-hud-aa.png", { mask: homeMask(page) });
   });
 
-  test("the console in the prototype theme", async ({ page }) => {
+  test("Home in the prototype theme", async ({ page }) => {
     // The theme is set before navigating rather than switched here, so the
     // shot is of the page as it loads.
     await gotoPage(page, "home", "hud");
-    await expect(page).toHaveScreenshot("console-hud.png", { mask: versionMask(page) });
+    await expect(page).toHaveScreenshot("console-hud.png", { mask: homeMask(page) });
   });
 
   test("switching theme changes the muted ramp on screen, not just in the DOM", async ({
