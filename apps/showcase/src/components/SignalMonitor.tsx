@@ -1,13 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 import type { FocusEvent, PointerEvent } from "react";
 import { Button, Panel } from "@nexus-cyberdeck/react";
-import { configFor, fireEvent, shuffleSeed, useGlitchEngine } from "../effects/glitchEngine.js";
+import { configFor } from "../effects/glitch/core/config.js";
+import type { Config } from "../effects/glitch/core/config.js";
+import type { QueuedEvent } from "../effects/glitch/core/bus.js";
+import { fireEvent, shuffleSeed } from "../effects/glitch/core/events.js";
+import type { ActiveEvent } from "../effects/glitch/core/events.js";
+import type { EventId } from "../effects/glitch/data/events/index.js";
+import { useGlitchEngine } from "../effects/glitch/useGlitchEngine.js";
 import { createAudio } from "../effects/glitchAudio.js";
 
 /* ============================================================================
    showcase — SignalMonitor
    Home's hero: a small CRT running Glitch Lab's own signal path and
-   synthesiser (effects/glitchEngine.js, effects/glitchAudio.js). The pointer
+   synthesiser (effects/glitch/, effects/glitchAudio.js). The pointer
    tunes it — across for colour bleed, down for tracking. Each visit lands on
    a channel chosen at random (the graph, with a new layout every time; the
    test bars; or the HUD). Jolt fires one of Glitch Lab's faults.
@@ -24,14 +30,13 @@ import { createAudio } from "../effects/glitchAudio.js";
    after one — so a hover before any press is silent.
    ========================================================================== */
 
-type Cfg = ReturnType<typeof configFor>;
 type Audio = NonNullable<ReturnType<typeof createAudio>>;
 
 const CHANNELS = ["GRAPH", "BARS", "HUD"] as const;
 
 // Faults that displace, ghost or shift colour. Dropout, signal loss, data
 // corruption, head crash and cold boot all flash or blank the picture.
-const SAFE_FAULTS = ["scrub", "interference", "degauss"] as const;
+const SAFE_FAULTS = ["scrub", "interference", "degauss"] as const satisfies readonly EventId[];
 
 const VOLUME = 0.45;
 // The room: Glitch Lab's bed with the 15.7 kHz whine kept low, faded so it
@@ -54,18 +59,18 @@ const ROOM = { hiss: 0.4, hum: 0.35, whine: 0.12, fade: 0.25 };
  *
  * Glitch Lab keeps the preset as it is.
  */
-function rest(): Cfg {
+function rest(): Config {
   const cfg = configFor("BROADCAST");
-  Object.assign(cfg["crt"]!, { amt: 1, curve: 0.9, overscan: 1 });
-  cfg["holo"]!.flicker = 0;
+  Object.assign(cfg.crt, { amt: 1, curve: 0.9, overscan: 1 });
+  cfg.holo.flicker = 0;
   return cfg;
 }
 
 /** Pointer position, 0–1 on each axis, to the knobs it turns. */
-function tune(x: number, y: number): Cfg {
+function tune(x: number, y: number): Config {
   const cfg = rest();
-  Object.assign(cfg["chroma"]!, { on: 1, amt: 0.5 + x * 0.5, width: 4 + x * 20, lag: -2 + x * 12 });
-  Object.assign(cfg["tracking"]!, { on: 1, amt: y, shift: y * 0.12, height: 0.06 + y * 0.18 });
+  Object.assign(cfg.chroma, { on: 1, amt: 0.5 + x * 0.5, width: 4 + x * 20, lag: -2 + x * 12 });
+  Object.assign(cfg.tracking, { on: 1, amt: y, shift: y * 0.12, height: 0.06 + y * 0.18 });
   return cfg;
 }
 
@@ -76,11 +81,11 @@ const mayPlay = () =>
 
 export function SignalMonitor() {
   const hostRef = useRef<HTMLDivElement>(null);
-  const cfgRef = useRef<Cfg>(rest());
+  const cfgRef = useRef<Config>(rest());
   const srcRef = useRef(0);
   const seedRef = useRef(0);
-  const activeRef = useRef<unknown[]>([]);
-  const queueRef = useRef<unknown[]>([]);
+  const activeRef = useRef<ActiveEvent[]>([]);
+  const queueRef = useRef<QueuedEvent[]>([]);
   const stillRef = useRef(false);
   const audioRef = useRef<Audio | null>(null);
 
@@ -170,10 +175,10 @@ export function SignalMonitor() {
   };
 
   /** Runs one fault, picture and sound, unless one is already running. */
-  const runFault = (id: string): { dur: number } | null => {
+  const runFault = (id: EventId): { dur: number } | null => {
     if (running.current || still || err) return null;
     running.current = true;
-    const def = fireEvent(activeRef, id)!;
+    const def = fireEvent(activeRef, id);
     if (audible) openAudio(audioRef, VOLUME)?.fire(id);
     setFault(def.label);
     setRan((r) => ({ count: r.count + 1, last: def.label }));
@@ -187,7 +192,7 @@ export function SignalMonitor() {
   // The rotation advances only when a fault actually runs, so a press that is
   // ignored mid-fault does not skip one.
   const jolt = () => {
-    if (runFault(SAFE_FAULTS[nextFault.current % SAFE_FAULTS.length]!)) nextFault.current++;
+    if (runFault(SAFE_FAULTS[nextFault.current % SAFE_FAULTS.length])) nextFault.current++;
   };
 
   const toggleSound = () => {
