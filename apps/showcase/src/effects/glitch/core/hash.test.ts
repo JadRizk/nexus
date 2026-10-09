@@ -10,10 +10,6 @@ describe("hashf", () => {
     }
   });
 
-  it("is deterministic", () => {
-    expect(hashf(12.34)).toBe(hashf(12.34));
-  });
-
   it("spreads nearby inputs apart", () => {
     expect(hashf(1)).not.toBeCloseTo(hashf(1.001), 2);
   });

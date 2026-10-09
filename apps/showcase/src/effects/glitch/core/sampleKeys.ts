@@ -13,7 +13,9 @@ export function sampleKeys(keys: readonly Key[], u: number): number {
   if (first === undefined) throw new TypeError("sampleKeys needs at least one key");
   if (u <= first[0]) return first[1];
   let previous = first;
-  for (const next of keys.slice(1)) {
+  for (let i = 1; i < keys.length; i++) {
+    const next = keys[i];
+    if (next === undefined) continue;
     if (u <= next[0]) {
       if (next[2] === "step") return previous[1];
       const t = (u - previous[0]) / Math.max(1e-6, next[0] - previous[0]);

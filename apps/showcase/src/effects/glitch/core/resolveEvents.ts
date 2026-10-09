@@ -22,9 +22,18 @@ export interface Resolved {
 }
 
 function combine(mode: TrackMode, current: number | undefined, value: number): number {
-  if (mode === "max") return Math.max(current ?? 0, value);
-  if (mode === "add") return (current ?? 0) + value;
-  return value;
+  switch (mode) {
+    case "max":
+      return Math.max(current ?? 0, value);
+    case "add":
+      return (current ?? 0) + value;
+    case "set":
+      return value;
+    default: {
+      const unhandled: never = mode;
+      throw new TypeError(`Unknown track mode: ${String(unhandled)}`);
+    }
+  }
 }
 
 function applyTracks(overrides: Overrides, event: ActiveEvent, u: number): void {

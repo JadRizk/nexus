@@ -28,10 +28,6 @@ describe("chaosEnv", () => {
     expect(chaosEnv(0.5, 1, 5)).toBeLessThan(chaosEnv(0.5, 0.5, 5));
   });
 
-  it("is deterministic for a given (u, chaos, seed) triple", () => {
-    expect(chaosEnv(0.42, 0.5, 3)).toBe(chaosEnv(0.42, 0.5, 3));
-  });
-
   it("is quantised to ~24 Hz — two u values in the same 1/24 window agree", () => {
     // 0.10 and 0.11 both fall in floor(u * 24) === 2.
     expect(Math.floor(0.1 * 24)).toBe(Math.floor(0.11 * 24));

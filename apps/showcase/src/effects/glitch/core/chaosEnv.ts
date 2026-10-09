@@ -3,7 +3,7 @@ import { hashf } from "./hash.js";
 /**
  * The chaos term: a multiplier on an event's envelope at `u` (0–1 through the
  * event), at most 1 and, for `chaos` up to 1, at least 0. `chaos` (0–1) sets
- * how deep a dip cuts; 0 or less returns 1. The same `u`, `chaos` and `seed` always give the same value.
+ * how deep a dip cuts; 0 or less returns 1.
  *
  * Quantised to ~24 Hz so it stutters like frames dropping rather than
  * shimmering like noise, and it only ever *reduces* the envelope — a fault

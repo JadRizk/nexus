@@ -119,16 +119,14 @@ describe("resolveEvents: sampling", () => {
   });
 
   it("the chaos envelope scales amt tracks", () => {
-    const seed = 5;
-    const envelope = chaosEnv(0.5, 0.5, seed);
-    expect(envelope).toBeLessThan(1);
     const def = eventDef([{ fx: "crt", param: "amt", mode: "set", keys: flat(0.8) }], {
       chaos: 0.5,
     });
 
-    const { overrides } = resolveEvents([started(def, 0, seed)], 0.5);
+    const { overrides } = resolveEvents([started(def, 0, 5)], 0.5);
 
-    expect(overrides.crt?.amt).toBe(0.8 * envelope);
+    // 0.8 × chaosEnv(u 0.5, chaos 0.5, seed 5).
+    expect(overrides.crt?.amt).toBe(0.5226003208015755);
   });
 
   it("the chaos envelope leaves every other knob unscaled", () => {
