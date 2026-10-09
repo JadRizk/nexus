@@ -524,6 +524,28 @@ describe("GraphCanvas keyboard and screen-reader navigation", () => {
     expect(warn).toHaveBeenCalledWith(expect.stringMatching(/no ariaLabel/));
   });
 
+  it("mounts an empty graph, named for the graph, and keys on it are harmless", () => {
+    const onFatal = vi.fn();
+    mount(undefined, props({ nodes: [], edges: [], onFatal }));
+    expect(onFatal).not.toHaveBeenCalled();
+    expect(focusTarget()!.getAttribute("aria-label")).toBe(
+      "Graph, 0 nodes, 0 connections in 0 kinds.",
+    );
+    act(() => focusTarget()!.focus());
+    for (const key of ["ArrowRight", "ArrowDown", "Enter", " ", "Home", "d"]) press(key);
+    expect(spoken()).toBe("Graph, 0 nodes, 0 connections in 0 kinds.");
+    expect(onFatal).not.toHaveBeenCalled();
+  });
+
+  it("mounts with every category hidden, and lands on a node once one is shown", () => {
+    const onFatal = vi.fn();
+    mount(undefined, props({ hiddenNodeCategories: Object.keys(nodeCategories), onFatal }));
+    expect(onFatal).not.toHaveBeenCalled();
+    expect(focusTarget()!.getAttribute("aria-label")).toMatch(/^Graph, 0 nodes/);
+    mount(undefined, props({ hiddenNodeCategories: [], onFatal }));
+    expect(focusTarget()!.getAttribute("aria-label")).toBe("A, atlas, 1 connection");
+  });
+
   it("keeps that warning out of production builds", () => {
     vi.stubEnv("NODE_ENV", "production");
     try {

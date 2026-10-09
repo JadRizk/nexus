@@ -287,6 +287,31 @@ describe("when the current node is hidden", () => {
   });
 });
 
+describe("with no node to stand on", () => {
+  it("says what there is instead of reading a node that isn't there", () => {
+    const empty = { ...initialNavState(-1), entered: true };
+    for (const action of [
+      { type: "browse", step: 1 },
+      { type: "filter", step: 1 },
+      { type: "follow" },
+      { type: "toggleSelect" },
+      { type: "home" },
+      { type: "describe" },
+    ] as NavAction[]) {
+      const [s, fx] = navigate(empty, action, makeCtx(new Set([0, 1, 2, 3, 4])));
+      expect(s).toBe(empty);
+      expect(fx).toEqual({ announce: "SUMMARY" });
+    }
+  });
+
+  it("lands on a node once a filter lifts", () => {
+    const empty = { ...initialNavState(-1), entered: true };
+    const [s, fx] = navigate(empty, { type: "visibility" }, makeCtx());
+    expect(s.current).toBe(0);
+    expect(fx).toMatchObject({ announce: "Moved to hub", moved: true });
+  });
+});
+
 describe("going back past hidden places", () => {
   it("skips steps to nodes a filter has since hidden", () => {
     // hub → alpha → hub, then alpha is hidden.

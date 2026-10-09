@@ -134,7 +134,20 @@ export function lastVisible(history: readonly HistoryEntry[], ctx: Pick<NavConte
   return -1;
 }
 
+/** The steps that act on the node the reader is on, so need one to be. */
+const NEEDS_NODE = new Set<NavAction["type"]>([
+  "browse",
+  "filter",
+  "follow",
+  "toggleSelect",
+  "home",
+  "describe",
+]);
+
 export function navigate(s: NavState, action: NavAction, ctx: NavContext): [NavState, NavEffects] {
+  // An empty graph, or one a filter has emptied, has no node to stand on.
+  // Those steps say what there is instead of reading a node that isn't there.
+  if (s.current < 0 && NEEDS_NODE.has(action.type)) return [s, { announce: ctx.text.summary() }];
   const list = () => ctx.connections(s.current, s.filter);
 
   switch (action.type) {

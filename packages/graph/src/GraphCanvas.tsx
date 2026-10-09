@@ -1432,8 +1432,13 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           }
           marks();
           if (overlay && nav) {
-            const sel = nav.selected === nav.current;
-            overlay.setNode(navContext.text.node(nav.current, sel), sel);
+            const sel = nav.current >= 0 && nav.selected === nav.current;
+            // With no node to stand on (an empty graph, or everything
+            // filtered out), the focus target is named for the graph instead.
+            overlay.setNode(
+              nav.current >= 0 ? navContext.text.node(nav.current, sel) : navContext.text.summary(),
+              sel,
+            );
             overlay.setHints(overlay.focused && keyHintsRef.current, fitInsetRef.current);
           }
         }
@@ -1503,6 +1508,9 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           if (ev.key !== "Escape" || tipIdx < 0 || overlay?.focused) return;
           tipSuppressed = tipIdx;
           showTip(-1);
+          // Handled: a page-level Escape ("close everything") can tell that
+          // this one only dismissed the tooltip, and leave the rest alone.
+          ev.preventDefault();
         };
         window.addEventListener("keydown", onWindowKey);
         disposables.push(() => window.removeEventListener("keydown", onWindowKey));

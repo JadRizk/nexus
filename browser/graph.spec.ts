@@ -215,6 +215,32 @@ test.describe("graph canvas", () => {
     expect(shown).toBeLessThan(200);
   });
 
+  test("an Escape that only dismisses the tooltip is marked as handled", async ({ page }) => {
+    await page.goto("/#/labs/graph");
+    // Hover needs a node that stays put under the pointer.
+    await expect.poll(() => statText(page, "SOLVER"), { timeout: 60_000 }).toBe("LOCKED");
+    const c = await landmarkCentre(page);
+    await page.mouse.move(c.x, c.y);
+    const tipOpacity = () =>
+      page.evaluate(() => {
+        const tip = [...document.querySelectorAll<HTMLElement>("div")].find(
+          (el) => el.style.maxWidth === "270px",
+        );
+        return tip?.style.opacity ?? "";
+      });
+    await expect.poll(tipOpacity).toBe("1");
+
+    // Listening after the graph's own window listener, so it sees the verdict.
+    await page.evaluate(() => {
+      window.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") document.body.dataset["escHandled"] = String(e.defaultPrevented);
+      });
+    });
+    await page.keyboard.press("Escape");
+    await expect.poll(tipOpacity).toBe("0");
+    await expect(page.locator("body")).toHaveAttribute("data-esc-handled", "true");
+  });
+
   test("Back keeps focus when it runs out of history", async ({ page }) => {
     await page.goto("/#/labs/graph");
     const target = page.locator('[aria-roledescription="graph"] [data-nx-graph-focus]');
