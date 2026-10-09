@@ -1,4 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import type { ReactElement, RefAttributes } from "react";
 import * as THREE from "three";
 import { createPhysics, computeDegree } from "./physics.js";
 import { project, unproject, glyphRadiusPx } from "./camera.js";
@@ -98,6 +99,15 @@ interface InternalController {
   getNodeByIndex?: (index: number) => GraphNodeSnapshot | null;
 }
 
+// Generic over the node `data` type at the boundary only: the cast at the end
+// of this declaration gives callers `GraphCanvasProps<T>`, `onSelect` with a
+// `GraphNodeSnapshot<T>`, and a `ref` typed `GraphController<T>`, so the
+// payload comes back typed. forwardRef's own type is not generic, hence the
+// cast — the same pattern as @nexus-cyberdeck/react's CommandPalette. The body
+// works in `unknown` because it never reads `data`; describe() copies the
+// reference from `nodes[i]` onto the snapshot and nothing else touches it, so
+// whatever `T` the caller's nodes carry is what comes back. `T` defaults to
+// `unknown`, which is what every caller that never names it already had.
 export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
   function GraphCanvas(props, ref) {
     const {
@@ -942,6 +952,9 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
             state: STATE_LABEL[nState[i]!]!,
             degree: degree[i]!,
             groups,
+            // Passed through by reference, never read or copied: the consumer
+            // gets back the exact object it put on the node.
+            data: nodes[i]!.data,
           };
         };
 
@@ -1440,4 +1453,6 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
       </div>
     );
   },
-);
+) as (<T = unknown>(
+  props: GraphCanvasProps<T> & RefAttributes<GraphController<T>>,
+) => ReactElement) & { displayName?: string };
