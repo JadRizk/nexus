@@ -84,6 +84,7 @@ const COMPONENTS: Array<[Route, string]> = [
   ["components/section-heading", "SectionHeading"],
   ["components/wordmark", "Wordmark"],
   ["components/blink-cursor", "BlinkCursor"],
+  ["components/graph-outline", "GraphOutline"],
   ["components/legend", "Legend"],
   ["components/nexus-provider", "NexusProvider"],
   ["components/drawer", "Drawer"],
@@ -502,9 +503,12 @@ test.describe("claims axe cannot make", () => {
       await gotoPage(page, route);
       // Controls inside an inert subtree are excluded: a closed Drawer stays
       // mounted with its close button, and that button being unreachable is
-      // the behaviour the Drawer promises, not a defect.
+      // the behaviour the Drawer promises, not a defect. The same goes for the
+      // contents of a closed <details> (GraphOutline's node entries): the
+      // browser keeps them out of the tab order until the disclosure opens,
+      // and the <summary> that opens it is checked instead.
       const controls = page.locator(
-        ":is(.nx-root button:not([disabled]), .nx-root input:not([disabled]), .nx-root a[href]):not([inert] *)",
+        ":is(.nx-root button:not([disabled]), .nx-root input:not([disabled]), .nx-root a[href], .nx-root summary):not([inert] *):not(details:not([open]) > :not(summary) *, details:not([open]) > :not(summary))",
       );
       const total = await controls.count();
       expect(total).toBeGreaterThan(10);

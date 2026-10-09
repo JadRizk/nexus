@@ -33,6 +33,8 @@ const REVIEWED: Record<string, string> = {
   "Drawer/.nx-drawer__header": "Divider between regions that already have their own edges.",
   "Drawer/.nx-drawer__footer": "Divider between regions that already have their own edges.",
   "CommandPalette/.nx-palette__hints": "Divider above a decorative, aria-hidden key legend.",
+  "GraphOutline/.nx-graph-outline__node":
+    "Divider between list entries. Each entry is identified by its text label; the disclosure's own focus ring marks focus.",
 };
 
 /** `Component/selector` for every rule in a component's stylesheet that reads the token. */

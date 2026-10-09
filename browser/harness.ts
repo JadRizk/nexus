@@ -49,6 +49,7 @@ export const DOC_ROUTES = [
   "components/tooltip",
   "components/glyph",
   "components/link-glyph",
+  "components/graph-outline",
   "components/drawer",
   "components/command-palette",
   "components/nexus-provider",

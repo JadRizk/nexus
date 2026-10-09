@@ -8,20 +8,71 @@
  *
  * @vitest-environment jsdom
  */
-import { act } from "react";
+import { act, createRef } from "react";
 import { createRoot } from "react-dom/client";
 import type { Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GraphCanvas } from "./GraphCanvas.js";
 import type * as PhysicsModule from "./physics.js";
+import type * as CameraRigModule from "./camera-rig.js";
 import type { Physics, PhysicsParams } from "./physics.js";
 import type * as ThreeModule from "three";
-import type { GraphCanvasProps, LinkCategory, NodeCategory, PhysicsConfig } from "./types.js";
+import { seedFromIds } from "./random.js";
+import type {
+  GraphCanvasProps,
+  GraphController,
+  LinkCategory,
+  NodeCategory,
+  PhysicsConfig,
+} from "./types.js";
 
 type ParamsPatch = Partial<PhysicsParams> & { settle?: number };
 
 /** Every setParams call any solver created during a test received, in order. */
 const setParamsCalls: ParamsPatch[] = [];
+
+/** Every createPhysics call: the graph and options it got, and a copy of its starting positions. */
+const createCalls: Array<{
+  graph: Parameters<typeof PhysicsModule.createPhysics>[0];
+  options: Parameters<typeof PhysicsModule.createPhysics>[1];
+  startPos: number[];
+}> = [];
+
+/** How many times reseed() reached a solver. */
+let reseedCalls = 0;
+
+/** Every camera-rig method GraphCanvas called, with its arguments, in order. */
+const rigCalls: Array<[string, ...unknown[]]> = [];
+
+// The real rig, with its methods observed: the rules live in camera-rig.ts
+// and are tested there; this file checks GraphCanvas drives them.
+vi.mock("./camera-rig.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof CameraRigModule>();
+  return {
+    ...actual,
+    createCameraRig: (deps: Parameters<typeof actual.createCameraRig>[0]) => {
+      const rig = actual.createCameraRig(deps);
+      const watched = [
+        "intro",
+        "fit",
+        "reframe",
+        "focus",
+        "frameAround",
+        "release",
+        "reseed",
+        "takeOver",
+      ] as const;
+      for (const name of watched) {
+        const fn = rig[name] as (...args: unknown[]) => void;
+        (rig as unknown as Record<string, unknown>)[name] = (...args: unknown[]) => {
+          rigCalls.push([name, ...args]);
+          fn(...args);
+        };
+      }
+      return rig;
+    },
+  };
+});
 
 /** Every WebGLRenderer constructed during a test, and the teardown calls it received, in order. */
 const renderers: Array<{ domElement: HTMLCanvasElement; teardown: string[] }> = [];
@@ -33,13 +84,21 @@ vi.mock("./physics.js", async (importOriginal) => {
   const actual = await importOriginal<typeof PhysicsModule>();
   return {
     ...actual,
-    createPhysics: (graph: Parameters<typeof actual.createPhysics>[0]): Physics => {
-      const sim = actual.createPhysics(graph);
+    createPhysics: (
+      graph: Parameters<typeof actual.createPhysics>[0],
+      options?: Parameters<typeof actual.createPhysics>[1],
+    ): Physics => {
+      const sim = actual.createPhysics(graph, options);
+      createCalls.push({ graph, options, startPos: Array.from(sim.pos) });
       return {
         ...sim,
         setParams: (p: ParamsPatch) => {
           setParamsCalls.push({ ...p });
           sim.setParams(p);
+        },
+        reseed: () => {
+          reseedCalls++;
+          sim.reseed();
         },
       };
     },
@@ -107,6 +166,9 @@ let root: Root;
 
 beforeEach(() => {
   setParamsCalls.length = 0;
+  createCalls.length = 0;
+  reseedCalls = 0;
+  rigCalls.length = 0;
   renderers.length = 0;
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
   // jsdom ships none of these. The frame loop is deliberately never scheduled:
@@ -159,7 +221,7 @@ describe("GraphCanvas physics prop", () => {
     expect(setParamsCalls[0]).toMatchObject({ gravity: 0.1 });
   });
 
-  it("forwards all six documented fields, defaulting the ones not passed", () => {
+  it("forwards all eight documented fields, defaulting the ones not passed", () => {
     mount({ gravity: 0.1 });
     expect(setParamsCalls[0]).toEqual({
       repulsion: 900,
@@ -167,6 +229,8 @@ describe("GraphCanvas physics prop", () => {
       gravity: 0.1,
       damping: 0.62,
       cursorForce: 0,
+      sectorForce: 0,
+      radiusForce: 0,
       settle: 0,
     });
   });
@@ -181,8 +245,255 @@ describe("GraphCanvas physics prop", () => {
       gravity: 0.2,
       damping: 0.4,
       cursorForce: 0,
+      sectorForce: 0,
+      radiusForce: 0,
       settle: 0,
     });
+  });
+});
+
+describe("GraphCanvas layout seed and structure", () => {
+  it("seeds the layout from the node ids when no seed is given", () => {
+    mount();
+    expect(createCalls.at(-1)!.options).toEqual({ seed: seedFromIds(nodes.map((n) => n.id)) });
+  });
+
+  it("draws the same starting layout on every mount of the same graph", () => {
+    mount();
+    act(() => root.unmount());
+    root = createRoot(container);
+    mount();
+    expect(createCalls).toHaveLength(2);
+    expect(createCalls[1]!.startPos).toEqual(createCalls[0]!.startPos);
+  });
+
+  it("passes an explicit seed through unchanged", () => {
+    mount(undefined, { seed: 42 });
+    expect(createCalls.at(-1)!.options).toEqual({ seed: 42 });
+  });
+
+  it("leaves the solver unseeded for seed={null}", () => {
+    mount(undefined, { seed: null });
+    expect(createCalls.at(-1)!.options).toEqual({});
+  });
+
+  it("rebuilds the scene when the seed changes", () => {
+    mount(undefined, { seed: 1 });
+    mount(undefined, { seed: 2 });
+    expect(createCalls.map((c) => c.options)).toEqual([{ seed: 1 }, { seed: 2 }]);
+  });
+
+  it("gives a node's own sectorAngle/radiusTarget precedence over its category's, and omits absent ones", () => {
+    mount(undefined, {
+      nodeCategories: {
+        atlas: { ...nodeCategories["atlas"]!, sectorAngle: 1, radiusTarget: 100 },
+      },
+      nodes: [
+        { id: "a", categoryId: "atlas", label: "A", sectorAngle: 2 },
+        { id: "b", categoryId: "atlas", label: "B", radiusTarget: 300 },
+        { id: "c", categoryId: "atlas", label: "C" },
+      ],
+      edges: [],
+    });
+    expect(createCalls.at(-1)!.graph.nodes).toEqual([
+      { charge: 1, mass: 1, sectorAngle: 2, radiusTarget: 100 },
+      { charge: 1, mass: 1, sectorAngle: 1, radiusTarget: 300 },
+      { charge: 1, mass: 1, sectorAngle: 1, radiusTarget: 100 },
+    ]);
+  });
+
+  it("forwards sectorForce and radiusForce, on mount and on change", () => {
+    mount({ sectorForce: 0.02 });
+    expect(setParamsCalls[0]).toMatchObject({ sectorForce: 0.02, radiusForce: 0 });
+    mount({ sectorForce: 0.02, radiusForce: 0.05 });
+    expect(setParamsCalls.at(-1)).toMatchObject({ sectorForce: 0.02, radiusForce: 0.05 });
+  });
+
+  it("reseeds the live solver through the controller without rebuilding the scene", () => {
+    const ref = createRef<GraphController>();
+    mount(undefined, { ref } as Partial<GraphCanvasProps>);
+    const before = createCalls.length;
+    act(() => ref.current!.reseed());
+    expect(reseedCalls).toBe(1);
+    expect(createCalls).toHaveLength(before);
+    expect(renderers).toHaveLength(1);
+  });
+});
+
+describe("GraphCanvas camera wiring", () => {
+  const calls = (name: string) => rigCalls.filter((c) => c[0] === name);
+
+  it("opens with the intro, sweeping unless reduced motion is on", () => {
+    mount();
+    expect(calls("intro")).toEqual([["intro", false]]);
+  });
+
+  it("does not frame the initial selection over the intro", () => {
+    mount(undefined, { selectedId: "a" });
+    expect(calls("frameAround")).toEqual([]);
+  });
+
+  it("frames a new selection with its neighbours, and releases on deselect", () => {
+    mount();
+    mount(undefined, { selectedId: "a" });
+    expect(calls("frameAround")).toEqual([["frameAround", 0, [1]]]);
+    mount(undefined, { selectedId: null });
+    expect(calls("release")).toHaveLength(1);
+  });
+
+  it("leaves the camera alone on selection with followSelection={false}", () => {
+    mount(undefined, { followSelection: false });
+    mount(undefined, { followSelection: false, selectedId: "a" });
+    mount(undefined, { followSelection: false, selectedId: null });
+    expect(calls("frameAround")).toEqual([]);
+    expect(calls("release")).toEqual([]);
+  });
+
+  it("asks for a re-frame when fitInset changes, and not when it is merely re-created", () => {
+    mount(undefined, { fitInset: { right: 300 } });
+    const after = calls("reframe").length;
+    mount(undefined, { fitInset: { right: 300 } });
+    expect(calls("reframe")).toHaveLength(after);
+    mount(undefined, { fitInset: { right: 120 } });
+    expect(calls("reframe")).toHaveLength(after + 1);
+  });
+
+  it("routes the controller's fit, focus and reseed to the rig", () => {
+    const ref = createRef<GraphController>();
+    mount(undefined, { ref } as Partial<GraphCanvasProps>);
+    act(() => {
+      ref.current!.fit();
+      ref.current!.focus("b");
+      ref.current!.focus("no-such-id");
+      ref.current!.reseed();
+    });
+    expect(calls("fit")).toHaveLength(1);
+    expect(calls("focus")).toEqual([["focus", 1]]);
+    expect(calls("reseed")).toEqual([["reseed", false]]);
+  });
+});
+
+describe("GraphCanvas history: controller.back() and canGoBack", () => {
+  it("goes back through selection changes, restoring each earlier selection through onSelect", () => {
+    const ref = createRef<GraphController>();
+    const onSelect = vi.fn();
+    const props = { ref, onSelect } as Partial<GraphCanvasProps>;
+    mount(undefined, { ...props, selectedId: "a" });
+    expect(ref.current!.canGoBack).toBe(false);
+
+    // A mouse reader clicks "b", then clears the selection.
+    mount(undefined, { ...props, selectedId: "b" });
+    mount(undefined, { ...props, selectedId: null });
+    expect(ref.current!.canGoBack).toBe(true);
+
+    act(() => ref.current!.back());
+    expect(onSelect).toHaveBeenLastCalledWith(expect.objectContaining({ id: "b" }));
+    act(() => ref.current!.back());
+    expect(onSelect).toHaveBeenLastCalledWith(expect.objectContaining({ id: "a" }));
+    expect(ref.current!.canGoBack).toBe(false);
+  });
+
+  it("starts with no history when mounted with a selection", () => {
+    const ref = createRef<GraphController>();
+    mount(undefined, { ref, selectedId: "b" } as Partial<GraphCanvasProps>);
+    expect(ref.current!.canGoBack).toBe(false);
+  });
+});
+
+describe("GraphCanvas keyboard and screen-reader navigation", () => {
+  const focusTarget = () =>
+    container.querySelector<HTMLButtonElement>("button[data-nx-graph-focus]");
+  const spoken = () => container.querySelector("[aria-live]")!.textContent!.replace(/\u200b/g, "");
+  const press = (key: string) =>
+    act(() => {
+      focusTarget()!.dispatchEvent(
+        new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }),
+      );
+    });
+  const props = (extra: Partial<GraphCanvasProps> = {}) =>
+    ({
+      ariaLabel: "Test graph",
+      linkCategories: {
+        refs: { ...linkCategories["refs"]!, verb: "refers to", inverseVerb: "referred to by" },
+      },
+      ...extra,
+    }) as Partial<GraphCanvasProps>;
+
+  it("names the focus target as soon as it mounts, before any interaction", () => {
+    mount(undefined, props());
+    expect(focusTarget()!.getAttribute("aria-label")).toBe("A, atlas, 1 connection");
+    expect(focusTarget()!.getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("offers one focus target that speaks a summary and the node on the way in", () => {
+    mount(undefined, props());
+    expect(container.querySelectorAll("button")).toHaveLength(1);
+    act(() => focusTarget()!.focus());
+    expect(spoken()).toBe("Graph, 2 nodes, 1 connection in 1 kind. A, atlas, 1 connection");
+    expect(focusTarget()!.getAttribute("aria-label")).toBe("A, atlas, 1 connection");
+  });
+
+  it("browses with the arrows, follows with Enter, and goes back with Backspace", () => {
+    const onNavigate = vi.fn();
+    mount(undefined, props({ onNavigate }));
+    act(() => focusTarget()!.focus());
+    press("ArrowRight");
+    expect(spoken()).toBe("refers to B, atlas. 1 of 1");
+    press("Enter");
+    expect(spoken()).toBe("B, atlas, 1 connection");
+    expect(onNavigate).toHaveBeenLastCalledWith(
+      expect.objectContaining({ action: "follow", node: expect.objectContaining({ id: "b" }) }),
+    );
+    press("ArrowRight");
+    expect(spoken()).toBe("referred to by A, atlas. 1 of 1");
+    press("Backspace");
+    expect(spoken()).toBe("Back to A, atlas, 1 connection");
+  });
+
+  it("selects with Space through onSelect, and Escape steps out in stages", () => {
+    const onSelect = vi.fn();
+    mount(undefined, props({ onSelect }));
+    act(() => focusTarget()!.focus());
+    press(" ");
+    expect(onSelect).toHaveBeenLastCalledWith(expect.objectContaining({ id: "a" }));
+    expect(focusTarget()!.getAttribute("aria-pressed")).toBe("true");
+    press("Escape");
+    expect(onSelect).toHaveBeenLastCalledWith(null);
+    press("Escape");
+    // Focus goes to the graph's root, not to <body>.
+    expect(document.activeElement).toBe(container.querySelector('[role="group"]'));
+  });
+
+  it("uses describeNode and rankConnections when given", () => {
+    mount(
+      undefined,
+      props({
+        describeNode: (node, ctx) => `${node.label} (${ctx.connections})`,
+        rankConnections: () => 0,
+      }),
+    );
+    act(() => focusTarget()!.focus());
+    expect(spoken()).toMatch(/A \(1\)$/);
+  });
+
+  it("focusNode() puts the reader on a node and moves focus into the graph", () => {
+    const ref = createRef<GraphController>();
+    mount(undefined, { ...props(), ref } as Partial<GraphCanvasProps>);
+    act(() => ref.current!.focusNode("b"));
+    expect(document.activeElement).toBe(focusTarget());
+    expect(spoken()).toBe("B, atlas, 1 connection");
+    expect(ref.current!.canGoBack).toBe(true);
+  });
+
+  it("renders no focus target with keyboardNavigation={false}", () => {
+    mount(undefined, props({ keyboardNavigation: false }));
+    expect(focusTarget()).toBeNull();
+  });
+
+  it("warns when keyboard navigation is on and the graph has no name", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    mount(undefined, { ariaLabel: undefined });
+    expect(warn).toHaveBeenCalledWith(expect.stringMatching(/no ariaLabel/));
   });
 });
 

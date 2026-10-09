@@ -74,66 +74,74 @@ export const NODE_CATEGORY_IDS = Object.keys(NODE_CATEGORIES);
 
 // Link colours are deliberately bright: the CRT composite removes ~45% of
 // signal, so anything that starts dim disappears entirely on screen.
+//
+// Each kind is told apart by form as well as colour, so the legend still
+// works in greyscale or for a reader who can't separate these hues: routing
+// (straight, arc, etched), dash rhythm, and gain (how bright it sits at rest).
+// LINK is the scaffold that hangs notes off their atlas — etched and quiet.
+// The rest are claims, drawn brighter. TAGGED and CONFLICT have no direction,
+// so they end in two plain bars; the rest end in a bracket at their target.
+// `verb` / `inverseVerb` are how a screen reader reads each relation from
+// either end ("cites" / "cited by").
 export const LINK_CATEGORIES: Record<string, LinkCategory> = {
   refs: {
     label: "LINK",
     color: "#3AC6D4",
-    width: 1.15,
+    width: 1.0,
     dist: 1.0,
     strength: 0.55,
-    dash: 0,
-    arrow: true,
-    flow: 1.0,
-    curve: 0.13,
-    jit: 0,
+    routing: "etched",
+    gain: 0.55,
+    verb: "links to",
+    inverseVerb: "linked from",
   },
   cites: {
     label: "CITE",
     color: "#FF8A1E",
-    width: 1.4,
+    width: 1.1,
     dist: 1.35,
     strength: 0.4,
-    dash: 0,
-    arrow: true,
-    flow: 0.5,
+    routing: "arc",
     curve: 0.2,
-    jit: 0,
+    flow: 0.5,
+    verb: "cites",
+    inverseVerb: "cited by",
   },
   tagged: {
     label: "TAGGED",
     color: "#C6F135",
-    width: 0.95,
+    width: 0.9,
     dist: 0.48,
     strength: 0.95,
-    dash: 2.4,
-    arrow: false,
-    flow: 0,
-    curve: 0.05,
-    jit: 0,
+    dash: 7,
+    gain: 0.75,
+    directed: false,
+    verb: "tagged with",
   },
   mentions: {
     label: "MENTION",
     color: "#A98BFF",
-    width: 1.0,
+    width: 0.95,
     dist: 1.1,
     strength: 0.28,
-    dash: 1.3,
-    arrow: true,
-    flow: 0.3,
+    routing: "arc",
     curve: 0.27,
-    jit: 0,
+    dash: 5,
+    gain: 0.85,
+    flow: 0.3,
+    verb: "mentions",
+    inverseVerb: "mentioned by",
   },
   contradicts: {
     label: "CONFLICT",
     color: "#FF2E63",
-    width: 1.5,
+    width: 1.2,
     dist: 1.6,
     strength: 0.2,
-    dash: 0,
-    arrow: false,
-    flow: -1.0,
-    curve: 0.36,
+    gain: 1.2,
     jit: 1,
+    directed: false,
+    verb: "conflicts with",
   },
 };
 export const LINK_CATEGORY_IDS = Object.keys(LINK_CATEGORIES);
@@ -189,21 +197,40 @@ const AGENTS = [
   "ADEYEMI",
 ];
 const SRC = ["ARXIV", "DUMP", "INTERCEPT", "FIELDLOG", "TRANSCRIPT", "DATASET", "ARCHIVE", "LEAK"];
-const pick = <T>(a: readonly T[]): T => a[(Math.random() * a.length) | 0]!;
+/**
+ * mulberry32, the same generator @nexus-cyberdeck/graph seeds its layout
+ * with. Inlined because the package keeps its PRNG internal: the showcase
+ * only needs the same data on every load, so the screenshot baselines and
+ * a reader's sense of where things are both hold still.
+ */
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** The seed the showcase's sample graph is generated from. */
+export const SAMPLE_SEED = 0x6e657875; // "nexu"
 
 export interface SampleGraph {
   nodes: GraphNode[];
   edges: GraphEdge[];
 }
 
-export function generateSampleGraph(total: number): SampleGraph {
+export function generateSampleGraph(total: number, seed: number = SAMPLE_SEED): SampleGraph {
+  const random = mulberry32(seed);
+  const pick = <T>(a: readonly T[]): T => a[(random() * a.length) | 0]!;
   const nodes: GraphNode[] = [];
   const add = (categoryId: string, label: string): number => {
     nodes.push({
       id: nodes.length,
       categoryId,
       label,
-      state: Math.random() < 0.12 ? 2 : Math.random() < 0.18 ? 0 : 1,
+      state: random() < 0.12 ? 2 : random() < 0.18 ? 0 : 1,
     });
     return nodes.length - 1;
   };
@@ -224,55 +251,58 @@ export function generateSampleGraph(total: number): SampleGraph {
   for (let i = 0; i < nTag; i++) tags.push(add("tag", "#" + pick(W_A)));
   for (let i = 0; i < nPerson; i++) people.push(add("person", pick(AGENTS)));
   for (let i = 0; i < nSource; i++)
-    sources.push(add("source", pick(SRC) + "-" + (100 + ((Math.random() * 899) | 0))));
+    sources.push(add("source", pick(SRC) + "-" + (100 + ((random() * 899) | 0))));
   for (let i = 0; i < nQ; i++) questions.push(add("question", "?" + pick(W_A) + "_" + pick(W_B)));
   for (let i = 0; i < nNote; i++) notes.push(add("note", pick(W_A) + "_" + pick(W_B)));
 
   const seen = new Set<number>(),
     edges: GraphEdge[] = [];
-  const link = (a: number, b: number, categoryId: string): boolean => {
+  const link = (a: number, b: number, categoryId: string, absentEnd?: "a" | "b"): boolean => {
     if (a === b) return false;
     const k = a < b ? a * 100000 + b : b * 100000 + a;
     if (seen.has(k)) return false;
     seen.add(k);
-    edges.push({ a, b, categoryId });
+    edges.push(absentEnd ? { a, b, categoryId, absentEnd } : { a, b, categoryId });
     return true;
   };
   const mocOf = new Map<number, number>();
   for (const id of notes) {
-    const home = mocs[(Math.random() * mocs.length) | 0]!;
+    const home = mocs[(random() * mocs.length) | 0]!;
     mocOf.set(id, home);
     link(home, id, "refs");
-    if (Math.random() < 0.1) link(mocs[(Math.random() * mocs.length) | 0]!, id, "refs");
+    if (random() < 0.1) link(mocs[(random() * mocs.length) | 0]!, id, "refs");
   }
   for (const id of notes) {
     const sibs = notes.filter((o) => mocOf.get(o) === mocOf.get(id));
-    const k = 1 + ((Math.random() * 2.4) | 0);
+    const k = 1 + ((random() * 2.4) | 0);
     for (let j = 0; j < k && sibs.length > 1; j++)
-      link(id, sibs[(Math.random() * sibs.length) | 0]!, "refs");
+      link(id, sibs[(random() * sibs.length) | 0]!, "refs");
   }
   for (const id of notes) {
-    const k = Math.random() < 0.55 ? 1 : Math.random() < 0.8 ? 2 : 0;
-    for (let j = 0; j < k; j++) link(id, tags[(Math.random() * tags.length) | 0]!, "tagged");
+    const k = random() < 0.55 ? 1 : random() < 0.8 ? 2 : 0;
+    for (let j = 0; j < k; j++) link(id, tags[(random() * tags.length) | 0]!, "tagged");
   }
-  for (const q of questions) link(q, tags[(Math.random() * tags.length) | 0]!, "tagged");
+  for (const q of questions) link(q, tags[(random() * tags.length) | 0]!, "tagged");
   for (const s of sources) {
-    const k = 1 + ((Math.random() * 3) | 0);
-    for (let j = 0; j < k; j++) link(notes[(Math.random() * notes.length) | 0]!, s, "cites");
+    const k = 1 + ((random() * 3) | 0);
+    for (let j = 0; j < k; j++) link(notes[(random() * notes.length) | 0]!, s, "cites");
   }
   for (const p of people) {
-    const k = 1 + ((Math.random() * 3.5) | 0);
-    for (let j = 0; j < k; j++) link(notes[(Math.random() * notes.length) | 0]!, p, "mentions");
-    if (Math.random() < 0.5) link(p, sources[(Math.random() * sources.length) | 0]!, "cites");
+    const k = 1 + ((random() * 3.5) | 0);
+    for (let j = 0; j < k; j++) link(notes[(random() * notes.length) | 0]!, p, "mentions");
+    if (random() < 0.5) link(p, sources[(random() * sources.length) | 0]!, "cites");
   }
+  // A note pointing at an unresolved question points at something with
+  // nothing behind it yet: the trace frays out toward the question and lands
+  // on no pad (GraphEdge.absentEnd).
   for (const q of questions) {
-    const k = 1 + ((Math.random() * 2) | 0);
-    for (let j = 0; j < k; j++) link(notes[(Math.random() * notes.length) | 0]!, q, "refs");
+    const k = 1 + ((random() * 2) | 0);
+    for (let j = 0; j < k; j++) link(notes[(random() * notes.length) | 0]!, q, "refs", "b");
   }
   const nC = Math.max(2, Math.round(total * 0.022));
   for (let i = 0; i < nC; i++) {
-    const a = notes[(Math.random() * notes.length) | 0]!,
-      b = notes[(Math.random() * notes.length) | 0]!;
+    const a = notes[(random() * notes.length) | 0]!,
+      b = notes[(random() * notes.length) | 0]!;
     if (mocOf.get(a) !== mocOf.get(b)) link(a, b, "contradicts");
   }
   return { nodes, edges };

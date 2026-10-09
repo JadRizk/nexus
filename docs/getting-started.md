@@ -48,14 +48,18 @@ const nodeCategories: Record<string, NodeCategory> = {
   topic: { label: "TOPIC", code: "TOP", tier: 0, shape: 1, color: "#C6F135", size: 3.2, charge: 3, mass: 3 },
 };
 const linkCategories: Record<string, LinkCategory> = {
-  refs: { label: "LINK", color: "#3AC6D4", width: 1.15, dist: 1, strength: 0.55, arrow: true, flow: 1, curve: 0.13 },
+  refs: { label: "LINK", color: "#3AC6D4", width: 1, dist: 1, strength: 0.55, routing: "arc", verb: "links to", inverseVerb: "linked from" },
 };
+
+// Module scope, not inline: a new array on every render rebuilds the scene.
+const nodes = [{ id: "t1", categoryId: "topic", label: "THRESHOLD//ATLAS" }];
 
 export default function GraphPage() {
   return (
     <div style={{ height: 480 }}>
       <GraphCanvas
-        nodes={[{ id: "t1", categoryId: "topic", label: "THRESHOLD//ATLAS" }]}
+        ariaLabel="Topic graph"
+        nodes={nodes}
         edges={[]}
         nodeCategories={nodeCategories}
         linkCategories={linkCategories}
@@ -213,25 +217,34 @@ const nodeCategories: Record<string, NodeCategory> = {
   note:  { label: "NOTE",  code: "NDE", tier: 3, shape: 0, color: "#17E2E5", size: 1.7, charge: 1, mass: 1 },
 };
 const linkCategories: Record<string, LinkCategory> = {
-  refs: { label: "LINK", color: "#3AC6D4", width: 1.15, dist: 1, strength: 0.55, arrow: true, flow: 1, curve: 0.13 },
+  refs: { label: "LINK", color: "#3AC6D4", width: 1, dist: 1, strength: 0.55, routing: "arc", verb: "links to", inverseVerb: "linked from" },
 };
+
+// Module scope or useMemo: nodes and edges are compared by identity, and a
+// new array on every render rebuilds the whole scene.
+const nodes = [
+  { id: "t1", categoryId: "topic", label: "THRESHOLD//ATLAS" },
+  { id: "n1", categoryId: "note", label: "liminal grammar" },
+];
+const edges = [{ a: "t1", b: "n1", categoryId: "refs" }];
 
 <div style={{ height: 480 }}>
   <GraphCanvas
-    nodes={[
-      { id: "t1", categoryId: "topic", label: "THRESHOLD//ATLAS" },
-      { id: "n1", categoryId: "note", label: "liminal grammar" },
-    ]}
-    edges={[{ a: "t1", b: "n1", categoryId: "refs" }]}
+    ariaLabel="Topics and their notes"
+    nodes={nodes}
+    edges={edges}
     nodeCategories={nodeCategories}
     linkCategories={linkCategories}
   />
 </div>
 ```
 
-`color` is a real hex rather than a token because it is bound to the GPU. The
-full prop and controller reference is in the
-[graph package README](../packages/graph/README.md).
+`color` is a real hex rather than a token because it is bound to the GPU.
+`ariaLabel` names the graph for screen readers: the canvas is one Tab stop,
+and inside it the arrow keys travel along connections, read with each link
+category's `verb`. The full prop, keyboard and controller reference is in the
+[graph package README](../packages/graph/README.md), and `describeGraph()`
+with `<GraphOutline>` gives the same graph as a list.
 
 ## 8. Retheme without fighting specificity
 

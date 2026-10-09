@@ -26,6 +26,7 @@ import {
 } from "./pages/components/Controls.js";
 import {
   GlyphPage,
+  GraphOutlinePage,
   KeyValuePage,
   LegendPage,
   LinkGlyphPage,
@@ -84,6 +85,7 @@ const COMPONENT_PAGES: Record<ComponentSlug, () => ReactNode> = {
   tooltip: TooltipPage,
   glyph: GlyphPage,
   "link-glyph": LinkGlyphPage,
+  "graph-outline": GraphOutlinePage,
   drawer: DrawerPage,
   "command-palette": CommandPalettePage,
   "nexus-provider": NexusProviderPage,

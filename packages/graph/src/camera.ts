@@ -99,3 +99,66 @@ export function unproject(
 export function glyphRadiusPx(radius: number, zoom: number): number {
   return Math.max(radius * zoom, 2.2) * 0.912;
 }
+
+/* ============================================================================
+   FRAMING
+
+   Where the camera goes to show a set of nodes. Fits a world-space bounding
+   box into the part of the canvas the consumer's floating chrome leaves free
+   (`FitInset`), not into the whole canvas: the canvas stays full-bleed, so
+   the graph can still be panned underneath a HUD panel, but the framing the
+   camera picks on its own never parks nodes where a panel covers them.
+   ========================================================================== */
+
+/** Screen-edge padding, in CSS pixels, that framing keeps the graph clear of. */
+export interface FitInset {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
+export const NO_INSET: FitInset = { top: 0, right: 0, bottom: 0, left: 0 };
+
+/** Camera zoom limits; every camera move clamps to these. */
+export const ZOOM_MIN = 0.12;
+export const ZOOM_MAX = 16;
+
+/** Breathing room around fitted bounds: the box fills 1/1.35 of the free area. */
+const FIT_PADDING = 1.35;
+
+/**
+ * The world-space offset that puts a point in the middle of the free box
+ * rather than the middle of the canvas, at a given zoom. Subtract x, add y:
+ * screen +y is down and world +y is up (see project()).
+ */
+export function insetOffset(inset: FitInset, zoom: number): readonly [number, number] {
+  return [(inset.left - inset.right) / 2 / zoom, (inset.top - inset.bottom) / 2 / zoom];
+}
+
+/**
+ * Camera target that frames the box (x0, y0)–(x1, y1). The free area is
+ * clamped to 64px a side, so an inset wider than the canvas degrades to a
+ * cramped frame instead of an inverted box and a division by ~0. With no
+ * inset this is exactly the framing 1.x used.
+ */
+export function fitBounds(
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  width: number,
+  height: number,
+  inset: FitInset = NO_INSET,
+): { x: number; y: number; zoom: number } {
+  const gw = Math.max(1, x1 - x0),
+    gh = Math.max(1, y1 - y0);
+  const availW = Math.max(64, width - inset.left - inset.right);
+  const availH = Math.max(64, height - inset.top - inset.bottom);
+  const zoom = Math.min(
+    ZOOM_MAX,
+    Math.max(ZOOM_MIN, Math.min(availW / (gw * FIT_PADDING), availH / (gh * FIT_PADDING))),
+  );
+  const [ox, oy] = insetOffset(inset, zoom);
+  return { x: (x0 + x1) / 2 - ox, y: (y0 + y1) / 2 + oy, zoom };
+}

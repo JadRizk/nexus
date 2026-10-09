@@ -1,6 +1,9 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { describeGraph } from "@nexus-cyberdeck/graph";
+import type { GraphEdge, GraphNode, LinkCategory, NodeCategory } from "@nexus-cyberdeck/graph";
 import {
   Glyph,
+  GraphOutline,
   KeyValue,
   Legend,
   LinkGlyph,
@@ -202,6 +205,104 @@ export function LinkGlyphPage() {
           </div>
         ))}
       </Row>
+    </Spec>
+  );
+}
+
+// A small graph for the outline: three kinds of node, three kinds of link.
+const OUTLINE_KIND = (
+  label: string,
+  shape: NodeCategory["shape"],
+  color: string,
+): NodeCategory => ({
+  label,
+  shape,
+  color,
+  code: label.slice(0, 3),
+  size: 6,
+  charge: 1,
+  mass: 1,
+  tier: 1,
+});
+const OUTLINE_NODE_CATEGORIES: Record<string, NodeCategory> = {
+  atlas: OUTLINE_KIND("ATLAS", 1, "#C6F135"),
+  note: OUTLINE_KIND("NODE", 0, "#3AC6D4"),
+  source: OUTLINE_KIND("SOURCE", 2, "#FF8A1E"),
+};
+const OUTLINE_LINK_CATEGORIES: Record<string, LinkCategory> = {
+  refs: {
+    label: "LINK",
+    color: "#3AC6D4",
+    width: 1,
+    dist: 1,
+    strength: 0.55,
+    verb: "links to",
+    inverseVerb: "linked from",
+  },
+  cites: {
+    label: "CITE",
+    color: "#FF8A1E",
+    width: 1,
+    dist: 1,
+    strength: 0.8,
+    verb: "cites",
+    inverseVerb: "cited by",
+  },
+  conflicts: {
+    label: "CONFLICT",
+    color: "#FF2E63",
+    width: 1,
+    dist: 1,
+    strength: 0.5,
+    verb: "conflicts with",
+    directed: false,
+  },
+};
+const OUTLINE_NODES: GraphNode[] = [
+  { id: "ledger", categoryId: "atlas", label: "LEDGER//ATLAS" },
+  { id: "folded", categoryId: "note", label: "folded_index" },
+  { id: "brittle", categoryId: "note", label: "brittle_vector" },
+  { id: "arxiv", categoryId: "source", label: "ARXIV-402" },
+];
+const OUTLINE_EDGES: GraphEdge[] = [
+  { a: "ledger", b: "folded", categoryId: "refs" },
+  { a: "ledger", b: "brittle", categoryId: "refs" },
+  { a: "folded", b: "arxiv", categoryId: "cites" },
+  { a: "brittle", b: "arxiv", categoryId: "cites" },
+  { a: "folded", b: "brittle", categoryId: "conflicts" },
+];
+
+export function GraphOutlinePage() {
+  const [selected, setSelected] = useState<string | number | null>(null);
+  const outline = useMemo(
+    () =>
+      describeGraph({
+        nodes: OUTLINE_NODES,
+        edges: OUTLINE_EDGES,
+        nodeCategories: OUTLINE_NODE_CATEGORIES,
+        linkCategories: OUTLINE_LINK_CATEGORIES,
+      }),
+    [],
+  );
+  return (
+    <Spec
+      name="GraphOutline"
+      note="The graph as a list: each category under a heading, each node a disclosure holding its
+            connections, read the way the graph's keyboard navigation reads them. Feed it
+            describeGraph() from @nexus-cyberdeck/graph."
+      a11y="Built from native parts — a named region, real headings, <details> and buttons — so it
+            works in every screen reader's browse mode. Each connection's far node is a button
+            that opens and focuses that node's entry, so the list can be travelled like the graph."
+      code={`<GraphOutline data={describeGraph({ nodes, edges, nodeCategories, linkCategories })} />`}
+    >
+      <div style={{ maxWidth: 420 }}>
+        <GraphOutline
+          data={outline}
+          selectedId={selected}
+          onSelect={setSelected}
+          label="Sample graph as a list"
+        />
+      </div>
     </Spec>
   );
 }

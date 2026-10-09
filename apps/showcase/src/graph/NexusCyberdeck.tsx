@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import { GraphCanvas, TIER_ZOOM } from "@nexus-cyberdeck/graph";
+import {
+  DEFAULT_OPTICS,
+  DEFAULT_PHYSICS,
+  GraphCanvas,
+  TIER_ZOOM,
+  describeGraph,
+} from "@nexus-cyberdeck/graph";
 import type {
   GraphController,
   GraphNodeSnapshot,
@@ -10,6 +16,7 @@ import type {
 import {
   Panel,
   Button,
+  GraphOutline,
   TabStrip,
   Slider,
   ToggleRow,
@@ -45,28 +52,32 @@ import {
    state, and the chrome around the canvas.
    ========================================================================== */
 
+// The sliders start from, and reset to, the engine's own defaults rather than
+// a copy of them: 2.0 retuned edgeWidth, edgeOpacity and aberr for the new
+// edge shader, and a stale copy here drew every edge twice as heavy.
 const DEFAULT_CFG = {
-  repulsion: 900,
-  linkDistance: 78,
-  cursorForce: 0,
-  settle: 0,
-  flowSpeed: 0.24,
-  glow: 0.8,
-  trails: 0.16,
-  edgeOpacity: 0.5,
-  edgeWidth: 2.4,
-  scan: 0.55,
-  aberr: 1.0,
-  curve: 0.55,
-  grain: 0.45,
-  bloom: 0.85,
-  glitch: 0.5,
+  repulsion: DEFAULT_PHYSICS.repulsion,
+  linkDistance: DEFAULT_PHYSICS.linkDistance,
+  cursorForce: DEFAULT_PHYSICS.cursorForce,
+  settle: DEFAULT_PHYSICS.settle,
+  flowSpeed: DEFAULT_OPTICS.flowSpeed,
+  glow: DEFAULT_OPTICS.glow,
+  trails: DEFAULT_OPTICS.trails,
+  edgeOpacity: DEFAULT_OPTICS.edgeOpacity,
+  edgeWidth: DEFAULT_OPTICS.edgeWidth,
+  scan: DEFAULT_OPTICS.scan,
+  aberr: DEFAULT_OPTICS.aberr,
+  curve: DEFAULT_OPTICS.curve,
+  grain: DEFAULT_OPTICS.grain,
+  bloom: DEFAULT_OPTICS.bloom,
+  glitch: DEFAULT_OPTICS.glitch,
 };
 
 const DEFAULT_STATS: GraphStats = {
   fps: 0,
   nodes: 0,
   edges: 0,
+  drawnNodes: 0,
   drawnEdges: 0,
   frameMs: 0,
   settled: false,
@@ -76,9 +87,17 @@ export default function NexusCyberdeck() {
   const controllerRef = useRef<GraphController>(null);
 
   const [total, setTotal] = useState(200);
-  const [seed, setSeed] = useState(0);
   const [stats, setStats] = useState<GraphStats>(DEFAULT_STATS);
+  // controller.canGoBack is read after each selection change: GraphCanvas's
+  // own effects (a child's) have run by then, so its history is current.
+  const [canGoBack, setCanGoBack] = useState(false);
+  // The same graph as a list (GraphOutline), over the canvas. The canvas stays
+  // mounted underneath, so closing the list returns to exactly the same view.
+  const [listView, setListView] = useState(false);
   const [selected, setSelected] = useState<GraphNodeSnapshot | null>(null);
+  useEffect(() => {
+    setCanGoBack(controllerRef.current?.canGoBack ?? false);
+  }, [selected]);
   const [isolate, setIsolate] = useState<number | null>(null);
   const [running, setRunning] = useState(true);
   const [tab, setTab] = useState<"crt" | "sim">("crt");
@@ -98,7 +117,7 @@ export default function NexusCyberdeck() {
     [],
   );
 
-  const sampleGraph = useMemo(() => generateSampleGraph(total), [total, seed]);
+  const sampleGraph = useMemo(() => generateSampleGraph(total), [total]);
 
   const hiddenNodeCategories = useMemo(() => NODE_CATEGORY_IDS.filter((k) => !nodeOn[k]), [nodeOn]);
   const hiddenLinkCategories = useMemo(() => LINK_CATEGORY_IDS.filter((k) => !linkOn[k]), [linkOn]);
@@ -169,6 +188,10 @@ export default function NexusCyberdeck() {
         hiddenLinkCategories={hiddenLinkCategories}
         isolateId={isolate}
         selectedId={selected?.id ?? null}
+        // The console (left, 12px in and 248px wide) and the details drawer
+        // (right, 296px, only while something is selected) float over the
+        // canvas. Framing lands the graph in what they leave, with a 12px gap.
+        fitInset={{ left: 12 + 248 + 12, right: selected ? 12 + 296 + 12 : 0 }}
         running={running}
         onSelect={setSelected}
         onStats={setStats}
@@ -227,7 +250,14 @@ export default function NexusCyberdeck() {
               gap: "1px var(--nx-space-2)",
             }}
           >
-            <KeyValue style={{ gap: "var(--nx-space-2)" }} label="NODES" value={stats.nodes} />
+            <KeyValue
+              style={{ gap: "var(--nx-space-2)" }}
+              label="NODES"
+              // "drawn/total" while a filter or an isolate hides some.
+              value={
+                stats.drawnNodes < stats.nodes ? `${stats.drawnNodes}/${stats.nodes}` : stats.nodes
+              }
+            />
             <KeyValue style={{ gap: "var(--nx-space-2)" }} label="LINKS" value={stats.edges} />
             <KeyValue style={{ gap: "var(--nx-space-2)" }} label="DRAWN" value={stats.drawnEdges} />
             <KeyValue style={{ gap: "var(--nx-space-2)" }} label="FRAME" value={stats.frameMs} />
@@ -336,8 +366,8 @@ export default function NexusCyberdeck() {
               <Slider
                 label="link width"
                 value={cfg.edgeWidth}
-                min={0.6}
-                max={5}
+                min={0.4}
+                max={3}
                 step={0.1}
                 onChange={(v) => set("edgeWidth", v)}
                 format={(x) => x.toFixed(1)}
@@ -454,10 +484,26 @@ export default function NexusCyberdeck() {
               onClick={() => {
                 setSelected(null);
                 setIsolate(null);
-                setSeed((s) => s + 1);
+                controllerRef.current?.reseed();
               }}
             >
               Reseed
+            </Button>
+            <Button
+              style={{ minWidth: 0, gridColumn: "1 / -1" }}
+              aria-pressed={listView}
+              onClick={() => setListView((v) => !v)}
+            >
+              {listView ? "View as graph" : "View as list"}
+            </Button>
+            {/* Back is the same step Backspace takes inside the graph: the
+              previous node and the selection that went with it. */}
+            <Button
+              style={{ minWidth: 0, gridColumn: "1 / -1" }}
+              disabled={!canGoBack}
+              onClick={() => controllerRef.current?.back()}
+            >
+              Back
             </Button>
           </div>
         </Panel>
@@ -495,7 +541,9 @@ export default function NexusCyberdeck() {
                 <LinkGlyph
                   colour={LINK_CATEGORIES[k]!.color}
                   dashed={!!LINK_CATEGORIES[k]!.dash}
-                  arrow={!!LINK_CATEGORIES[k]!.arrow}
+                  // LinkGlyph still draws direction as an arrowhead; the canvas
+                  // draws it as a bracket at the target end.
+                  arrow={LINK_CATEGORIES[k]!.directed !== false}
                   width={LINK_CATEGORIES[k]!.width * 1.05}
                   muted={!linkOn[k]}
                 />
@@ -505,6 +553,19 @@ export default function NexusCyberdeck() {
           ))}
         </Panel>
       </div>
+
+      {/* ------------------------------------------------------------ list view */}
+      {listView && (
+        <OutlinePanel
+          nodes={sampleGraph.nodes}
+          edges={sampleGraph.edges}
+          hiddenNodeCategories={hiddenNodeCategories}
+          hiddenLinkCategories={hiddenLinkCategories}
+          selectedId={selected?.id ?? null}
+          rightInset={selected ? 12 + 296 + 12 : 12}
+          onSelect={(id) => setSelected(controllerRef.current?.getNode(id) ?? null)}
+        />
+      )}
 
       {/* ------------------------------------------------------------- drawer */}
       <InspectorDrawer
@@ -569,13 +630,22 @@ function InspectorDrawer({
   onFocus: () => void;
   onGoTo: (id: number) => void;
 }) {
-  const trapRef = useFocusTrap<HTMLDivElement>(!!selected, onClose);
+  // A selection made from the graph's keyboard navigation must leave focus in
+  // the graph, or the reader loses their place mid-walk. So the drawer only
+  // traps focus (and is modal) when focus wasn't inside the graph when it opened.
+  const [fromGraph, setFromGraph] = useState(false);
+  const [lastSelected, setLastSelected] = useState(selected);
+  if (selected !== lastSelected) {
+    setLastSelected(selected);
+    setFromGraph(!!document.activeElement?.closest('[aria-roledescription="graph"]'));
+  }
+  const trapRef = useFocusTrap<HTMLDivElement>(!!selected && !fromGraph, onClose);
   const titleId = useId();
   return (
     <div
       ref={trapRef}
       role="dialog"
-      aria-modal="true"
+      aria-modal={fromGraph ? undefined : true}
       aria-labelledby={selected ? titleId : undefined}
       aria-hidden={selected ? undefined : true}
       tabIndex={-1}
@@ -812,5 +882,57 @@ function InspectorDrawer({
         </Panel>
       )}
     </div>
+  );
+}
+
+/** The list view: GraphOutline over the canvas, filtered like the canvas. */
+function OutlinePanel({
+  nodes,
+  edges,
+  hiddenNodeCategories,
+  hiddenLinkCategories,
+  selectedId,
+  rightInset,
+  onSelect,
+}: {
+  nodes: Parameters<typeof describeGraph>[0]["nodes"];
+  edges: Parameters<typeof describeGraph>[0]["edges"];
+  hiddenNodeCategories: readonly string[];
+  hiddenLinkCategories: readonly string[];
+  selectedId: string | number | null;
+  rightInset: number;
+  onSelect: (id: string | number) => void;
+}) {
+  const outline = useMemo(
+    () =>
+      describeGraph({
+        nodes,
+        edges,
+        nodeCategories: NODE_CATEGORIES,
+        linkCategories: LINK_CATEGORIES,
+        hiddenNodeCategories,
+        hiddenLinkCategories,
+      }),
+    [nodes, edges, hiddenNodeCategories, hiddenLinkCategories],
+  );
+  return (
+    <Panel
+      style={{
+        position: "absolute",
+        top: "var(--nx-space-5)",
+        bottom: "var(--nx-space-5)",
+        left: 12 + 248 + 12,
+        right: rightInset,
+        overflowY: "auto",
+        zIndex: 6,
+      }}
+    >
+      <GraphOutline
+        data={outline}
+        label="Sample graph as a list"
+        selectedId={selectedId}
+        onSelect={onSelect}
+      />
+    </Panel>
   );
 }

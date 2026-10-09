@@ -47,11 +47,11 @@ down.
 
 ## Packages
 
-| Package                                                | What it is                                                                                                                                      |
-| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`@nexus-cyberdeck/tokens`](packages/tokens/README.md) | CSS custom properties for both themes, typed accessors, contrast ratios computed at build time. Zero dependencies.                              |
-| [`@nexus-cyberdeck/react`](packages/react/README.md)   | The 19 components, `useFocusTrap`, `useHotkey`, `rankItems`. Depends only on tokens.                                                            |
-| [`@nexus-cyberdeck/graph`](packages/graph/README.md)   | Force-directed WebGL canvas on Three.js: SDF glyph nodes, curved links, CRT post-process. Versioned separately; no dependency on the other two. |
+| Package                                                | What it is                                                                                                                                                                                                                              |
+| ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`@nexus-cyberdeck/tokens`](packages/tokens/README.md) | CSS custom properties for both themes, typed accessors, contrast ratios computed at build time. Zero dependencies.                                                                                                                      |
+| [`@nexus-cyberdeck/react`](packages/react/README.md)   | The 19 components, `useFocusTrap`, `useHotkey`, `rankItems`. Depends only on tokens.                                                                                                                                                    |
+| [`@nexus-cyberdeck/graph`](packages/graph/README.md)   | Force-directed WebGL canvas on Three.js: SDF glyph nodes, links that carry kind in form and direction in their ends, CRT post-process, and keyboard and screen-reader navigation. Versioned separately; no dependency on the other two. |
 
 Not using React? `@nexus-cyberdeck/tokens` is plain CSS. Set `data-nx-theme`
 on any element and the custom properties cascade.
