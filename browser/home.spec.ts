@@ -115,3 +115,80 @@ test("under reduced motion the screen is a still and the faults and sound are wi
   await expect(monitor(page)).toHaveAttribute("data-room", "off");
   await expect(monitor(page)).toHaveAttribute("data-faults", "0");
 });
+
+test("Tab from Sound to Jolt keeps the room on", async ({ page }) => {
+  await gotoPage(page, "home");
+  const sound = page.getByRole("button", { name: "Sound" });
+  const jolt = page.getByRole("button", { name: "Jolt" });
+  await sound.focus();
+  await expect(monitor(page)).toHaveAttribute("data-room", "on");
+
+  // Record every value data-room takes from here on: focus passing between
+  // the monitor's own buttons must not turn the room off, even for a render.
+  await monitor(page).evaluate((el) => {
+    const seen: string[] = [];
+    (window as unknown as { roomSeen: string[] }).roomSeen = seen;
+    new MutationObserver(() => seen.push(el.getAttribute("data-room") ?? "")).observe(el, {
+      attributes: true,
+      attributeFilter: ["data-room"],
+    });
+  });
+  await page.keyboard.press("Tab");
+  await expect(jolt).toBeFocused();
+  await expect(monitor(page)).toHaveAttribute("data-room", "on");
+  const seen = await page.evaluate(() => (window as unknown as { roomSeen: string[] }).roomSeen);
+  expect(seen).toEqual([]);
+});
+
+test("the room comes up on the page's first press while the pointer is over the monitor", async ({
+  page,
+}) => {
+  test.slow();
+  // This case needs a page that has had no press yet, so audio is not yet
+  // allowed. Playwright runs its own page scripts as user gestures, which
+  // marks the page active before any press, so the browser's flag is
+  // replaced with one that, like the real one, is set by a trusted
+  // pointerdown or keydown and by nothing else.
+  await page.addInitScript(() => {
+    let hasBeenActive = false;
+    const activate = (e: Event) => {
+      if (e.isTrusted) hasBeenActive = true;
+    };
+    window.addEventListener("pointerdown", activate, true);
+    window.addEventListener("keydown", activate, true);
+    Object.defineProperty(Navigator.prototype, "userActivation", {
+      configurable: true,
+      get: () => ({ hasBeenActive, isActive: hasBeenActive }),
+    });
+  });
+  // Not gotoPage either: that presses the header's Search button.
+  await page.goto("/");
+  await expect(page.locator(".sc-monitor__host canvas")).toBeAttached();
+  await screen(page).hover();
+  await expect(monitor(page)).toHaveAttribute("data-room", "off");
+
+  // The press is what allows audio. The pointer has not moved off the
+  // monitor, so the room comes up now rather than on the next hover.
+  await page.getByRole("button", { name: "Jolt" }).click();
+  await expect(monitor(page)).toHaveAttribute("data-faults", "1");
+  await expect(monitor(page)).toHaveAttribute("data-room", "on");
+});
+
+test("reduced motion takes effect when it is toggled on a page already open", async ({ page }) => {
+  await gotoPage(page, "home");
+  const jolt = page.getByRole("button", { name: "Jolt" });
+  const sound = page.getByRole("button", { name: "Sound" });
+  await expect(jolt).toBeVisible();
+  await screen(page).hover();
+  await expect(monitor(page)).toHaveAttribute("data-room", "on");
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect(jolt).toHaveCount(0);
+  await expect(sound).toHaveCount(0);
+  await expect(monitor(page)).toHaveAttribute("data-room", "off");
+
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await expect(jolt).toBeVisible();
+  await expect(sound).toBeVisible();
+  await expect(monitor(page)).toHaveAttribute("data-room", "on");
+});
