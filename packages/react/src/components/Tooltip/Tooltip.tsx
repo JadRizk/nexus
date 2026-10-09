@@ -13,7 +13,7 @@ export interface TooltipProps extends ToneProps {
 }
 
 export const Tooltip = forwardRef<HTMLDivElement, TooltipProps>(function Tooltip(
-  { x, y, tone, colour, children, style, id },
+  { x, y, tone, colour, muted, children, style, id },
   ref,
 ) {
   return (
@@ -28,7 +28,7 @@ export const Tooltip = forwardRef<HTMLDivElement, TooltipProps>(function Tooltip
         {
           left: x,
           top: y,
-          "--nx-tooltip-accent": resolveColour({ tone, colour }, "var(--nx-fg-info)"),
+          "--nx-tooltip-accent": resolveColour({ tone, colour, muted }, "var(--nx-fg-info)"),
           ...style,
         } as CSSProperties
       }

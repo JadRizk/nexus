@@ -45,4 +45,12 @@ describe("MeterRow", () => {
       "--nx-meter-fg": "#3AC6D4",
     });
   });
+
+  it("muted overrides the colour, routing to the disabled foreground", () => {
+    // A filtered-out category keeps its colour for when it is switched back on.
+    render(<MeterRow label="LINK" value={1} total={2} colour="#3AC6D4" muted />);
+    expect(screen.getByRole("meter").parentElement).toHaveStyle({
+      "--nx-meter-fg": "var(--nx-fg-disabled)",
+    });
+  });
 });

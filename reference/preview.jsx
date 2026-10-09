@@ -452,6 +452,7 @@ var Drawer = forwardRef7(function Drawer2({
   subtitle,
   tone: tone2,
   colour,
+  muted,
   icon,
   footer,
   width = 296,
@@ -460,7 +461,7 @@ var Drawer = forwardRef7(function Drawer2({
 }, ref) {
   const trapRef = useFocusTrap(open, onClose);
   const titleId = useId2();
-  const accent = resolveColour({ tone: tone2, colour }, "var(--nx-fg-info)");
+  const accent = resolveColour({ tone: tone2, colour, muted }, "var(--nx-fg-info)");
   return /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(
     "div",
     {
@@ -553,7 +554,7 @@ LinkGlyph.displayName = "LinkGlyph";
 
 // packages/react/src/components/MeterRow/MeterRow.tsx
 import { forwardRef as forwardRef12 } from "react";
-var MeterRow = forwardRef12(function MeterRow2({ label, value, total, tone: tone2, colour, labelWidth }, ref) {
+var MeterRow = forwardRef12(function MeterRow2({ label, value, total, tone: tone2, colour, muted, labelWidth }, ref) {
   const pct = total > 0 ? Math.min(100, Math.max(0, value / total * 100)) : 0;
   return /* @__PURE__ */ React.createElement(
     "div",
@@ -561,7 +562,7 @@ var MeterRow = forwardRef12(function MeterRow2({ label, value, total, tone: tone
       ref,
       className: "nx-meter",
       style: {
-        "--nx-meter-fg": resolveColour({ tone: tone2, colour }, "var(--nx-fg-info)"),
+        "--nx-meter-fg": resolveColour({ tone: tone2, colour, muted }, "var(--nx-fg-info)"),
         ...labelWidth != null ? { "--nx-meter-label-width": `${labelWidth}px` } : null
       }
     },
@@ -637,14 +638,14 @@ Slider.displayName = "Slider";
 
 // packages/react/src/components/Stat/Stat.tsx
 import { forwardRef as forwardRef15 } from "react";
-var Stat = forwardRef15(function Stat2({ label, value, tone: tone2, colour, style }, ref) {
+var Stat = forwardRef15(function Stat2({ label, value, tone: tone2, colour, muted, style }, ref) {
   return /* @__PURE__ */ React.createElement(
     "div",
     {
       ref,
       className: "nx-stat",
       style: {
-        "--nx-stat-value-fg": resolveColour({ tone: tone2, colour }, "var(--nx-fg-default)"),
+        "--nx-stat-value-fg": resolveColour({ tone: tone2, colour, muted }, "var(--nx-fg-default)"),
         ...style
       }
     },
@@ -743,7 +744,7 @@ ToggleRow.displayName = "ToggleRow";
 
 // packages/react/src/components/Tooltip/Tooltip.tsx
 import { forwardRef as forwardRef18 } from "react";
-var Tooltip = forwardRef18(function Tooltip2({ x, y, tone: tone2, colour, children, style, id }, ref) {
+var Tooltip = forwardRef18(function Tooltip2({ x, y, tone: tone2, colour, muted, children, style, id }, ref) {
   return /* @__PURE__ */ React.createElement(
     "div",
     {
@@ -754,7 +755,7 @@ var Tooltip = forwardRef18(function Tooltip2({ x, y, tone: tone2, colour, childr
       style: {
         left: x,
         top: y,
-        "--nx-tooltip-accent": resolveColour({ tone: tone2, colour }, "var(--nx-fg-info)"),
+        "--nx-tooltip-accent": resolveColour({ tone: tone2, colour, muted }, "var(--nx-fg-info)"),
         ...style
       }
     },

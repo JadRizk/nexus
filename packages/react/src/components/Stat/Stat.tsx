@@ -10,7 +10,7 @@ export interface StatProps extends ToneProps {
 }
 
 export const Stat = forwardRef<HTMLDivElement, StatProps>(function Stat(
-  { label, value, tone, colour, style },
+  { label, value, tone, colour, muted, style },
   ref,
 ) {
   return (
@@ -20,7 +20,7 @@ export const Stat = forwardRef<HTMLDivElement, StatProps>(function Stat(
       // Computed from props, so it cannot live in the stylesheet.
       style={
         {
-          "--nx-stat-value-fg": resolveColour({ tone, colour }, "var(--nx-fg-default)"),
+          "--nx-stat-value-fg": resolveColour({ tone, colour, muted }, "var(--nx-fg-default)"),
           ...style,
         } as CSSProperties
       }

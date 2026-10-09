@@ -12,7 +12,7 @@ export interface MeterRowProps extends ToneProps {
 
 /** Proportional bar with a real `role="meter"`, not a decorative div. */
 export const MeterRow = forwardRef<HTMLDivElement, MeterRowProps>(function MeterRow(
-  { label, value, total, tone, colour, labelWidth },
+  { label, value, total, tone, colour, muted, labelWidth },
   ref,
 ) {
   const pct = total > 0 ? Math.min(100, Math.max(0, (value / total) * 100)) : 0;
@@ -24,7 +24,7 @@ export const MeterRow = forwardRef<HTMLDivElement, MeterRowProps>(function Meter
       // caller can align several meters against a longer set of labels.
       style={
         {
-          "--nx-meter-fg": resolveColour({ tone, colour }, "var(--nx-fg-info)"),
+          "--nx-meter-fg": resolveColour({ tone, colour, muted }, "var(--nx-fg-info)"),
           ...(labelWidth != null ? { "--nx-meter-label-width": `${labelWidth}px` } : null),
         } as CSSProperties
       }
