@@ -41,6 +41,17 @@ describe("Tooltip", () => {
     });
   });
 
+  it("muted overrides the tone on its accent bar", () => {
+    render(
+      <Tooltip x={0} y={0} tone="critical" muted>
+        unresolved
+      </Tooltip>,
+    );
+    expect(screen.getByRole("tooltip")).toHaveStyle({
+      "--nx-tooltip-accent": "var(--nx-fg-disabled)",
+    });
+  });
+
   it("carries the class its styling hangs off", () => {
     // pointer-events, the surface and the type are all in Tooltip.css now;
     // the visual suite is what proves they arrive.

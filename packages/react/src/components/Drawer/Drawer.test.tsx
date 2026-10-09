@@ -214,4 +214,11 @@ describe("Drawer", () => {
       "--nx-drawer-accent": "#C6F135",
     });
   });
+
+  it("muted overrides the tone on the title accent", () => {
+    render(<Drawer open onClose={() => {}} title="Inspector" tone="warning" muted />);
+    expect(screen.getByRole("heading", { name: "Inspector" })).toHaveStyle({
+      "--nx-drawer-accent": "var(--nx-fg-disabled)",
+    });
+  });
 });

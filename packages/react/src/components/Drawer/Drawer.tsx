@@ -60,6 +60,7 @@ export const Drawer = forwardRef<HTMLDivElement, DrawerProps>(function Drawer(
     subtitle,
     tone,
     colour,
+    muted,
     icon,
     footer,
     width = 296,
@@ -70,7 +71,7 @@ export const Drawer = forwardRef<HTMLDivElement, DrawerProps>(function Drawer(
 ) {
   const trapRef = useFocusTrap<HTMLDivElement>(open, onClose);
   const titleId = useId();
-  const accent = resolveColour({ tone, colour }, "var(--nx-fg-info)");
+  const accent = resolveColour({ tone, colour, muted }, "var(--nx-fg-info)");
 
   return (
     <>
