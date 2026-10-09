@@ -92,9 +92,10 @@ describe("the focus target", () => {
   it("skips the style writes when nothing moved", () => {
     overlay.place(100, 50, 30);
     const t = button().style.transform;
-    button().style.transform = "sentinel";
+    // A valid value: newer jsdom drops an invalid one, as browsers do.
+    button().style.transform = "translate3d(1px, 2px, 0px)";
     overlay.place(100.2, 50.2, 30.1);
-    expect(button().style.transform).toBe("sentinel");
+    expect(button().style.transform).toBe("translate3d(1px, 2px, 0px)");
     overlay.place(110, 50, 30);
     expect(button().style.transform).not.toBe(t);
   });

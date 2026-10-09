@@ -15,6 +15,12 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The changeset check at the end of this job diffs the pull request
+          # against its base branch, so the clone has to contain that branch.
+          # The default depth of 1 holds only the commit under test, and the
+          # check used to skip itself every run because origin/main was absent.
+          fetch-depth: 0
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -124,20 +130,7 @@ jobs:
       - name: Graph compiles against its declared three floor
         run: node scripts/check-peer-floor.mjs
 
-      # Every step above this one — typecheck, test, build, the showcase —
-      # installs only the @types/react@18 pinned in devDependencies, never the
-      # @types/react@19 half of the `react: "^18.3.0 || ^19.0.0"` peer range
-      # both packages declare. That gap is exactly how useFocusTrap shipped a
-      # `RefObject<T>` return type that was a real type error for a 19
-      # consumer (RefObject<T> is exact under 19's types, so it told them
-      # `current` could never be null): nothing here ever compiled against 19
-      # to catch it. This compiles packages/react and packages/graph's own
-      # source against @types/react@19 so a React-19-only type error fails
-      # the same pull request that introduced it, not a downstream consumer.
-      - name: React and graph compile against @types/react 19
-        run: node scripts/check-react19-types.mjs
-
-      # The two checks above read the packages' source from inside the repo. A
+      # The typecheck above reads the packages' source from inside the repo. A
       # consumer reads the shipped .d.ts and exports map under their own
       # @types/react, which is where useFocusTrap's ref type broke for React 18
       # without anything here noticing. This installs the packed tarballs into
@@ -149,8 +142,11 @@ jobs:
       # A changeset is how a consumer finds out what changed. Asking for one on
       # the pull request is the only moment anybody remembers the reasoning; a
       # changelog reconstructed from commit messages at release time is written
-      # by whoever is releasing, about work they may not have done.
-      - name: Changeset present for package changes
+      # by whoever is releasing, about work they may not have done. The script
+      # requires the pull request itself to add one: entries already pending on
+      # main do not count, and it fails rather than skips if the base branch is
+      # not in the clone (which is what the fetch-depth above is for).
+      - name: Pull request adds a changeset for its package changes
         if: github.event_name == 'pull_request'
         run: node scripts/check-changeset.mjs
 
@@ -161,12 +157,13 @@ jobs:
   # copy of the version scripts/browser-tests.mjs already derives: both read
   # the same lockfile field, so a version bump can only go stale in one place.
   # The packages promise `react: ^18.3.0 || ^19.0.0`, and the `test` job above
-  # installs the React 18 pinned in devDependencies, so on its own it only ever
-  # runs a component on 18. This runs the same typecheck and the same unit
-  # tests on a real React 19, in a scratch copy so nothing here touches the
-  # lockfile. It does not need `npm ci` of its own: the script installs into
-  # the copy. A separate job so a React 19 failure is named as one.
-  test-react-19:
+  # installs the React 19 pinned in devDependencies, so on its own it only ever
+  # runs a component, and typechecks the source, on 19. This runs the same
+  # typecheck and the same unit tests on a real React 18 with its own @types,
+  # in a scratch copy so nothing here touches the lockfile. It does not need
+  # `npm ci` of its own: the script installs into the copy. A separate job so
+  # a React 18 failure is named as one.
+  test-react-18:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -177,8 +174,8 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Typecheck and unit tests on React 19
-        run: node scripts/test-react19.mjs
+      - name: Typecheck and unit tests on React 18
+        run: node scripts/test-react.mjs 18
 
   playwright-version:
     runs-on: ubuntu-latest

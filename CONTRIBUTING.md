@@ -33,6 +33,7 @@ npm run build          # packages + reference/preview.jsx
 npm run build -w apps/showcase   # root `build` does not cover the showcase
 node scripts/check-docs.mjs
 node scripts/check-peer-floor.mjs  # graph vs the oldest three it supports
+node scripts/check-changeset.mjs   # needs origin/main: `git fetch origin main`
 ```
 
 CI runs exactly these, then fails if any generated file has drifted:
@@ -49,8 +50,13 @@ npm run build:preview  # reference/preview.jsx from the packages
 
 ## Changesets
 
-Any change a consumer could notice needs a changeset, and CI asks for one on
-every pull request that touches `packages/*/src`:
+Any change a consumer could notice needs a changeset. CI checks every pull
+request that touches `packages/*/src` for one the pull request itself adds. A
+changeset already pending on `main` from earlier work does not count, however
+many are waiting in the folder: the entry has to be new in your branch. Nor
+does amending one that is already pending, since the check counts only files
+your branch adds: a follow-up pull request adds its own entry (or
+`npx changeset --empty` if it cannot affect a consumer).
 
 ```bash
 npx changeset          # pick packages, pick the bump, describe the change
@@ -144,7 +150,16 @@ expire. The workflow needs Node 22.14+ and npm 11.5.1+, which is why
 Trusted publishing can only be configured for a package that already exists,
 so a package's **first** publish is done by hand, from a maintainer's machine,
 `@nexus-cyberdeck/tokens` before `@nexus-cyberdeck/react` (which depends on
-it). After that, for each of the three packages, on npmjs.com under
+it). Until then each package stays `"private": true`, which is the deliberate
+hold on that first publish. With the flag set, `changeset version` (run as
+`version:packages` when the release workflow opens the Version Packages pull
+request) still bumps the version and writes the changelog, and
+`changeset publish` creates the git tag but skips the registry
+(`privatePackages: { version: true, tag: true }` in `.changeset/config.json`),
+while a by-hand `npm publish` is refused. Remove the flag in the same pull
+request as the package's manual first publish — `tokens` before `react` — so
+it comes off exactly when the package exists on the registry and the workflow
+can take over. After that, for each of the three packages, on npmjs.com under
 _Settings → Trusted Publisher_:
 
 | Field        | Value           |

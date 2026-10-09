@@ -75,30 +75,51 @@ export async function gotoPage(
   // rather than landing on Home and clicking through the nav.
   await page.goto(route === "home" ? "/" : `/#/${route}`);
 
-  // Theme and CRT live in the provider, so they are set from the header once
-  // the page is up; the header is the same on every route.
-  const crtButton = banner(page).getByRole("button", { name: "CRT", exact: true });
-  if ((await crtButton.getAttribute("aria-pressed")) === String(!crt)) await crtButton.click();
-  await expect(crtButton).toHaveAttribute("aria-pressed", String(crt));
+  // Theme and CRT live in the provider, so they are set once the page is up,
+  // through the site palette: the only control for either, on every route.
+  const root = page.locator(".nx-root");
+  if ((await root.getAttribute("data-nx-crt")) !== (crt ? "on" : "off")) {
+    await runSiteAction(page, crt ? "Turn the CRT layer on" : "Turn the CRT layer off");
+  }
+  await expect(root).toHaveAttribute("data-nx-crt", crt ? "on" : "off");
 
   await setTheme(page, theme);
 
   await settle(page);
 }
 
-/**
- * The site header. Scoping to it matters: the Home page renders its own
- * theme panel with AA/HUD buttons of the same name, so an unscoped locator is
- * ambiguous the moment a test visits Home.
- */
+/** The site header: the section nav and the Search button. */
 export function banner(page: Page): Locator {
   return page.getByRole("banner");
 }
 
-export async function setTheme(page: Page, theme: Theme) {
+/**
+ * Runs one of the site palette's actions by its exact label, opened from the
+ * header's Search button. Focus and pointer are moved off the button
+ * afterwards, or its focus ring or hover state would be in every shot.
+ */
+export async function runSiteAction(page: Page, label: string) {
   await banner(page)
-    .getByRole("button", { name: theme === "hud-aa" ? "AA" : "HUD", exact: true })
+    .getByRole("button", { name: /^Search/ })
     .click();
+  const palette = page.getByRole("dialog", { name: "Search the site" });
+  await expect(palette).toBeVisible();
+  await page.keyboard.type(label);
+  await expect(page.getByRole("option").first()).toHaveText(new RegExp(label, "i"));
+  await page.keyboard.press("Enter");
+  await expect(palette).toBeHidden();
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  // The pointer is still over Search, whose hover state would be in the shot.
+  await page.mouse.move(0, 0);
+}
+
+export async function setTheme(page: Page, theme: Theme) {
+  if ((await page.locator(".nx-root").getAttribute("data-nx-theme")) !== theme) {
+    await runSiteAction(
+      page,
+      theme === "hud" ? "Switch to the HUD theme" : "Switch to the AA theme",
+    );
+  }
   // Assert the switch actually took effect rather than trusting the click.
   // This is the bug the token generator fixed: the control was live, the
   // attribute changed, and none of the values a component reads moved.
@@ -149,8 +170,8 @@ export async function focusVisible(target: Locator) {
  * them in between, moves nothing.
  */
 export function versionMask(page: Page): Locator[] {
-  // The figure counters (token and component counts, rendered on Home and in
-  // the footer) are masked for the same reason the version is: they change
+  // The figure counters (token and component counts, rendered on Home) are
+  // masked for the same reason the version is: they change
   // whenever a token or component is added, and a one-glyph change in a
   // full-page baseline at maxDiffPixels: 0 would otherwise force a re-record
   // on every such PR (NX-25 was the first to hit it).
@@ -171,4 +192,15 @@ export async function settle(page: Page) {
   await page.evaluate(
     () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))),
   );
+}
+
+/**
+ * Masks for a shot of Home: the version and figures, plus the hero's live
+ * signal. That canvas is Glitch Lab's shader pipeline running on the frame
+ * clock, so no two captures of it agree; Glitch Lab's own route is not
+ * screenshotted for the same reason. The frame around it, its controls and
+ * its caption stay compared.
+ */
+export function homeMask(page: Page): Locator[] {
+  return [...versionMask(page), page.locator(".sc-monitor__host")];
 }

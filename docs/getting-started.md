@@ -292,4 +292,4 @@ remain. Use it on a hero surface, not behind every panel.
 - [Component README](../packages/react/README.md): the full component list, colour props, accessibility guarantees.
 - [Tokens README](../packages/tokens/README.md): every custom property, the typed accessors, DTCG import.
 - [STYLING.md](../packages/react/STYLING.md): the rule behind the component-token layer.
-- The showcase in this repository (`npm run dev`) renders every component with a rationale note and a code sample.
+- The showcase in this repository (`npm run dev`) renders every component live, most with a rationale note and a code sample.

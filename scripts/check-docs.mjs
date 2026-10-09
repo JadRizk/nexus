@@ -50,6 +50,13 @@ function ratio(theme, step) {
  * Every file that quotes a figure in prose, and what it must say. Adding a
  * doc that names a count means adding a line here; forgetting to is the one
  * failure mode this file cannot catch itself.
+ *
+ * A check with one figure names it in `expected`/`what`. A check whose pattern
+ * spans several cells of a table row lists one `{ expected, what }` per capture
+ * group in `captures`, in order, so every column is held to the code and not
+ * only the first: the `hud` column of both theme tables quoted grey-100 (the
+ * decorative hairline) as the UI boundary for as long as only the `hud-aa`
+ * column was asserted.
  */
 const CHECKS = [
   {
@@ -85,52 +92,79 @@ const CHECKS = [
     expected: shortVersion,
     what: "the version",
   },
+  // Both theme tables: first column hud-aa, second column hud. Disabled text
+  // is grey-300 (semantic.fg.disabled); the UI boundary is grey-200
+  // (semantic.border.strong), not the grey-100 hairline.
   {
     file: "README.md",
-    pattern: /\| disabled text\s+\| (\d+\.\d+):1/g,
-    expected: ratio("hud-aa", "grey-300"),
-    what: "hud-aa disabled-text contrast",
+    pattern: /\| disabled text\s+\| (\d+\.\d+):1\s+\| (\d+\.\d+):1/g,
+    captures: [
+      { expected: ratio("hud-aa", "grey-300"), what: "hud-aa disabled-text contrast" },
+      { expected: ratio("hud", "grey-300"), what: "hud disabled-text contrast" },
+    ],
   },
   {
     file: "README.md",
-    pattern: /\| UI boundaries\s+\| (\d+\.\d+):1/g,
-    expected: ratio("hud-aa", "grey-200"),
-    what: "hud-aa UI-boundary contrast",
+    pattern: /\| UI boundaries\s+\| (\d+\.\d+):1\s+\| (\d+\.\d+):1/g,
+    captures: [
+      { expected: ratio("hud-aa", "grey-200"), what: "hud-aa UI-boundary contrast" },
+      { expected: ratio("hud", "grey-200"), what: "hud UI-boundary contrast" },
+    ],
   },
   {
     file: "packages/tokens/README.md",
-    pattern: /\| Disabled text contrast\s+\| (\d+\.\d+):1/g,
-    expected: ratio("hud-aa", "grey-300"),
-    what: "hud-aa disabled-text contrast",
+    pattern: /\| Disabled text contrast\s+\| (\d+\.\d+):1\s+\| (\d+\.\d+):1/g,
+    captures: [
+      { expected: ratio("hud-aa", "grey-300"), what: "hud-aa disabled-text contrast" },
+      { expected: ratio("hud", "grey-300"), what: "hud disabled-text contrast" },
+    ],
   },
   {
     file: "packages/tokens/README.md",
-    pattern: /\| UI boundary contrast\s+\| (\d+\.\d+):1/g,
-    expected: ratio("hud-aa", "grey-200"),
-    what: "hud-aa UI-boundary contrast",
+    pattern: /\| UI boundary contrast\s+\| (\d+\.\d+):1\s+\| (\d+\.\d+):1/g,
+    captures: [
+      { expected: ratio("hud-aa", "grey-200"), what: "hud-aa UI-boundary contrast" },
+      { expected: ratio("hud", "grey-200"), what: "hud UI-boundary contrast" },
+    ],
+  },
+  // The preview's hand-authored tail (below the PAGES boundary, which
+  // build-preview.mjs copies verbatim) quotes the same hud boundary figure in
+  // its muted-ramp a11y note. Slider tracks use --nx-border-strong, grey-200.
+  {
+    file: "reference/preview.jsx",
+    pattern: /border token used for slider tracks sits at (\d+\.\d+):1/g,
+    expected: ratio("hud", "grey-200"),
+    what: "hud slider-track (UI-boundary) contrast",
   },
 ];
 
 const problems = [];
+let assertions = 0;
 
-for (const { file, pattern, expected, what } of CHECKS) {
+for (const check of CHECKS) {
+  const { file, pattern } = check;
+  const captures = check.captures ?? [{ expected: check.expected, what: check.what }];
+  assertions += captures.length;
   const found = [...read(file).matchAll(pattern)];
   if (found.length === 0) {
     problems.push(
-      `${file} no longer quotes ${what} anywhere — this check has gone silent. ` +
-        `Restore the figure, or remove the assertion from scripts/check-docs.mjs deliberately.`,
+      `${file} no longer quotes ${captures.map((c) => c.what).join(" / ")} anywhere — this ` +
+        `check has gone silent. Restore the figure, or remove the assertion from ` +
+        `scripts/check-docs.mjs deliberately.`,
     );
     continue;
   }
   for (const match of found) {
-    if (match[1] !== String(expected)) {
-      problems.push(
-        `${file} advertises "${match[0].trim()}" — the code has ${expected} for ${what}. ` +
-          `If that figure is deliberately about a subset rather than the whole library, spell ` +
-          `the number as a word ("three overlay components") so it does not read as a claim ` +
-          `about the total.`,
-      );
-    }
+    captures.forEach(({ expected, what }, i) => {
+      if (match[i + 1] !== String(expected)) {
+        problems.push(
+          `${file} advertises "${match[0].trim()}" — the code has ${expected} for ${what}. ` +
+            `If that figure is deliberately about a subset rather than the whole library, spell ` +
+            `the number as a word ("three overlay components") so it does not read as a claim ` +
+            `about the total.`,
+        );
+      }
+    });
   }
 }
 
@@ -143,5 +177,5 @@ if (problems.length) {
 
 console.log(
   `Docs OK — DS v${shortVersion} (${version}), ${tokenCount} tokens · ${componentCount} components, ` +
-    `${CHECKS.length} assertions.`,
+    `${assertions} assertions.`,
 );

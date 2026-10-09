@@ -25,8 +25,9 @@ Coming from 1.x? See [Migrating from 1.x](#migrating-from-1x).
 npm install @nexus-cyberdeck/graph three
 ```
 
-> Not published yet. Until the first release, install from `npm pack` output —
-> see the [getting-started guide](https://github.com/JadRizk/nexus/blob/main/docs/getting-started.md).
+> Not published yet: the package is held `"private": true` until its first
+> publish, so install from `npm pack` output in the meantime — see the
+> [getting-started guide](https://github.com/JadRizk/nexus/blob/main/docs/getting-started.md).
 
 React 18.3 or 19 and Three.js 0.170 or later are peer dependencies.
 
@@ -165,8 +166,9 @@ read through a ref.
 - **`GraphNode`**: `id`, `categoryId`, `label`, optional `state` (0 dormant,
   1 stable, 2 hot, 3 orphan), optional per-node `size`, `sectorAngle` and
   `radiusTarget` (overriding the category's), and an opaque `data` payload
-  that is round-tripped through `onSelect` and `getNode` and never read
-  internally. A node with no edges is always drawn as an orphan.
+  that comes back as `data` on the `GraphNodeSnapshot` that `onSelect` and
+  `getNode` return — the same reference, never read internally. A node with
+  no edges is always drawn as an orphan.
 - **`GraphEdge`**: `a`, `b`, `categoryId`, optional `absentEnd` (`"a"` or
   `"b"`: a declared endpoint with nothing behind it, drawn as a trace that
   frays out and lands on no pad) and `data`.
@@ -189,36 +191,37 @@ read through a ref.
   - `verb` / `inverseVerb`: how a screen reader reads the relation from each
     end, e.g. `"cites"` / `"cited by"`.
   - `flow`: packet speed along the edge (negative reverses; 0 is none), and
-    `jit` for an unstable-looking edge.
+    `jit` for an unstable-looking edge (a travelling sine at 11 rad/s, scaled
+    to zero under `prefers-reduced-motion`).
 
 ## Props
 
 Everything is a controlled prop: the canvas notifies and the consumer owns
 state.
 
-| Prop                                           | Purpose                                                                                                                                                                                                            |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `nodes`, `edges`                               | the graph                                                                                                                                                                                                          |
-| `nodeCategories`, `linkCategories`             | per-category appearance and physics                                                                                                                                                                                |
-| `ariaLabel`                                    | the graph's accessible name. Pass it                                                                                                                                                                               |
-| `physics`                                      | partial `PhysicsConfig`: `repulsion`, `linkDistance`, `gravity`, `damping`, `cursorForce`, `sectorForce`, `radiusForce`, `settle`                                                                                  |
-| `optics`                                       | partial `OpticsConfig`: `glow`, `trails`, `edgeOpacity`, `edgeWidth`, `flowSpeed`, `scan`, `aberr`, `curve`, `grain`, `bloom`, `glitch`. `DEFAULT_OPTICS` and `DEFAULT_PHYSICS` are exported for your own controls |
-| `labelMode`                                    | `"auto"` (by tier and zoom), `"key"`, `"all"`, `"off"`                                                                                                                                                             |
-| `hiddenNodeCategories`, `hiddenLinkCategories` | category ids to hide                                                                                                                                                                                               |
-| `selectionScopedLinkCategories`                | link categories drawn only on edges touching the selected node                                                                                                                                                     |
-| `isolateId`                                    | show only this node and its neighbours                                                                                                                                                                             |
-| `selectedId`                                   | the selected node; update it from `onSelect`                                                                                                                                                                       |
-| `followSelection`                              | default `true`: selecting frames the node and its neighbours, clearing frames everything. `false` leaves the camera to you                                                                                         |
-| `fitInset`                                     | `{ top, right, bottom, left }` in CSS px covered by your own floating panels; every framing lands in the space left                                                                                                |
-| `seed`                                         | layout seed. Default: derived from the node ids, so the same graph draws the same way every visit. `null` for a random layout per mount                                                                            |
-| `running`                                      | run the physics solver; `false` pauses it (dragging still works). Default `true`                                                                                                                                   |
-| `invalidEdges`                                 | `"error"` (default) fails on an edge to an unknown node; `"drop"` leaves it out and reports it through `onWarning`                                                                                                 |
-| `keyboardNavigation`                           | default `true`; see [Keyboard and screen readers](#keyboard-and-screen-readers)                                                                                                                                    |
-| `keyHints`                                     | default `true`: show the one-line key hint while focus is in the graph                                                                                                                                             |
-| `describeNode`, `rankConnections`              | your own wording for a node, and your own order for its connections                                                                                                                                                |
-| `onSelect`, `onStats`, `onFatal`, `onWarning`  | selection, stats about twice a second, WebGL setup failure or context loss, recoverable problems                                                                                                                   |
-| `onNavigate`                                   | after every keyboard or screen-reader step                                                                                                                                                                         |
-| `onFrame`                                      | every frame, with live node positions and the camera, for syncing your own DOM. The arrays are reused, so read them during the call                                                                                |
+| Prop                                           | Purpose                                                                                                                                                                                                                                 |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `nodes`, `edges`                               | the graph                                                                                                                                                                                                                               |
+| `nodeCategories`, `linkCategories`             | per-category appearance and physics                                                                                                                                                                                                     |
+| `ariaLabel`                                    | the graph's accessible name. Pass it                                                                                                                                                                                                    |
+| `physics`                                      | partial `PhysicsConfig`: `repulsion`, `linkDistance`, `gravity`, `damping`, `cursorForce`, `sectorForce`, `radiusForce`, `settle`                                                                                                       |
+| `optics`                                       | partial `OpticsConfig`: `glow`, `trails`, `edgeOpacity`, `edgeWidth`, `flowSpeed`, `scan`, `aberr`, `curve`, `grain`, `bloom`, `glitch`. `DEFAULT_OPTICS` and `DEFAULT_PHYSICS` are exported for your own controls                      |
+| `labelMode`                                    | `"auto"` (by tier and zoom), `"key"`, `"all"`, `"off"`                                                                                                                                                                                  |
+| `hiddenNodeCategories`, `hiddenLinkCategories` | category ids to hide                                                                                                                                                                                                                    |
+| `selectionScopedLinkCategories`                | link categories drawn only on edges touching the selected node                                                                                                                                                                          |
+| `isolateId`                                    | show only this node and its neighbours                                                                                                                                                                                                  |
+| `selectedId`                                   | the selected node; update it from `onSelect`                                                                                                                                                                                            |
+| `followSelection`                              | default `true`: selecting frames the node and its neighbours, clearing frames everything. `false` leaves the camera to you                                                                                                              |
+| `fitInset`                                     | `{ top, right, bottom, left }` in CSS px covered by your own floating panels; every framing lands in the space left                                                                                                                     |
+| `seed`                                         | layout seed. Default: derived from the node ids, so the same graph draws the same way every visit. `null` for a random layout per mount                                                                                                 |
+| `running`                                      | run the physics solver; `false` pauses it (dragging still works). Default `true`                                                                                                                                                        |
+| `invalidEdges`                                 | `"error"` (default) fails on an edge to an unknown node; `"drop"` leaves it out and reports it through `onWarning`                                                                                                                      |
+| `keyboardNavigation`                           | default `true`; see [Keyboard and screen readers](#keyboard-and-screen-readers)                                                                                                                                                         |
+| `keyHints`                                     | default `true`: show the one-line key hint while focus is in the graph                                                                                                                                                                  |
+| `describeNode`, `rankConnections`              | your own wording for a node, and your own order for its connections                                                                                                                                                                     |
+| `onSelect`, `onStats`, `onFatal`, `onWarning`  | selection, stats about twice a second, WebGL setup failure or context loss, recoverable problems. A lost context is terminal: three asks the browser to restore it, but the canvas does not resume when it does — remount it to recover |
+| `onNavigate`                                   | after every keyboard or screen-reader step                                                                                                                                                                                              |
+| `onFrame`                                      | every frame, with live node positions and the camera, for syncing your own DOM. The arrays are reused, so read them during the call                                                                                                     |
 
 ### Controller
 
@@ -232,8 +235,16 @@ controller.current?.back(); // undo the last move: a followed connection, a clic
 controller.current?.canGoBack; // whether back() has anywhere to go
 controller.current?.reheat(); // nudge the solver back above rest
 controller.current?.reseed(); // re-scatter and lay out again, without rebuilding the scene
-controller.current?.getNode(id); // GraphNodeSnapshot with degree and adjacency
+controller.current?.getNode(id); // GraphNodeSnapshot with degree, adjacency and your data
 ```
+
+`GraphCanvasProps`, `GraphController` and `GraphNodeSnapshot` take the payload
+type as a parameter (`unknown` by default). `<GraphCanvas>` infers it from
+`nodes`, so `GraphNode<Ticket>[]` hands `onSelect` a
+`GraphNodeSnapshot<Ticket>` — but the ref is an inference site too, so type it
+`useRef<GraphController<Ticket>>(null)`; an untyped `useRef<GraphController>`
+widens the payload back to `unknown` for `onSelect` as well as `getNode`.
+`describeNode`, `rankConnections` and `onNavigate` see the same `T`.
 
 ## Keyboard and screen readers
 
@@ -376,8 +387,11 @@ list.
 
 ## Notes
 
-- Set `optics.curve` to `0` to disable the barrel warp entirely; the CRT pass
-  is four render targets and is meant for a hero canvas, not a thumbnail.
+- Set `optics.curve` to `0` to disable the barrel warp entirely. That removes
+  the warp, not the cost: the CRT pipeline is three offscreen render targets
+  and four passes per frame (render to texture, a thresholded horizontal blur,
+  a vertical blur, then the full-screen composite), all of which run regardless
+  of `curve`. It is meant for a hero canvas, not a thumbnail.
 - The physics solver, camera maths, framing and shader sources are exported too
   (`createPhysics`, `project`, `fitBounds`, `NODE_FS`, …) for anyone who wants
   to build a different renderer on the same engine.

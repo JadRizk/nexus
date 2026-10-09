@@ -3,7 +3,7 @@
 ## The short version
 
 For **glitch, static, CRT and tape sounds specifically, synthesise rather than
-source.** `GlitchLab.jsx` ships a Web Audio engine that does this. Three
+source.** `glitchAudio.js` ships a Web Audio engine that does this. Three
 reasons it wins for this particular category:
 
 1. **Sample playback cannot follow your envelopes.** The events already carry

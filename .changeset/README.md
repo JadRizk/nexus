@@ -25,12 +25,16 @@ pinning plus lockstep versioning is what makes that mismatch unreachable.
 graph is a product built _with_ the design system rather than part of it, so it
 should not be dragged through a major version because a token was renamed.
 
-**`privatePackages: { version: true }`** — the packages are still
-`"private": true`, so nothing publishes to a registry yet. Versioning and
-changelog generation work regardless, which means the release history starts
-accumulating now rather than on the day someone decides to publish. Removing
-`private` from a package's `package.json` is the only change needed to start
-publishing it; the workflow is already wired.
+**`privatePackages: { version: true, tag: true }`** — the packages are still
+`"private": true`, so nothing publishes to a registry yet. `changeset version`
+still bumps them and writes their changelogs, and `changeset publish` still
+creates their git tags, which means the release history starts accumulating
+now rather than on the day someone decides to publish. Removing `private` is
+not enough on its own to start publishing: trusted publishing can only be
+configured for a package that already exists, so each package's first publish
+is done by hand, with `private` removed in that same pull request, `tokens`
+before `react`. See
+[How publishing is authorised](../CONTRIBUTING.md#how-publishing-is-authorised).
 
 ## Releasing
 

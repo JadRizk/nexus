@@ -452,6 +452,7 @@ var Drawer = forwardRef7(function Drawer2({
   subtitle,
   tone: tone2,
   colour,
+  muted,
   icon,
   footer,
   width = 296,
@@ -460,7 +461,7 @@ var Drawer = forwardRef7(function Drawer2({
 }, ref) {
   const trapRef = useFocusTrap(open, onClose);
   const titleId = useId2();
-  const accent = resolveColour({ tone: tone2, colour }, "var(--nx-fg-info)");
+  const accent = resolveColour({ tone: tone2, colour, muted }, "var(--nx-fg-info)");
   return /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(
     "div",
     {
@@ -553,7 +554,7 @@ LinkGlyph.displayName = "LinkGlyph";
 
 // packages/react/src/components/MeterRow/MeterRow.tsx
 import { forwardRef as forwardRef12 } from "react";
-var MeterRow = forwardRef12(function MeterRow2({ label, value, total, tone: tone2, colour, labelWidth }, ref) {
+var MeterRow = forwardRef12(function MeterRow2({ label, value, total, tone: tone2, colour, muted, labelWidth }, ref) {
   const pct = total > 0 ? Math.min(100, Math.max(0, value / total * 100)) : 0;
   return /* @__PURE__ */ React.createElement(
     "div",
@@ -561,7 +562,7 @@ var MeterRow = forwardRef12(function MeterRow2({ label, value, total, tone: tone
       ref,
       className: "nx-meter",
       style: {
-        "--nx-meter-fg": resolveColour({ tone: tone2, colour }, "var(--nx-fg-info)"),
+        "--nx-meter-fg": resolveColour({ tone: tone2, colour, muted }, "var(--nx-fg-info)"),
         ...labelWidth != null ? { "--nx-meter-label-width": `${labelWidth}px` } : null
       }
     },
@@ -637,14 +638,14 @@ Slider.displayName = "Slider";
 
 // packages/react/src/components/Stat/Stat.tsx
 import { forwardRef as forwardRef15 } from "react";
-var Stat = forwardRef15(function Stat2({ label, value, tone: tone2, colour, style }, ref) {
+var Stat = forwardRef15(function Stat2({ label, value, tone: tone2, colour, muted, style }, ref) {
   return /* @__PURE__ */ React.createElement(
     "div",
     {
       ref,
       className: "nx-stat",
       style: {
-        "--nx-stat-value-fg": resolveColour({ tone: tone2, colour }, "var(--nx-fg-default)"),
+        "--nx-stat-value-fg": resolveColour({ tone: tone2, colour, muted }, "var(--nx-fg-default)"),
         ...style
       }
     },
@@ -743,7 +744,7 @@ ToggleRow.displayName = "ToggleRow";
 
 // packages/react/src/components/Tooltip/Tooltip.tsx
 import { forwardRef as forwardRef18 } from "react";
-var Tooltip = forwardRef18(function Tooltip2({ x, y, tone: tone2, colour, children, style, id }, ref) {
+var Tooltip = forwardRef18(function Tooltip2({ x, y, tone: tone2, colour, muted, children, style, id }, ref) {
   return /* @__PURE__ */ React.createElement(
     "div",
     {
@@ -754,7 +755,7 @@ var Tooltip = forwardRef18(function Tooltip2({ x, y, tone: tone2, colour, childr
       style: {
         left: x,
         top: y,
-        "--nx-tooltip-accent": resolveColour({ tone: tone2, colour }, "var(--nx-fg-info)"),
+        "--nx-tooltip-accent": resolveColour({ tone: tone2, colour, muted }, "var(--nx-fg-info)"),
         ...style
       }
     },
@@ -894,7 +895,7 @@ const NX_CSS = `/* =============================================================
   --nx-tick:      9px;
 
   /* stacking order */
-  --nx-z-drawer:   0;
+  --nx-z-drawer:   20;
   --nx-z-tooltip:  30;
   --nx-z-overlay:  40;
 
@@ -1081,9 +1082,10 @@ body {
    @nexus-cyberdeck/tokens — crt.css
    A CSS-only approximation of the PoC's four-pass shader pipeline.
 
-   The real thing renders to a texture, bright-passes, blurs twice, then
-   composites with barrel distortion, chromatic aberration, an aperture grille,
-   a rolling refresh bar, grain and glitch slicing. You cannot run that behind
+   The real thing renders to a texture, runs a thresholded horizontal blur
+   (the bright-pass) and a vertical blur, then composites with barrel
+   distortion, chromatic aberration, an aperture grille, a rolling refresh
+   bar, grain and glitch slicing. You cannot run that behind
    every panel in an application — it is a full-screen GPU pipeline.
 
    This gets ~80% of the read for one extra composited pseudo-element and no
@@ -1509,12 +1511,15 @@ body {
 /* Full-viewport scrim behind the open drawer. Blocking pointer interaction
    with the page underneath is half of what makes the dialog modal; the trap's
    document-level focus guard is the other half. It fades rather than mounting,
-   for the same reason the drawer slides. No z-index on either: they are
-   fixed-position siblings painted in DOM order, scrim first, so the drawer is
-   always above its own scrim without either having to out-number the rest of
-   the page. */
+   for the same reason the drawer slides. Scrim and drawer share one layer,
+   --nx-z-drawer, and are fixed-position siblings painted in DOM order, scrim
+   first, so the drawer is always above its own scrim. The layer is what keeps
+   both above the page: a Drawer sits next to whatever opens it, ahead of
+   positioned content (every Panel is \`position: relative\`) that would
+   otherwise paint over it, scrim included. */
 .nx-drawer__scrim {
   position: fixed;
+  z-index: var(--nx-z-drawer);
   inset: 0;
   background: var(--nx-drawer-scrim, var(--nx-scrim));
   transition: opacity var(--nx-dur-fade) linear;
@@ -2095,7 +2100,7 @@ const PALETTE_SWATCHES = [
   ["phosphor","#DFF5C7",16.84],
 ];
 const RAMPS = {
-  "hud-aa": [["grey-100","#2F382B",1.61],["grey-200","#53624B",3.01],["grey-300","#6B7F61",4.52],
+  "hud-aa": [["grey-100","#2F382B",1.61],["grey-200","#57664F",3.19],["grey-300","#6F8465",4.82],
              ["grey-400","#788E6D",5.50],["grey-500","#8DA084",7.00],["grey-600","#B0BDA9",10.00]],
   "hud":    [["grey-100","#1B2318",1.21],["grey-200","#2C3729",1.57],["grey-300","#3D4C39",2.14],
              ["grey-400","#4A5C46",2.72],["grey-500","#5E7359",3.80],["grey-600","#6E8768",4.98]],
@@ -2329,7 +2334,7 @@ function TokensPage() {
       </Spec>
       <Spec name={`Muted ramp — ${theme}`} note="Solved against exact contrast targets rather than picked by eye: hue 100°, saturation 13%, binary-searched per step. Switch the theme in the header to see what the prototype's ramp actually looked like."
         a11y={aa ? "This ramp meets AA: disabled text clears 4.5:1 and UI boundaries clear 3:1 (WCAG 1.4.11)."
-                 : "This ramp fails AA. Eight of nine muted tokens sit below 4.5:1, and the border token used for slider tracks sits at 1.21:1 against a required 3:1."}>
+                 : `This ramp fails AA. ${ramp.filter(([, , r]) => r < 4.5).length} of its ${ramp.length} steps sit below 4.5:1, and the border token used for slider tracks sits at 1.57:1 against a required 3:1.`}>
         <Row>{ramp.map(([n, v, r]) => <Swatch key={n} name={n} value={v} ratio={r} />)}</Row>
       </Spec>
       <Spec name="Restricted colour" note="Magenta is reserved for alarm states — unresolved items and conflicts, nothing else. In the token graph it is reachable only through --nx-fg-critical; there is no general accent alias, so it cannot quietly become a button colour."

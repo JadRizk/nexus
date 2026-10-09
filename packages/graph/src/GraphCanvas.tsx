@@ -1,4 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import type { ReactElement, RefAttributes } from "react";
 import * as THREE from "three";
 import { createPhysics, computeDegree } from "./physics.js";
 import { mulberry32, seedFromIds } from "./random.js";
@@ -149,6 +150,18 @@ interface InternalController {
   focusNode?: (index: number) => void;
 }
 
+// Generic over the node `data` type at the boundary only: the cast at the end
+// of this declaration gives callers `GraphCanvasProps<T>`, `onSelect` with a
+// `GraphNodeSnapshot<T>`, and a `ref` typed `GraphController<T>`, so the
+// payload comes back typed. forwardRef's own type is not generic, hence the
+// cast — the same pattern as @nexus-cyberdeck/react's CommandPalette. The body
+// works in `unknown` because it never reads `data`; describe() copies the
+// reference from `nodes[i]` onto the snapshot and nothing else touches it, so
+// whatever `T` the caller's nodes carry is what comes back. `T` defaults to
+// `unknown`, which is what every caller that never names it already had. The
+// cast's `displayName?` is not set here; it keeps the member the old
+// ForwardRefExoticComponent type declared, so code that reads or assigns
+// `GraphCanvas.displayName` still compiles.
 export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
   function GraphCanvas(props, ref) {
     const {
@@ -1250,6 +1263,9 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
             state: STATE_LABEL[nState[i]!]!,
             degree: degree[i]!,
             groups,
+            // Passed through by reference, never read or copied: the consumer
+            // gets back the exact object it put on the node.
+            data: nodes[i]!.data,
           };
         };
 
@@ -1837,12 +1853,17 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
         raf = requestAnimationFrame(frame);
         disposables.push(() => cancelAnimationFrame(raf));
 
-        // A lost context can't be drawn to. No preventDefault here, so the
-        // browser isn't asked to restore it: the frame loop stops and the
-        // failure surfaces the same way a thrown boot does, through the halt
-        // panel and onFatal. Unmount still drains everything above. Registered
-        // last so it is the first thing removed on teardown — the
-        // forceContextLoss() in cleanup fires this very event.
+        // A lost context can't be drawn to. three's WebGLRenderer registers its
+        // own listeners on this canvas: its webglcontextlost handler calls
+        // preventDefault() — so the browser IS asked to restore the context —
+        // and its webglcontextrestored handler re-initialises three's GL state.
+        // This component deliberately does not resume: the frame loop stops
+        // here and the failure surfaces the same way a thrown boot does,
+        // through the halt panel and onFatal, and nothing in this component
+        // listens for webglcontextrestored (a future change could, and restart
+        // the loop). Unmount still drains everything above. Registered last so
+        // it is the first thing removed on teardown — the forceContextLoss() in
+        // cleanup fires this very event.
         const onContextLost = () => {
           cancelAnimationFrame(raf);
           const message = "WebGL context lost";
@@ -1924,4 +1945,6 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
       </div>
     );
   },
-);
+) as (<T = unknown>(
+  props: GraphCanvasProps<T> & RefAttributes<GraphController<T>>,
+) => ReactElement) & { displayName?: string };

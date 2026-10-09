@@ -18,6 +18,13 @@ describe("Stat", () => {
     });
   });
 
+  it("muted overrides the tone, routing to the disabled foreground", () => {
+    render(<Stat label="Conflict" value="2" tone="critical" muted />);
+    expect(screen.getByText("2").parentElement).toHaveStyle({
+      "--nx-stat-value-fg": "var(--nx-fg-disabled)",
+    });
+  });
+
   it("falls back to the default foreground when no tone is given", () => {
     render(<Stat label="Class" value="NODE" />);
     expect(screen.getByText("NODE").parentElement).toHaveStyle({

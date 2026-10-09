@@ -21,8 +21,9 @@ npm install @nexus-cyberdeck/react @nexus-cyberdeck/tokens
 
 React 18.3 or 19 is a peer dependency.
 
-> Not published yet. Until the first release, install from `npm pack` output —
-> see the [getting-started guide](https://github.com/JadRizk/nexus/blob/main/docs/getting-started.md).
+> Not published yet: the package is held `"private": true` until its first
+> publish, so install from `npm pack` output in the meantime — see the
+> [getting-started guide](https://github.com/JadRizk/nexus/blob/main/docs/getting-started.md).
 
 ## Use
 
@@ -136,11 +137,15 @@ for the rule and the trap it avoids.
 ### Overlay stacking
 
 `Drawer`, `CommandPalette` and `Tooltip` are `position: fixed` or `absolute`
-and each carries a `--nx-z-*` token — `--nx-z-drawer`, `--nx-z-tooltip`,
-`--nx-z-overlay` (CommandPalette's scrim and panel) — rather than a
-hardcoded number, lowest to highest in that order: a tooltip pointing at
-something inside an open Drawer has to outrank it, and the modal palette
-outranks everything.
+and each carries a `--nx-z-*` token — `--nx-z-drawer` (the drawer and its
+scrim), `--nx-z-tooltip`, `--nx-z-overlay` (CommandPalette's scrim and panel)
+— rather than a hardcoded number, lowest to highest in that order: a tooltip
+pointing at something inside an open Drawer has to outrank it, and the modal
+palette outranks everything. The drawer layer sits above ordinary positioned
+page content, so a `Drawer` renders correctly wherever it mounts, including
+ahead of the `Panel`s that follow it; page content that sets its own
+`z-index` at or above `--nx-z-drawer` (20) will cover an open drawer, so keep
+yours below it.
 
 These numbers are only meaningful relative to one another, and only when
 nothing between the overlay and the viewport has created its own stacking

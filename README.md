@@ -1,4 +1,4 @@
-# Nexus Cyberdeck
+# ![Nexus Cyberdeck: the HUD that passes the audit.](brand/assets/readme-header.png)
 
 A HUD design system for React: acid green on near-black, hairline borders,
 zero corner radius, corner ticks, monospace everything, and a WCAG AA mode
@@ -87,7 +87,11 @@ the system draws.
 requirement rather than a preference: its Three.js renderer asks for a
 `webgl2` context and nothing else, and there is no 2D or DOM fallback. Where
 WebGL2 is unavailable or the context is lost, the canvas calls `onFatal` and
-renders nothing further — handle that prop and show your own fallback.
+renders nothing further — handle that prop and show your own fallback. A lost
+context stays lost as far as the canvas is concerned: three's renderer asks the
+browser to restore it (it calls `preventDefault()` on `webglcontextlost`), but
+the canvas deliberately does not resume when that happens, so recovering means
+remounting it.
 
 ## Documentation
 
@@ -96,7 +100,7 @@ renders nothing further — handle that prop and show your own fallback.
 - [Tokens reference](packages/tokens/README.md): every custom property, the typed accessors, the DTCG-shaped source file.
 - [Graph reference](packages/graph/README.md): data model, props, controller.
 - [STYLING.md](packages/react/STYLING.md): the rule behind the component-token layer and the specificity trap it avoids.
-- The showcase (`npm run dev`) renders every component with a rationale note, an accessibility note and a code sample, plus the graph and a shader lab.
+- The showcase (`npm run dev`) renders every component live, most with a rationale note and a code sample and some with an accessibility note, plus the graph and a shader lab.
 
 ## Repository layout
 
@@ -194,7 +198,7 @@ general accent alias, so it cannot quietly become a button colour.
 | muted ramp    | lifted, AA-compliant | the prototype's original |
 | type scale    | ×1.15                | ×1.0                     |
 | disabled text | 4.82:1               | 2.14:1 ✗                 |
-| UI boundaries | 3.19:1               | 1.21:1 ✗                 |
+| UI boundaries | 3.19:1               | 1.57:1 ✗                 |
 
 The signature colours are **identical in both**. Acid 14.98:1, data 12.19:1,
 lime 15.20:1, sodium 8.32:1, violet 6.27:1, alarm 5.44:1, phosphor 16.84:1.
@@ -260,10 +264,10 @@ Verified behaviours:
 
 ## CRT layer
 
-The graph's CRT is a four-pass GPU pipeline: render to texture, bright-pass,
-two blurs, then a composite with barrel distortion, chromatic aberration,
-aperture grille, rolling refresh bar, grain and glitch slicing. You cannot run
-that behind every panel in an application.
+The graph's CRT is a four-pass GPU pipeline: render to texture, a thresholded
+horizontal blur, a vertical blur, then a composite with barrel distortion,
+chromatic aberration, aperture grille, rolling refresh bar, grain and glitch
+slicing. You cannot run that behind every panel in an application.
 
 `crt.css` gets most of the read for one composited pseudo-element and no
 JavaScript. Reserve the shader version for a hero canvas.
@@ -314,8 +318,10 @@ Any change a consumer could notice needs one:
 npx changeset      # pick packages, pick the bump, describe the change
 ```
 
-CI asks for one on any pull request that touches `packages/*/src`. The entry
-you write becomes the changelog verbatim, so write it for someone upgrading.
+A pull request that touches `packages/*/src` must add its own changeset, and
+CI fails it otherwise; a changeset already pending on `main` from earlier work
+does not count. The entry you write becomes the changelog verbatim, so write
+it for someone upgrading.
 
 ### What counts as breaking
 
@@ -352,10 +358,22 @@ compile, it renders the wrong colour. Pinning is what makes that mismatch
 unreachable. `@nexus-cyberdeck/graph` versions independently, because it is a
 product built _with_ the system rather than part of it.
 
-The packages are still `"private": true`, so nothing publishes yet. Removing
-`private` from a package is the only change needed to start publishing it;
-the workflow is already wired, and needs the `nexus-cyberdeck` organisation to
-exist on npm and an `NPM_TOKEN` secret in the repository.
+The packages are still `"private": true`, and that flag is the deliberate hold
+on the first publish. With it set, `changeset version` (run as
+`version:packages` when the release workflow opens the Version Packages pull
+request) still bumps the version and writes the changelog, and
+`changeset publish` creates the git tag but skips the registry
+(`privatePackages: { version: true, tag: true }` in `.changeset/config.json`),
+while a by-hand `npm publish` is refused. The release workflow is already
+wired, and it publishes through npm trusted publishing (OIDC) — see
+[How publishing is authorised](CONTRIBUTING.md#how-publishing-is-authorised)
+in CONTRIBUTING. There is no `NPM_TOKEN` secret and none should be added: a
+token on the publish step would make npm use it instead and silently bypass
+provenance. Starting to publish needs the `nexus-cyberdeck` organisation to
+exist on npm. Then `private` comes off a package in the same pull request as
+its manual first publish, `tokens` before `react` (which pins an exact `tokens`
+version), and trusted publishing takes over for every release after that
+first manual one.
 
 ## What is deliberately not here
 

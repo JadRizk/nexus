@@ -40,7 +40,7 @@ export interface GraphNode<T = unknown> {
   sectorAngle?: number;
   /** Overrides the category's `radiusTarget` for this node. */
   radiusTarget?: number;
-  /** Opaque consumer payload. Never read internally; round-tripped through onSelect/getNode. */
+  /** Opaque consumer payload. Never read internally; round-tripped through onSelect/getNode as `GraphNodeSnapshot.data`, the same reference. */
   data?: T;
 }
 
@@ -127,7 +127,7 @@ export interface LinkCategory {
   inverseVerb?: string;
   /** Packet-flow speed along the edge; negative reverses direction. 0 disables the flow animation. */
   flow?: number;
-  /** Jitter amount, for an unstable-looking edge (a contradiction, say). Stilled under reduced motion. */
+  /** Jitter amount, for an unstable-looking edge (a contradiction, say): a travelling sine at 11 rad/s along the edge, scaled to zero under prefers-reduced-motion. */
   jit?: number;
 }
 
@@ -164,7 +164,8 @@ export interface OpticsConfig {
   glitch: number;
 }
 
-export interface GraphNodeSnapshot {
+/** `T` is the type of the node's `data` payload — the same `T` as `GraphNode<T>`. */
+export interface GraphNodeSnapshot<T = unknown> {
   id: GraphNode["id"];
   categoryId: string;
   label: string;
@@ -177,6 +178,8 @@ export interface GraphNodeSnapshot {
     categoryId: string;
     rows: ReadonlyArray<{ id: GraphNode["id"]; label: string; categoryId: string; out: boolean }>;
   }>;
+  /** The node's own `data`, handed back as the same reference rather than a copy; `undefined` when the node has none. */
+  data?: T;
 }
 
 /**
@@ -217,9 +220,9 @@ export interface FrameGeometry {
 }
 
 /** One of a node's connections, as `rankConnections` sees it. */
-export interface Connection {
+export interface Connection<T = unknown> {
   /** The node at the other end. */
-  other: GraphNode;
+  other: GraphNode<T>;
   edge: GraphEdge;
   categoryId: string;
   /** "out" when the node is the edge's `a`, "in" when it is `b`, "both" for an undirected category. */
@@ -229,7 +232,7 @@ export interface Connection {
 }
 
 /** What a keyboard or screen-reader step did, for `onNavigate`. */
-export interface NavigateEvent {
+export interface NavigateEvent<T = unknown> {
   action:
     | "enter"
     | "browse"
@@ -243,12 +246,13 @@ export interface NavigateEvent {
     | "escape"
     | "focusNode";
   /** The node the reader is on after the step, or null once they've left the graph. */
-  node: GraphNodeSnapshot | null;
+  node: GraphNodeSnapshot<T> | null;
   /** What was spoken, if anything. */
   announcement: string;
 }
 
-export interface GraphController {
+/** `T` is the node `data` type `getNode` returns; it matches the `T` of the `<GraphCanvas>` the ref is attached to. */
+export interface GraphController<T = unknown> {
   /**
    * Frames every visible node, inside `fitInset`, and hands the camera back
    * to the auto-fit: while the layout is still settling, the frame keeps
@@ -265,7 +269,7 @@ export interface GraphController {
   reheat(v?: number): void;
   /** Re-scatters the nodes and runs the layout again from the start, without rebuilding the scene. With a seed (the default), the sequence of reseeds is reproducible too. */
   reseed(): void;
-  getNode(id: GraphNode["id"]): GraphNodeSnapshot | null;
+  getNode(id: GraphNode["id"]): GraphNodeSnapshot<T> | null;
   /**
    * Goes back to where the reader was before their last move — a followed
    * connection, a click on another node, or a cleared selection — restoring
@@ -284,8 +288,9 @@ export interface GraphController {
   focusNode(id: GraphNode["id"]): void;
 }
 
-export interface GraphCanvasProps {
-  nodes: readonly GraphNode[];
+/** `T` is the node `data` type, inferred from `nodes`, `ref` and `onSelect` together — an untyped `GraphController` ref widens it to `unknown`; `onSelect` and the controller's `getNode` hand it back typed. Defaults to `unknown`. */
+export interface GraphCanvasProps<T = unknown> {
+  nodes: readonly GraphNode<T>[];
   edges: readonly GraphEdge[];
   nodeCategories: Record<string, NodeCategory>;
   linkCategories: Record<string, LinkCategory>;
@@ -337,7 +342,7 @@ export interface GraphCanvasProps {
    */
   followSelection?: boolean;
   /** Fires when the user clicks a node (or clicks empty space, with `null`) — update `selectedId` in response. */
-  onSelect?: (node: GraphNodeSnapshot | null) => void;
+  onSelect?: (node: GraphNodeSnapshot<T> | null) => void;
   onStats?: (stats: GraphStats) => void;
   /** Fires every rendered frame with live geometry. Read it synchronously: the arrays are reused, not reallocated. */
   onFrame?: (geometry: FrameGeometry) => void;
@@ -352,7 +357,7 @@ export interface GraphCanvasProps {
   invalidEdges?: InvalidEdgePolicy;
   /** Recoverable problems, such as edges dropped under `invalidEdges: "drop"`. Without it they go to `console.warn`, so a drop is never silent. */
   onWarning?: (message: string, detail: { dropped: readonly DroppedEdge[] }) => void;
-  /** Called once if WebGL setup throws (including an invalid graph: an edge to an unknown node id, a duplicate node id, or a category id missing from the maps) or the WebGL context is lost — the canvas renders nothing further after this. */
+  /** Called once if WebGL setup throws (including an invalid graph: an edge to an unknown node id, a duplicate node id, or a category id missing from the maps) or the WebGL context is lost — the canvas renders nothing further after this. Context loss is terminal by design: three's renderer asks the browser to restore the context (it calls preventDefault on webglcontextlost), but the canvas does not resume when it is restored; remount it to recover. */
   onFatal?: (message: string) => void;
   /**
    * Accessible name for the graph. With keyboard navigation on (the default)
@@ -372,11 +377,11 @@ export interface GraphCanvasProps {
   /** Show the one-line key hint while focus is inside the graph. Default true. */
   keyHints?: boolean;
   /** Your own wording for a node, spoken when the reader lands on it. Default: "<label>, <category>, <n> connections". */
-  describeNode?: (node: GraphNode, ctx: DescribeContext) => string;
+  describeNode?: (node: GraphNode<T>, ctx: DescribeContext) => string;
   /** Your own order for a node's connections, most important first. Default: category weight, then category order, then label. */
-  rankConnections?: (a: Connection, b: Connection) => number;
+  rankConnections?: (a: Connection<T>, b: Connection<T>) => number;
   /** Fires after every keyboard or screen-reader step, e.g. to keep a detail panel in step with focus. */
-  onNavigate?: (event: NavigateEvent) => void;
+  onNavigate?: (event: NavigateEvent<T>) => void;
   className?: string;
   style?: CSSProperties;
 }

@@ -494,8 +494,9 @@ test.describe("claims axe cannot make", () => {
   });
 
   // One test per page: the controls used to share two long pages, and now
-  // each component has its own.
-  for (const route of DOC_ROUTES) {
+  // each component has its own. Home is included: its console is the densest
+  // set of controls on the site.
+  for (const route of ["home", ...DOC_ROUTES] as Route[]) {
     test(`every interactive control on ${route} is reachable by keyboard`, async ({ page }) => {
       // axe checks that controls are labelled; it does not walk the tab order.
       // A control that is focusable but visually covered by something else is a

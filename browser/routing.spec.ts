@@ -22,8 +22,8 @@ test("a deep link opens its page and marks it current in both navs", async ({ pa
     "aria-current",
     "page",
   );
-  // The header names the section, which is current for every page under it.
-  await expect(nav(page).getByRole("link", { name: "Components" })).toHaveAttribute(
+  // Docs is one header entry, current for every page under the sidebar.
+  await expect(nav(page).getByRole("link", { name: "Docs" })).toHaveAttribute(
     "aria-current",
     "true",
   );
@@ -32,10 +32,7 @@ test("a deep link opens its page and marks it current in both navs", async ({ pa
 test("the header nav is links with real hrefs, and Home is the bare URL", async ({ page }) => {
   await gotoPage(page, "home");
   await expect(nav(page).getByRole("link", { name: "Home" })).toHaveAttribute("href", "#/");
-  await expect(nav(page).getByRole("link", { name: "Components" })).toHaveAttribute(
-    "href",
-    "#/components",
-  );
+  await expect(nav(page).getByRole("link", { name: "Docs" })).toHaveAttribute("href", "#/start");
   await expect(nav(page).getByRole("link", { name: "Graph" })).toHaveAttribute(
     "href",
     "#/labs/graph",
@@ -55,7 +52,9 @@ test("the sidebar lists exactly the pages the suite tests", async ({ page }) => 
 
 test("back and forward move between pages", async ({ page }) => {
   await gotoPage(page, "home");
-  await nav(page).getByRole("link", { name: "Components" }).click();
+  await nav(page).getByRole("link", { name: "Docs" }).click();
+  await expect(page).toHaveURL(/#\/start$/);
+  await sidebar(page).getByRole("link", { name: "Overview" }).click();
   await expect(page).toHaveURL(/#\/components$/);
   await page
     .getByRole("link", { name: /^Button/ })
@@ -67,6 +66,41 @@ test("back and forward move between pages", async ({ page }) => {
   await expect(h1(page, "Components")).toBeVisible();
   await page.goForward();
   await expect(h1(page, "Button")).toBeVisible();
+});
+
+test("a short page does not scroll to fit the sidebar", async ({ page }) => {
+  // The sidebar is longer than most pages. It scrolls on its own, capped at
+  // <main>'s visible height, so it must never set the page's scroll height.
+  await gotoPage(page, "components/hazard-rule");
+  const main = page.locator("main");
+  const sizes = await main.evaluate((el) => {
+    const nav = el.querySelector<HTMLElement>(".sc-sidebar")!;
+    return { main: [el.scrollHeight, el.clientHeight], nav: [nav.scrollHeight, nav.clientHeight] };
+  });
+  expect(sizes.main[0]).toBe(sizes.main[1]);
+  expect(sizes.nav[0]).toBeGreaterThan(sizes.nav[1]);
+});
+
+test("a deep link scrolls its own sidebar entry into view, not the page", async ({ page }) => {
+  await gotoPage(page, "hooks/rank-items");
+  const current = sidebar(page).getByRole("link", { name: "rankItems" });
+  await expect(current).toHaveAttribute("aria-current", "page");
+  await expect(current).toBeInViewport();
+  expect(await page.locator("main").evaluate((el) => el.scrollTop)).toBe(0);
+});
+
+test("every page renders when reached by client-side navigation", async ({ page }) => {
+  // Direct loads are covered page by page elsewhere; this walks the sidebar
+  // in one session, so each page mounts after a different one. A page whose
+  // hooks leaked into the shell rendered fine on a direct load and crashed
+  // the whole app here.
+  test.setTimeout(60_000);
+  await gotoPage(page, "start");
+  for (const route of DOC_ROUTES) {
+    await sidebar(page).locator(`a[href="#/${route}"]`).click();
+    await expect(page).toHaveURL(new RegExp(`#/${route}$`));
+    await expect(page.locator("main h1"), route).toBeVisible();
+  }
 });
 
 test("changing page starts the new one at the top, with focus in it", async ({ page }) => {
@@ -104,4 +138,39 @@ test("an unknown route says so and links home", async ({ page }) => {
   await expect(h1(page, "No such page")).toBeVisible();
   await page.getByRole("link", { name: "Back to Home" }).click();
   await expect(page).toHaveURL(/#\/$/);
+});
+
+test.describe("site palette", () => {
+  // ⌘K / Ctrl+K and "/" open one palette on every route: the site's pages
+  // plus the header's actions. ControlOrMeta is ⌘ on macOS and Ctrl elsewhere,
+  // which is what useHotkey's "mod" means.
+  const palette = (page: Page) => page.getByRole("dialog", { name: "Search the site" });
+
+  test("goes to a page from any route", async ({ page }) => {
+    await gotoPage(page, "foundations/colour");
+    await page.keyboard.press("ControlOrMeta+k");
+    await expect(palette(page)).toBeVisible();
+    await page.keyboard.type("slid");
+    await page.keyboard.press("Enter");
+    await expect(palette(page)).toBeHidden();
+    await expect(h1(page, "Slider")).toBeVisible();
+  });
+
+  test("runs the site's actions, the only theme and CRT controls", async ({ page }) => {
+    await gotoPage(page, "home", "hud-aa");
+    // The header button is the palette's visible way in.
+    await banner(page)
+      .getByRole("button", { name: /^Search/ })
+      .click();
+    await page.keyboard.type("switch to the hud");
+    await page.keyboard.press("Enter");
+    await expect(page.locator(".nx-root")).toHaveAttribute("data-nx-theme", "hud");
+  });
+
+  test("stands aside on the CommandPalette page, which demonstrates its own", async ({ page }) => {
+    await gotoPage(page, "components/command-palette");
+    await page.keyboard.press("ControlOrMeta+k");
+    await expect(page.getByRole("dialog")).toHaveCount(1);
+    await expect(palette(page)).toHaveCount(0);
+  });
 });
