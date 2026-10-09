@@ -8,7 +8,6 @@ import {
   BlinkCursor,
   useNexus,
 } from "@nexus-cyberdeck/react";
-import type { NexusTheme } from "@nexus-cyberdeck/react";
 import { HomePage } from "./pages/HomePage.js";
 import NexusCyberdeck from "./graph/NexusCyberdeck.js";
 import GlitchLab from "./effects/GlitchLab.jsx";
@@ -16,6 +15,7 @@ import { href, useRoute } from "./router.js";
 import { DOC_GROUPS, findPage } from "./site.js";
 import type { DocPage } from "./site.js";
 import { PageHeader } from "./components/Spec.js";
+import { SitePalette, useSitePalette } from "./components/SitePalette.js";
 
 type View =
   | { kind: "home" }
@@ -24,9 +24,9 @@ type View =
   | { kind: "doc"; page: DocPage }
   | { kind: "not-found" };
 
-// Home, Graph and Glitch Lab are self-contained full-viewport "console"
-// experiences — docked panels, no page-level padding or scroll. Graph and
-// Glitch Lab in particular render their own WebGL surfaces (see README:
+// Home, Graph and Glitch Lab are full-bleed: no docs sidebar or page column.
+// Graph and Glitch Lab are full-viewport "console" experiences — docked
+// panels, no page-level scroll — and render their own WebGL surfaces (see README:
 // "the graph itself ... is a product, not a design system") and ignore the
 // site CRT toggle — Glitch Lab especially, since CRT composite is itself
 // one of its shader effects, not something to layer a second time. Every
@@ -71,8 +71,9 @@ function Shell() {
   const path = useRoute().join("/");
   const view = resolve(path);
   const title = titleOf(view);
-  const fullBleed = view.kind === "home" || view.kind === "graph" || view.kind === "glitch";
-  const { theme, setTheme, crt, setCrt } = useNexus();
+  const docked = view.kind === "graph" || view.kind === "glitch";
+  // Theme and CRT are switched from the site palette (SitePalette.tsx).
+  const { crt } = useNexus();
   const main = useRef<HTMLElement>(null);
   // The route last shown. Null until the first one, which is the document's own
   // load. Comparing routes rather than counting runs is what keeps StrictMode's
@@ -101,149 +102,145 @@ function Shell() {
   }, [title]);
 
   return (
-    <div
-      className={crt ? "nx-crt nx-crt--roll" : ""}
-      style={{ display: "flex", flexDirection: "column", height: "100vh" }}
-    >
-      {/* skip link — first tab stop, WCAG 2.4.1 */}
-      {/* The click is handled here rather than by the browser: the hash
+    <SitePalette path={path}>
+      <div
+        className={crt ? "nx-crt nx-crt--roll" : ""}
+        style={{ display: "flex", flexDirection: "column", height: "100vh" }}
+      >
+        {/* skip link — first tab stop, WCAG 2.4.1 */}
+        {/* The click is handled here rather than by the browser: the hash
           belongs to the router, and following "#main" would navigate to a
           route called "main". */}
-      <a
-        href="#main"
-        className="nx-skip"
-        onClick={(e) => {
-          e.preventDefault();
-          main.current?.focus();
-        }}
-      >
-        Skip to content
-      </a>
-
-      {/* A banner landmark: screen-reader users can jump to it, and it gives
-          the site chrome a name distinct from the theme controls the Home
-          page renders in its own panel. */}
-      <Panel
-        role="banner"
-        corners="none"
-        padded={false}
-        // No border: the hazard rule below is the header's only edge.
-        style={{ flexShrink: 0, border: 0 }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "var(--nx-space-6)",
-            padding: "var(--nx-space-4) var(--nx-space-6)",
-            flexWrap: "wrap",
+        <a
+          href="#main"
+          className="nx-skip"
+          onClick={(e) => {
+            e.preventDefault();
+            main.current?.focus();
           }}
         >
-          <div style={{ display: "flex", alignItems: "baseline", gap: "var(--nx-space-3)" }}>
-            <Wordmark size="var(--nx-text-lg)">NEXUS</Wordmark>
-            <span
-              style={{
-                color: "var(--nx-fg-tertiary)",
-                fontSize: "var(--nx-text-2xs)",
-                letterSpacing: "var(--nx-track-wider)",
-              }}
-            >
-              DS v<span data-nx-version>{__NX_VERSION__}</span> <BlinkCursor />
-            </span>
-          </div>
+          Skip to content
+        </a>
 
-          <nav aria-label="Sections" style={{ display: "flex", gap: "var(--nx-space-2)", flex: 1 }}>
-            {/* Links, not buttons: each one goes somewhere, so it can be opened
+        {/* A banner landmark: screen-reader users can jump to it, and tests
+          scope the theme and CRT controls to it. */}
+        <Panel
+          role="banner"
+          corners="none"
+          padded={false}
+          // No border: the hazard rule below is the header's only edge.
+          style={{ flexShrink: 0, border: 0 }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "var(--nx-space-6)",
+              padding: "var(--nx-space-4) var(--nx-space-6)",
+              flexWrap: "wrap",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "baseline", gap: "var(--nx-space-3)" }}>
+              <Wordmark size="var(--nx-text-lg)">NEXUS</Wordmark>
+              <span
+                style={{
+                  color: "var(--nx-fg-tertiary)",
+                  fontSize: "var(--nx-text-2xs)",
+                  letterSpacing: "var(--nx-track-wider)",
+                }}
+              >
+                v<span data-nx-version>{__NX_VERSION__}</span> <BlinkCursor />
+              </span>
+            </div>
+
+            <nav
+              aria-label="Sections"
+              style={{ display: "flex", gap: "var(--nx-space-2)", flex: 1 }}
+            >
+              {/* Links, not buttons: each one goes somewhere, so it can be opened
                 in a new tab or copied. They wear the button class so the
                 header looks as it did; line-height and decoration are the two
                 things a <button> gets from the UA sheet that an <a> does not. */}
-            {NAV.map((item) => (
-              <a
-                key={item.label}
-                href={`#/${item.path}`}
-                className="nx-btn"
-                data-active={isCurrent(item, path) ? "1" : "0"}
-                aria-current={
-                  path === item.path ? "page" : isCurrent(item, path) ? "true" : undefined
-                }
-                style={{ lineHeight: "normal", textDecoration: "none" }}
-              >
-                {item.label}
-              </a>
-            ))}
-          </nav>
+              {NAV.map((item) => (
+                <a
+                  key={item.label}
+                  href={`#/${item.path}`}
+                  className="nx-btn"
+                  data-active={isCurrent(item, path) ? "1" : "0"}
+                  aria-current={
+                    path === item.path ? "page" : isCurrent(item, path) ? "true" : undefined
+                  }
+                  style={{ lineHeight: "normal", textDecoration: "none" }}
+                >
+                  {item.label}
+                </a>
+              ))}
+            </nav>
 
-          <div style={{ display: "flex", gap: "var(--nx-space-2)", alignItems: "center" }}>
-            <span
-              style={{
-                color: "var(--nx-fg-tertiary)",
-                fontSize: "var(--nx-text-2xs)",
-                letterSpacing: "var(--nx-track-wide)",
-              }}
-            >
-              THEME
-            </span>
-            {(["hud-aa", "hud"] as NexusTheme[]).map((t) => (
-              <Button
-                key={t}
-                active={theme === t}
-                onClick={() => setTheme(t)}
-                aria-pressed={theme === t}
-              >
-                {t === "hud-aa" ? "AA" : "HUD"}
-              </Button>
-            ))}
-            <Button active={crt} onClick={() => setCrt(!crt)} aria-pressed={crt}>
-              CRT
-            </Button>
+            <SearchButton />
           </div>
-        </div>
-        <HazardRule />
-      </Panel>
+          <HazardRule />
+        </Panel>
 
-      {/* tabIndex=0 because this element scrolls. A scrollable region that is
+        {/* tabIndex=0 because this element scrolls. A scrollable region that is
           not focusable cannot be scrolled by keyboard at all when it holds no
           focusable content of its own — which is exactly the Tokens page, a
           long column of swatches with nothing to tab to. It doubles as the
           skip link's landing target. */}
-      <main
-        ref={main}
-        id="main"
-        tabIndex={0}
-        style={{
-          flex: 1,
-          minHeight: 0,
-          overflow: fullBleed ? "hidden" : "auto",
-          // A size container on docs pages, so the sticky sidebar can cap its
-          // height at <main>'s visible height (100cqh) and scroll on its own.
-          containerType: view.kind === "doc" ? "size" : undefined,
-        }}
-      >
-        {view.kind === "home" && <HomePage />}
-        {view.kind === "graph" && <NexusCyberdeck />}
-        {view.kind === "glitch" && <GlitchLab />}
-        {view.kind === "doc" && (
-          <div style={{ display: "flex", alignItems: "flex-start" }}>
-            <DocsNav path={path} />
-            {/* Sized as the page column was before the sidebar existed: the
+        <main
+          ref={main}
+          id="main"
+          tabIndex={0}
+          style={{
+            flex: 1,
+            minHeight: 0,
+            // Home is full-bleed but long, so it scrolls in <main> like a docs
+            // page — which also gives it the scroll reset on navigation.
+            overflow: docked ? "hidden" : "auto",
+            // A size container on docs pages, so the sticky sidebar can cap its
+            // height at <main>'s visible height (100cqh) and scroll on its own.
+            containerType: view.kind === "doc" ? "size" : undefined,
+          }}
+        >
+          {view.kind === "home" && <HomePage />}
+          {view.kind === "graph" && <NexusCyberdeck />}
+          {view.kind === "glitch" && <GlitchLab />}
+          {view.kind === "doc" && (
+            <div style={{ display: "flex", alignItems: "flex-start" }}>
+              <DocsNav path={path} />
+              {/* Sized as the page column was before the sidebar existed: the
                 visual baselines capture each example at this width. */}
-            <div style={{ flex: "1 1 auto", minWidth: 0, ...PAGE }}>
-              <PageHeader title={view.page.title} lede={view.page.summary} />
-              {/* Mounted as a component, never called as a function: a page's
+              <div style={{ flex: "1 1 auto", minWidth: 0, ...PAGE }}>
+                <PageHeader title={view.page.title} lede={view.page.summary} />
+                {/* Mounted as a component, never called as a function: a page's
                   hooks must belong to the page, or moving between pages with
                   different hooks breaks the shell's own hook order. Keyed by
                   path so each page starts from fresh state. */}
-              <view.page.render key={path} />
+                <view.page.render key={path} />
+              </div>
             </div>
-          </div>
-        )}
-        {view.kind === "not-found" && (
-          <div style={PAGE}>
-            <NotFoundPage />
-          </div>
-        )}
-      </main>
-    </div>
+          )}
+          {view.kind === "not-found" && (
+            <div style={PAGE}>
+              <NotFoundPage />
+            </div>
+          )}
+        </main>
+      </div>
+    </SitePalette>
+  );
+}
+
+/**
+ * The site palette's visible way in, for anyone not reaching for ⌘K or "/" —
+ * and the only control for theme and CRT, which the palette lists first.
+ */
+function SearchButton() {
+  const { open } = useSitePalette();
+  return (
+    <Button onClick={open} aria-keyshortcuts="Meta+K Control+K /">
+      Search <kbd style={{ color: "var(--nx-fg-tertiary)", fontFamily: "inherit" }}>⌘K</kbd>
+    </Button>
   );
 }
 

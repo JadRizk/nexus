@@ -66,3 +66,170 @@
   background: var(--nx-bg-active);
   border-left-color: var(--nx-fg-accent);
 }
+
+/* ============================================================================
+   Home — the landing page. Layout only; every surface is a library component.
+   ========================================================================== */
+
+/* At least the height of <main>, so the footer sits at the bottom of a tall
+   window instead of under the routes. */
+.sc-home {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  min-height: 100%;
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: var(--nx-space-8) var(--nx-space-6) 0;
+}
+
+/* Pitch and monitor side by side; the monitor drops under the pitch once the
+   two no longer fit, rather than squeezing either. */
+.sc-home__hero {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--nx-space-7);
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* The pitch gives way first, down to 360px, before the monitor wraps. */
+.sc-home__pitch {
+  flex: 1 1 360px;
+  max-width: 520px;
+}
+
+.sc-cta {
+  line-height: normal;
+  text-decoration: none;
+}
+
+/* ---------------------------------------------------------------- monitor */
+
+.sc-monitor {
+  flex: 0 1 560px;
+  min-width: 420px;
+}
+
+.sc-monitor__screen {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  background: var(--nx-bg-canvas);
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.sc-monitor__host {
+  position: absolute;
+  inset: 0;
+}
+
+.sc-monitor__fault {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--nx-space-3);
+  align-items: center;
+  justify-content: center;
+  color: var(--nx-fg-critical);
+  letter-spacing: var(--nx-track-wider);
+}
+
+.sc-monitor__fault span {
+  color: var(--nx-fg-subtle);
+  letter-spacing: normal;
+}
+
+.sc-monitor__bar {
+  display: flex;
+  gap: var(--nx-space-3);
+  justify-content: space-between;
+  padding: var(--nx-space-3);
+  border-top: var(--nx-hairline) solid var(--nx-border-default);
+}
+
+.sc-monitor__channels {
+  display: flex;
+  gap: var(--nx-space-2);
+}
+
+/* ----------------------------------------------------------------- routes */
+
+.sc-home__routes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  margin-top: var(--nx-space-8);
+  border-top: var(--nx-hairline) solid var(--nx-border-default);
+  border-bottom: var(--nx-hairline) solid var(--nx-border-default);
+}
+
+.sc-route {
+  display: block;
+  padding: var(--nx-space-5) var(--nx-space-5) var(--nx-space-5) var(--nx-space-4);
+  border-left: 2px solid transparent;
+  text-decoration: none;
+  transition: background var(--nx-dur-micro) var(--nx-ease);
+}
+
+.sc-route:hover {
+  background: var(--nx-bg-hover);
+  border-left-color: var(--nx-fg-accent);
+}
+
+.sc-route__label {
+  display: block;
+  color: var(--nx-fg-accent);
+  font-weight: var(--nx-weight-bold);
+  letter-spacing: var(--nx-track-wide);
+  text-transform: uppercase;
+}
+
+.sc-route__blurb {
+  display: block;
+  margin-top: var(--nx-space-2);
+  color: var(--nx-fg-subtle);
+  font-size: var(--nx-text-xs);
+}
+
+/* ----------------------------------------------------------------- footer */
+
+/* No border and no surface of its own: it is the page running out, not
+   another panel. */
+.sc-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--nx-space-5);
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: auto;
+  padding: var(--nx-space-8) 0 var(--nx-space-6);
+  color: var(--nx-fg-tertiary);
+  font-size: var(--nx-text-2xs);
+  letter-spacing: var(--nx-track-wider);
+  text-transform: uppercase;
+}
+
+.sc-footer__brand {
+  display: flex;
+  gap: var(--nx-space-4);
+  align-items: baseline;
+}
+
+.sc-footer__links {
+  display: flex;
+  gap: var(--nx-space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sc-footer__links a {
+  color: var(--nx-fg-subtle);
+  text-decoration: none;
+}
+
+.sc-footer__links a:hover {
+  color: var(--nx-fg-accent);
+  text-decoration: underline;
+}

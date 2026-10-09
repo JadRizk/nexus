@@ -139,3 +139,38 @@ test("an unknown route says so and links home", async ({ page }) => {
   await page.getByRole("link", { name: "Back to Home" }).click();
   await expect(page).toHaveURL(/#\/$/);
 });
+
+test.describe("site palette", () => {
+  // ⌘K / Ctrl+K and "/" open one palette on every route: the site's pages
+  // plus the header's actions. ControlOrMeta is ⌘ on macOS and Ctrl elsewhere,
+  // which is what useHotkey's "mod" means.
+  const palette = (page: Page) => page.getByRole("dialog", { name: "Search the site" });
+
+  test("goes to a page from any route", async ({ page }) => {
+    await gotoPage(page, "foundations/colour");
+    await page.keyboard.press("ControlOrMeta+k");
+    await expect(palette(page)).toBeVisible();
+    await page.keyboard.type("slid");
+    await page.keyboard.press("Enter");
+    await expect(palette(page)).toBeHidden();
+    await expect(h1(page, "Slider")).toBeVisible();
+  });
+
+  test("runs the site's actions, the only theme and CRT controls", async ({ page }) => {
+    await gotoPage(page, "home", "hud-aa");
+    // The header button is the palette's visible way in.
+    await banner(page)
+      .getByRole("button", { name: /^Search/ })
+      .click();
+    await page.keyboard.type("switch to the hud");
+    await page.keyboard.press("Enter");
+    await expect(page.locator(".nx-root")).toHaveAttribute("data-nx-theme", "hud");
+  });
+
+  test("stands aside on the CommandPalette page, which demonstrates its own", async ({ page }) => {
+    await gotoPage(page, "components/command-palette");
+    await page.keyboard.press("ControlOrMeta+k");
+    await expect(page.getByRole("dialog")).toHaveCount(1);
+    await expect(palette(page)).toHaveCount(0);
+  });
+});
