@@ -4,6 +4,7 @@ import react from "@vitejs/plugin-react";
 import { workspaceAlias } from "../../workspace-alias.mjs";
 import { componentCount, shortVersion, tokenCount } from "../../scripts/ds-figures.mjs";
 import { componentCssFiles, componentLayer } from "../../scripts/component-layer.mjs";
+import { BRAND, manifestJson, renderHead } from "../../scripts/brand-meta.mjs";
 
 // The component token layer as a module: parsed from the component
 // stylesheets here, at build time, so the bundle carries the result rather
@@ -22,8 +23,35 @@ function componentLayerModule(): Plugin {
   };
 }
 
+// The brand head block and the web app manifest, filled from
+// scripts/brand-meta.mjs so the strings and the ground colour are never
+// hand-copied into a file a crawler or an OS reads. `pre` runs before Vite's
+// own HTML processing, so the icon links, which are public files, still get
+// the base prefixed after. The manifest is not a public file, so its link
+// takes the base from here: without it the built page links /site.webmanifest
+// and Pages answers 404.
+function brandHead(): Plugin {
+  let base = "/";
+  return {
+    name: "nx-brand-head",
+    configResolved(config) {
+      base = config.base;
+    },
+    transformIndexHtml: { order: "pre", handler: (html) => renderHead(html, { base }) },
+    configureServer(server) {
+      server.middlewares.use(`${server.config.base}site.webmanifest`, (_req, res) => {
+        res.setHeader("Content-Type", "application/manifest+json");
+        res.end(manifestJson());
+      });
+    },
+    generateBundle() {
+      this.emitFile({ type: "asset", fileName: "site.webmanifest", source: manifestJson() });
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react(), componentLayerModule()],
+  plugins: [react(), componentLayerModule(), brandHead()],
   resolve: { alias: workspaceAlias },
   // The figures the chrome advertises, read from the code at build time so a
   // version bump or a new component can never leave the header stale. See
@@ -32,6 +60,7 @@ export default defineConfig({
     __NX_VERSION__: JSON.stringify(shortVersion),
     __NX_TOKENS__: JSON.stringify(tokenCount),
     __NX_COMPONENTS__: JSON.stringify(componentCount),
+    __NX_TITLE__: JSON.stringify(BRAND.title),
   },
   server: {
     port: 5173,

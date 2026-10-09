@@ -3,8 +3,9 @@
 // mono and inverted versions, the 16px favicon drawing, the maskable icon,
 // the wordmark, both social cards and the README header.
 //
-// Every colour is read from packages/tokens/src/tokens.json, so the kit
-// follows a token change on the next run instead of drifting from it. Text is
+// Every string and colour comes from scripts/brand-meta.mjs, which reads the
+// colours from packages/tokens/src/tokens.json, so the kit follows a token or
+// positioning change on the next run instead of drifting from it. Text is
 // outlined to paths here, so the SVGs render identically on every machine and
 // in every crawler without the fonts installed.
 //
@@ -14,14 +15,17 @@
 // here: they are a record, not build output.
 //
 // Needs two things the repository does not carry:
-//   - opentype.js and the DejaVu fonts, installed without touching the lockfile:
-//       npm install --no-save opentype.js@1.3.4 dejavu-fonts-ttf@2.37.3
+//   - opentype.js and the DejaVu fonts, installed outside the repository so the
+//     workspace's node_modules and lockfile are untouched:
+//       D=$(mktemp -d) && npm install --prefix "$D" --no-save opentype.js@1.3.4 dejavu-fonts-ttf@2.37.3
+//       NODE_PATH="$D/node_modules" node scripts/brand-draw.mjs
 //   - Impact, the stencil face. macOS ships it at the default path below;
 //     elsewhere set NX_IMPACT_TTF to a copy of Impact.ttf.
 import { createRequire } from "node:module";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { BRAND, COLOURS } from "./brand-meta.mjs";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const require = createRequire(import.meta.url);
@@ -31,8 +35,10 @@ function load(name) {
     return require(name);
   } catch {
     console.error(
-      `brand-draw: cannot load ${name}. Install the drawing dependencies first:\n` +
-        "  npm install --no-save opentype.js@1.3.4 dejavu-fonts-ttf@2.37.3",
+      `brand-draw: cannot load ${name}. Install the drawing dependencies outside the repo\n` +
+        "and point NODE_PATH at them:\n\n" +
+        '  D=$(mktemp -d) && npm install --prefix "$D" --no-save opentype.js@1.3.4 dejavu-fonts-ttf@2.37.3\n' +
+        '  NODE_PATH="$D/node_modules" node scripts/brand-draw.mjs',
     );
     process.exit(1);
   }
@@ -48,19 +54,15 @@ const stencil = opentype.loadSync(IMPACT);
 const mono = opentype.loadSync(join(dejavu, "ttf/DejaVuSansMono.ttf"));
 const monoBold = opentype.loadSync(join(dejavu, "ttf/DejaVuSansMono-Bold.ttf"));
 
-// ── colours, from the token source ───────────────────────────────────────────
-const tokens = JSON.parse(readFileSync(join(root, "packages/tokens/src/tokens.json"), "utf8"));
-const C = tokens.primitive.colour;
-const RAMP = tokens.primitive.ramp;
-const VOID = C.void.$value;
-const PHOSPHOR = C.phosphor.$value;
-const ACID = C.acid.$value;
-const LABEL = RAMP["grey-400"].$value; // fg.tertiary — 5.59:1 on void
-const QUIET = RAMP["grey-500"].$value; // fg.subtle — 7.11:1 on void
-
-// ── decisions, from brand/BRAND.md ───────────────────────────────────────────
-const NAME = "Nexus Cyberdeck";
-const TAGLINE = "The HUD that passes the audit.";
+// ── colours and strings, from scripts/brand-meta.mjs ─────────────────────────
+const VOID = COLOURS.ground;
+const PHOSPHOR = COLOURS.ink;
+const ACID = COLOURS.signal;
+const LABEL = COLOURS.label; // fg.tertiary — 5.59:1 on void
+const QUIET = COLOURS.quiet; // fg.subtle — 7.11:1 on void
+const NAME = BRAND.name;
+const TAGLINE = BRAND.tagline;
+// Card-only copy, so it lives with the card.
 const EYEBROW = "/// hud design system for react";
 const FOOTER = "@nexus-cyberdeck/tokens · react · graph";
 const SHEAR = Math.tan((9 * Math.PI) / 180); // the Wordmark component's skewX(-9deg)
@@ -106,10 +108,11 @@ function markN(tile, cap) {
 
 /**
  * NEXUS CYBERDECK in the stencil face: cap height `cap`, tracking −0.02em,
- * sheared about the baseline, top-left of its ink at (x, y). Returns the path
- * data and the ink box.
+ * sheared about the baseline. Returns the ink box's size and `place(x, y)`,
+ * which puts the ink's top-left at (x, y) and returns the path data. Laid out
+ * once; place it once.
  */
-function wordmark(x, y, cap) {
+function wordmark(cap) {
   const size = cap / CAP;
   const scale = size / stencil.unitsPerEm;
   const glyphs = stencil.stringToGlyphs(NAME.toUpperCase());
@@ -127,11 +130,11 @@ function wordmark(x, y, cap) {
   const y1 = Math.min(...boxes.map((b) => b.y1));
   const w = Math.max(...boxes.map((b) => b.x2)) - x1;
   const h = Math.max(...boxes.map((b) => b.y2)) - y1;
-  const d = inked.map((p) => move(p, x - x1, y - y1).toPathData(2)).join(" ");
-  return { d, w, h };
+  const place = (x, y) => inked.map((p) => move(p, x - x1, y - y1).toPathData(2)).join(" ");
+  return { w, h, place };
 }
 
-/** Mono text outlined, left edge at x, baseline at y. Tracking in em. */
+/** Mono text outlined, left edge at x, baseline at y, as path data. Tracking in em. */
 function text(str, x, y, size, { bold = false, tracking = 0 } = {}) {
   const font = bold ? monoBold : mono;
   const scale = size / font.unitsPerEm;
@@ -142,7 +145,7 @@ function text(str, x, y, size, { bold = false, tracking = 0 } = {}) {
     if (p.commands.length) parts.push(p.toPathData(2));
     pen += g.advanceWidth * scale + tracking * size;
   }
-  return { d: parts.join(" "), w: pen - x - tracking * size };
+  return parts.join(" ");
 }
 const advance = (str, size, tracking = 0) =>
   str.length * (mono.charToGlyph("M").advanceWidth / mono.unitsPerEm) * size +
@@ -171,7 +174,7 @@ function hazard(x, y, w, h, id) {
 // ── the card: one composition at any size, everything load-bearing inside the
 //    centre 66% ────────────────────────────────────────────────────────────────
 function card(W, H, { eyebrow = true, footer = true, cap, tag, label = 18 } = {}) {
-  const mark = wordmark(0, 0, cap);
+  const mark = wordmark(cap);
   const tagW = advance(TAGLINE + " █", tag);
   const blockW = Math.max(mark.w, tagW);
   const x0 = (W - blockW) / 2;
@@ -188,10 +191,10 @@ function card(W, H, { eyebrow = true, footer = true, cap, tag, label = 18 } = {}
   const body = [rect(0, 0, W, H, VOID), ticks(W, H, H * 0.064, H * 0.09, 3)];
   if (eyebrow) {
     const t = text(EYEBROW.toUpperCase(), x0, y + label * 0.78, label, { tracking: 0.2 });
-    body.push(`<path d="${t.d}" fill="${LABEL}"/>`);
+    body.push(`<path d="${t}" fill="${LABEL}"/>`);
     y += label + gap;
   }
-  body.push(`<path d="${wordmark(x0, y, cap).d}" fill="${PHOSPHOR}"/>`);
+  body.push(`<path d="${mark.place(x0, y)}" fill="${PHOSPHOR}"/>`);
   y += mark.h + gap;
   const t = text(TAGLINE, x0, y + tag * 0.78, tag, { bold: true });
   const cursorX = x0 + advance(TAGLINE + " ", tag);
@@ -199,7 +202,7 @@ function card(W, H, { eyebrow = true, footer = true, cap, tag, label = 18 } = {}
   // mono full block's own, 0.94em above the baseline and 0.25em below.
   const baseline = y + tag * 0.78;
   body.push(
-    `<path d="${t.d}" fill="${PHOSPHOR}"/>`,
+    `<path d="${t}" fill="${PHOSPHOR}"/>`,
     rect(cursorX, baseline - tag * 0.938, tag * 0.6, tag * 1.188, ACID),
   );
   y += tag + gap;
@@ -207,7 +210,7 @@ function card(W, H, { eyebrow = true, footer = true, cap, tag, label = 18 } = {}
   y += 6 + gap;
   if (footer) {
     const f = text(FOOTER, x0, y + label * 0.78, label, { tracking: 0.06 });
-    body.push(`<path d="${f.d}" fill="${QUIET}"/>`);
+    body.push(`<path d="${f}" fill="${QUIET}"/>`);
   }
   return body.join("\n");
 }
@@ -254,11 +257,11 @@ files["logo/icon-maskable.svg"] = svg(
 }
 
 {
-  const w = wordmark(0, 0, 100);
+  const w = wordmark(100);
   files["logo/wordmark.svg"] = svg(
     Math.ceil(w.w),
     Math.ceil(w.h),
-    `<path d="${w.d}" fill="${PHOSPHOR}"/>`,
+    `<path d="${w.place(0, 0)}" fill="${PHOSPHOR}"/>`,
     NAME,
   );
 }

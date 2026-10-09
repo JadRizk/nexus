@@ -47,8 +47,8 @@ the finding, not the topic. The README is the reference register.
 Two faces. Monospace carries everything, body included: the token resolves to
 `ui-monospace, "SF Mono", Menlo, Consolas, monospace`. The stencil face is a
 condensed grotesque, resolving to `Impact, Haettenschweiler, "Arial Narrow
-Bold"`, and appears only in the wordmark and display numerals, sheared −9° with
-a chromatic split.
+Bold"`. It appears only in the wordmark, sheared −9° with a chromatic split,
+and in display numerals, which are set upright with neither.
 
 The scale is closed at six steps, `2xs` to `xl`, in rem and multiplied by a
 per-theme factor (×1.15 in `hud-aa`, ×1.0 in `hud`). The system names no font

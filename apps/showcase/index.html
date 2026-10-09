@@ -3,42 +3,37 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- The brand head block. Strings come from brand/references/positioning.md;
-         the hex is primitive.colour.void, copied because platform metadata
-         cannot read a token (brand.test.ts pins the copy). Crawlers do not run
-         JavaScript, so everything a link preview needs is here, in the served
-         HTML, with absolute https URLs. Icon paths are root-relative; Vite
-         prefixes them with the base (/nexus/ on Pages) at build time. -->
-    <title>Nexus Cyberdeck — a HUD design system for React</title>
-    <meta
-      name="description"
-      content="A HUD design system for React: acid on near-black, zero radius, monospace, WCAG AA enforced at build, and a WebGL graph canvas."
-    />
-    <link rel="canonical" href="https://jadrizk.github.io/nexus/" />
-    <meta name="theme-color" content="#08090A" />
+    <!-- The brand head block. Each %NX_…% value is filled at build and in dev
+         by the nx-brand-head plugin in vite.config.ts, from
+         scripts/brand-meta.mjs: the strings decided in
+         brand/references/positioning.md and the ground colour read from
+         tokens.json, because platform metadata cannot read a custom property.
+         Crawlers do not run JavaScript, so everything a link preview needs is
+         here in the served HTML, with absolute https URLs. Icon paths are
+         root-relative; Vite prefixes them with the base (/nexus/ on Pages).
+         The manifest is generated, not a public file, so the plugin writes
+         the base into its link instead. -->
+    <title>%NX_TITLE%</title>
+    <meta name="description" content="%NX_DESCRIPTION%" />
+    <link rel="canonical" href="%NX_SITE_URL%" />
+    <meta name="theme-color" content="%NX_THEME_COLOR%" />
 
     <link rel="icon" href="/favicon.ico" sizes="32x32" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="manifest" href="%NX_BASE%site.webmanifest" />
 
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="Nexus Cyberdeck" />
-    <meta property="og:title" content="Nexus Cyberdeck — the HUD that passes the audit" />
-    <meta
-      property="og:description"
-      content="A HUD design system for React, with WCAG AA enforced at build."
-    />
-    <meta property="og:url" content="https://jadrizk.github.io/nexus/" />
-    <meta property="og:image" content="https://jadrizk.github.io/nexus/og.png" />
+    <meta property="og:site_name" content="%NX_NAME%" />
+    <meta property="og:title" content="%NX_OG_TITLE%" />
+    <meta property="og:description" content="%NX_ONE_LINER%" />
+    <meta property="og:url" content="%NX_SITE_URL%" />
+    <meta property="og:image" content="%NX_SITE_URL%og.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta
-      property="og:image:alt"
-      content="The Nexus Cyberdeck wordmark in pale green stencil on near-black, above the line 'The HUD that passes the audit.' and an acid block cursor, between two corner ticks."
-    />
+    <meta property="og:image:alt" content="%NX_OG_IMAGE_ALT%" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:image" content="https://jadrizk.github.io/nexus/og.png" />
+    <meta name="twitter:image" content="%NX_SITE_URL%og.png" />
   </head>
   <body>
     <div id="root"></div>

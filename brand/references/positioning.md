@@ -8,8 +8,8 @@ A design system and component library for React, for dark operator
 interfaces: consoles, dashboards, graph and data tools.
 
 It sits on the npm search for "react design system", the GitHub topics
-`design-system`, `react`, `hud`, `sci-fi-ui` and `cyberpunk`, and beside the
-sci-fi UI kits people find through them.
+`design-system`, `react`, `hud`, `sci-fi-ui` and `wcag`, and beside the sci-fi
+UI kits people find through them.
 
 ## What a user would pick instead
 
@@ -77,6 +77,10 @@ Refused on the record:
 | **NEXUS CYBERDECK** / **NEXUS** (wordmark form, uppercase) | The stencil wordmark. `NEXUS` alone only in tight chrome next to the mark, such as the showcase header |
 | **nexus-cyberdeck** (identifier)                           | npm scope `@nexus-cyberdeck/*`, handles, any future domain                                             |
 | One-liner                                                  | Repo description, `og:description`, manifest `description`                                             |
-| Meta description                                           | `<meta name="description">`, `twitter:description`                                                     |
+| Meta description                                           | `<meta name="description">`. X has no tag of its own here and falls back to `og:description`           |
 | Tagline                                                    | Social card, README header, `og:title` after the name, the showcase Home hero                          |
 | Onliness statement                                         | This file and `BRAND.md` only. It is a test, not copy.                                                 |
+
+In code, every string above except the onliness statement lives once, in
+`scripts/brand-meta.mjs`. The showcase head, the manifest, the Home page title
+and the drawn SVGs all read it from there.

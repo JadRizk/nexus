@@ -70,40 +70,53 @@ Phosphor on void is 17.10:1; void on white is 19.93:1. Every other ratio is in
 Two steps. Both outputs are committed, in the same commit as the edit that
 caused them.
 
-**1 · The SVG sources.** Run after changing the mark, the tagline, the eyebrow,
-the footer or a colour token. Colours are read from `tokens.json`; text is
-outlined from Impact and DejaVu Sans Mono, so the SVGs need no fonts to
-render.
+**1 · The SVG sources.** Run after changing the mark, a string in
+`scripts/brand-meta.mjs`, the card's eyebrow or footer, or a colour token.
+Strings and colours come from `scripts/brand-meta.mjs`, which reads the
+colours from `tokens.json`. Text is outlined from Impact and DejaVu Sans Mono,
+so the SVGs need no fonts to render. The drawing dependencies are installed
+outside the repository, so the workspace's `node_modules` and lockfile are
+untouched:
 
 ```bash
-npm install --no-save opentype.js@1.3.4 dejavu-fonts-ttf@2.37.3
-node scripts/brand-draw.mjs
+D=$(mktemp -d) && npm install --prefix "$D" --no-save opentype.js@1.3.4 dejavu-fonts-ttf@2.37.3
+NODE_PATH="$D/node_modules" node scripts/brand-draw.mjs
 ```
 
 Impact is read from macOS's system path; set `NX_IMPACT_TTF` elsewhere. The
-refused candidates are not redrawn.
+refused candidates are not redrawn. On 2026-10-09 these two commands, run from
+a fresh temporary directory, redrew every shipped SVG byte-identical.
 
 **2 · The rasters.** Run after any SVG edit. Renders every PNG with `resvg`
-0.48, packs `favicon.ico` from 16, 32 and 48 px renders of the small mark, and
-copies the served set into `apps/showcase/public/`.
+0.48, packs `favicon.ico` from 16, 32 and 48 px renders of the small mark,
+copies the served set into `apps/showcase/public/`, and redraws the 16 px
+evidence sheet.
 
 ```bash
 node scripts/brand-assets.mjs
 ```
 
-| Raster                                                | From                     |
-| ----------------------------------------------------- | ------------------------ |
-| `logo/apple-touch-icon.png` 180, opaque               | `logo/mark.svg`          |
-| `logo/icon-192.png`, `logo/icon-512.png`              | `logo/mark.svg`          |
-| `logo/icon-maskable-512.png`                          | `logo/icon-maskable.svg` |
-| `logo/favicon.ico` 16/32/48                           | `logo/favicon.svg`       |
-| `social/social-card.png` 1200×630, served as `og.png` | `social/social-card.svg` |
-| `social/github-card.png` 1280×640                     | `social/github-card.svg` |
-| `readme-header.png` 1280×320                          | `readme-header.svg`      |
+| Raster                                                | From                                                          |
+| ----------------------------------------------------- | ------------------------------------------------------------- |
+| `logo/apple-touch-icon.png` 180, opaque               | `logo/mark.svg`                                               |
+| `logo/icon-192.png`, `logo/icon-512.png`              | `logo/mark.svg`                                               |
+| `logo/icon-maskable-512.png`                          | `logo/icon-maskable.svg`                                      |
+| `logo/favicon.ico` 16/32/48                           | `logo/favicon.svg`                                            |
+| `social/social-card.png` 1200×630, served as `og.png` | `social/social-card.svg`                                      |
+| `social/github-card.png` 1280×640                     | `social/github-card.svg`                                      |
+| `readme-header.png` 1280×320                          | `readme-header.svg`                                           |
+| `../references/mark-16px-read.png`                    | `logo/favicon.svg`, `logo/mark.svg`, `logo/icon-maskable.svg` |
 
-`apps/showcase/src/brand.test.ts` fails when a served copy differs from its
-source here, when a shipped SVG uses a colour that is not a token, or when the
-manifest and `theme-color` stop matching `primitive.colour.void`.
+**The head and the manifest are not files to edit.** `apps/showcase/index.html`
+holds `%NX_…%` placeholders that the `nx-brand-head` plugin in the showcase's
+`vite.config.ts` fills from `scripts/brand-meta.mjs`, in development and at
+build. The same plugin serves `site.webmanifest` in development and emits it
+into the build, so no copy of the ground colour is ever typed by hand.
+
+`apps/showcase/src/brand.test.ts` fails when a placeholder is left unfilled,
+when `theme-color` or the manifest stop matching `primitive.colour.void`, when
+a shipped SVG uses a colour outside the ones `BRAND.md` allows it, including
+any `rgba()`, or when a served file differs from its source here.
 
 ## Checking the kit
 
@@ -130,9 +143,6 @@ Last run: 2026-10-09. 31 pass · 0 advisory · 0 fail.
   the question.
 - **The Home hero.** The tagline belongs on the showcase Home page, which is
   being redesigned separately. It is not wired there.
-- **The Home title.** The app sets `document.title` to "Nexus Cyberdeck —
-  Showcase" on Home after mount. Crawlers read the static title; people see
-  the other one.
 - **Acid at 16 px.** The mark is phosphor, so the accent is absent from the
   tab strip. Whether that loses recognition among other dark favicons has not
   been tried on a real tab strip.
