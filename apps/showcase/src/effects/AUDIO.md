@@ -3,7 +3,7 @@
 ## The short version
 
 For **glitch, static, CRT and tape sounds specifically, synthesise rather than
-source.** `glitchAudio.js` ships a Web Audio engine that does this. Three
+source.** `glitch/audio/` ships a Web Audio engine that does this. Three
 reasons it wins for this particular category:
 
 1. **Sample playback cannot follow your envelopes.** The events already carry
@@ -80,7 +80,7 @@ For anything shipped in a product, this library is out.
 
 ## Voice design
 
-Each voice is written from the same physical story as its shader:
+Each voice in `glitch/audio/voices.ts` is written from the same physical story as its shader:
 
 | event          | what is actually making the sound                            |
 | -------------- | ------------------------------------------------------------ |
@@ -93,5 +93,5 @@ Each voice is written from the same physical story as its shader:
 | `interference` | mains hum beating against its own second harmonic            |
 | `boot`         | relay click → HV whine spinning up to scan rate → degauss    |
 
-Change `MAINS` from 60 to 50 outside the Americas. It is a one-line constant
+Change `MAINS` in `glitch/audio/tuning.ts` from 60 to 50 outside the Americas. It is a one-line constant
 and it is the difference between a sound that feels local and one that does not.
