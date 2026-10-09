@@ -259,3 +259,103 @@ test.describe('Panel corners="none" suppression', () => {
     expect(content).toBe('""');
   });
 });
+
+test.describe("Drawer stacking", () => {
+  // Not a screenshot: the bug is which element is on top at a pixel, and the
+  // answer is the same in every theme. Drawer is `position: fixed`; Panel is
+  // `position: relative`. With the drawer on z-index 0 any positioned content
+  // later in the document painted over it (and over its scrim), so a Drawer
+  // rendered next to its trigger opened underneath the cards that followed.
+  // The showcase no longer mounts a Drawer anywhere that would show it, so the
+  // overlap is built here: a positioned panel appended after the drawer's
+  // elements and sized to cover the whole viewport.
+
+  const COVER = `
+    position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+    margin: 0; pointer-events: auto;`;
+
+  async function coverViewport(page: Page) {
+    await page.evaluate((css) => {
+      const drawer = document.querySelector(".nx-drawer");
+      if (!drawer?.parentElement) throw new Error("no .nx-drawer to mount the cover after");
+      const cover = document.createElement("div");
+      cover.className = "nx-panel";
+      cover.id = "stacking-cover";
+      cover.setAttribute("style", css);
+      // Last child of the drawer's parent: later in the DOM than both the
+      // scrim and the dialog, which is exactly the order that used to win.
+      drawer.parentElement.appendChild(cover);
+    }, COVER);
+  }
+
+  /** What is painted at (x, y): the nearest component part, or the cover. */
+  function topmostAt(page: Page, x: number, y: number) {
+    return page.evaluate(
+      ([px, py]) => {
+        const el = document.elementFromPoint(px!, py!);
+        if (!el) return "none";
+        if (el.closest("#stacking-cover")) return "cover";
+        if (el.closest(".nx-drawer")) return "drawer";
+        if (el.classList.contains("nx-drawer__scrim")) return "scrim";
+        return el.tagName.toLowerCase();
+      },
+      [x, y],
+    );
+  }
+
+  test("an open drawer and its scrim are above positioned content that follows them", async ({
+    page,
+  }) => {
+    await gotoPage(page, "components/drawer");
+
+    // Opened before the cover goes in: the cover is page content too, and
+    // would sit over the trigger.
+    await page.getByRole("button", { name: "Open drawer" }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    await coverViewport(page);
+
+    // The drawer slides in over 220ms; poll rather than sleep so the check
+    // runs against the settled position.
+    await expect
+      .poll(async () => {
+        const box = await dialog.boundingBox();
+        if (!box) return "no box";
+        return topmostAt(page, box.x + box.width / 2, box.y + box.height / 2);
+      }, "drawer should be topmost at its own centre")
+      .toBe("drawer");
+
+    // Left of the drawer there is only the scrim between the page and the
+    // viewer. If the cover were above it, the page would be clickable through
+    // the "modal".
+    const box = (await dialog.boundingBox())!;
+    expect(await topmostAt(page, box.x / 2, box.y + box.height / 2)).toBe("scrim");
+  });
+
+  test("a closed drawer does not intercept the page", async ({ page }) => {
+    // The counterpart: the drawer has a real layer now, so closing it must
+    // leave nothing on that layer that can catch a pointer.
+    await gotoPage(page, "components/drawer");
+    await coverViewport(page);
+    const vp = page.viewportSize()!;
+    expect(await topmostAt(page, vp.width - 20, vp.height / 2)).toBe("cover");
+    expect(await topmostAt(page, 20, vp.height / 2)).toBe("cover");
+  });
+
+  test("Escape still closes the drawer and the cover is reachable again", async ({ page }) => {
+    await gotoPage(page, "components/drawer");
+    const opener = page.getByRole("button", { name: "Open drawer" });
+
+    await opener.click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await coverViewport(page);
+    // Focus moved into the dialog and is held there.
+    expect(await page.evaluate(() => !!document.activeElement?.closest(".nx-drawer"))).toBe(true);
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toBeHidden();
+    await expect(opener).toBeFocused();
+
+    const vp = page.viewportSize()!;
+    await expect.poll(() => topmostAt(page, vp.width - 20, vp.height / 2)).toBe("cover");
+  });
+});

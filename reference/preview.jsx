@@ -894,7 +894,7 @@ const NX_CSS = `/* =============================================================
   --nx-tick:      9px;
 
   /* stacking order */
-  --nx-z-drawer:   0;
+  --nx-z-drawer:   20;
   --nx-z-tooltip:  30;
   --nx-z-overlay:  40;
 
@@ -1509,12 +1509,15 @@ body {
 /* Full-viewport scrim behind the open drawer. Blocking pointer interaction
    with the page underneath is half of what makes the dialog modal; the trap's
    document-level focus guard is the other half. It fades rather than mounting,
-   for the same reason the drawer slides. No z-index on either: they are
-   fixed-position siblings painted in DOM order, scrim first, so the drawer is
-   always above its own scrim without either having to out-number the rest of
-   the page. */
+   for the same reason the drawer slides. Scrim and drawer share one layer,
+   --nx-z-drawer, and are fixed-position siblings painted in DOM order, scrim
+   first, so the drawer is always above its own scrim. The layer is what keeps
+   both above the page: a Drawer sits next to whatever opens it, ahead of
+   positioned content (every Panel is \`position: relative\`) that would
+   otherwise paint over it, scrim included. */
 .nx-drawer__scrim {
   position: fixed;
+  z-index: var(--nx-z-drawer);
   inset: 0;
   background: var(--nx-drawer-scrim, var(--nx-scrim));
   transition: opacity var(--nx-dur-fade) linear;

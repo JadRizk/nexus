@@ -163,6 +163,17 @@ describe("Drawer", () => {
     expect(rule).toMatch(/z-index\s*:\s*var\(--nx-z-drawer\)\s*;/);
   });
 
+  it("puts the scrim on the same stacking layer as the drawer", () => {
+    // The scrim has to out-rank positioned page content too, or a Panel
+    // painted after the Drawer covers the scrim and the page stays clickable
+    // through it. Equal z-index keeps the scrim under its own drawer by DOM
+    // order (scrim first).
+    const css = readFileSync(join(here, "Drawer.css"), "utf8");
+    const rule = css.match(/\.nx-drawer__scrim\s*\{([^}]*)\}/)?.[1];
+    expect(rule, ".nx-drawer__scrim rule not found in Drawer.css").toBeTruthy();
+    expect(rule).toMatch(/z-index\s*:\s*var\(--nx-z-drawer\)\s*;/);
+  });
+
   it("renders the icon, subtitle and footer when given, and omits their wrappers when not", () => {
     const { rerender, container } = render(
       <Drawer open onClose={() => {}} title="Inspector">
