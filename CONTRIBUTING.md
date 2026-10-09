@@ -144,8 +144,13 @@ expire. The workflow needs Node 22.14+ and npm 11.5.1+, which is why
 Trusted publishing can only be configured for a package that already exists,
 so a package's **first** publish is done by hand, from a maintainer's machine,
 `@nexus-cyberdeck/tokens` before `@nexus-cyberdeck/react` (which depends on
-it). After that, for each of the three packages, on npmjs.com under
-_Settings → Trusted Publisher_:
+it). Until then each package stays `"private": true`, which is the deliberate
+hold on that first publish: with the flag set, `changeset publish` versions and
+tags but pushes nothing, and a by-hand `npm publish` is refused. Remove it in
+the same pull request as the package's manual first publish — `tokens` before
+`react` — so the flag comes off exactly when the package exists on the
+registry and the workflow can take over. After that, for each of the three
+packages, on npmjs.com under _Settings → Trusted Publisher_:
 
 | Field        | Value           |
 | ------------ | --------------- |

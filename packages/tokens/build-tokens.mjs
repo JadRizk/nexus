@@ -12,12 +12,15 @@
    figures are computed from the resolved colours, and the AA floors are
    asserted at build time. Change a hex past a floor and the build stops.
 
-   Why not Style Dictionary itself: the token file is plain DTCG, so SD v4+ can
-   read it unchanged if you ever want it. What SD would still need is a custom
-   format for the per-theme ramp blocks, a second for the TypeScript output, a
-   custom action for the contrast maths, and a concat step for base.css — at
-   which point the config is larger than this file, and the token package keeps
-   a build-time dependency it does not otherwise need.
+   Why not Style Dictionary itself: the token file is DTCG in shape
+   ($value/$type/$description) but its values are CSS strings (hex colours,
+   rem/ms dimensions, cubic-bezier()) rather than the structured DTCG value
+   shapes, so a strict importer may need a transform first — the README's
+   "Design tools" section says what to expect. Past that, SD would still need a
+   custom format for the per-theme ramp blocks, a second for the TypeScript
+   output, a custom action for the contrast maths, and a concat step for
+   base.css — at which point the config is larger than this file, and the token
+   package keeps a build-time dependency it does not otherwise need.
    ========================================================================== */
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";

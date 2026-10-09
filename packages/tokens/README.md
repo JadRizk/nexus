@@ -16,7 +16,7 @@ Two themes ship, both dark:
 | Muted ramp             | lifted, WCAG AA-compliant | the prototype's original |
 | Type scale             | ×1.15                     | ×1.0                     |
 | Disabled text contrast | 4.82:1                    | 2.14:1                   |
-| UI boundary contrast   | 3.19:1                    | 1.21:1                   |
+| UI boundary contrast   | 3.19:1                    | 1.57:1                   |
 
 The signature colours are identical in both. Only the muted grey ramp and the
 type scale differ, which is why switching themes never touches component code.
@@ -33,8 +33,9 @@ and 3.00:1 there.
 npm install @nexus-cyberdeck/tokens
 ```
 
-> Not published yet. Until the first release, install from `npm pack` output —
-> see the [getting-started guide](https://github.com/JadRizk/nexus/blob/main/docs/getting-started.md).
+> Not published yet: the package is held `"private": true` until its first
+> publish, so install from `npm pack` output in the meantime — see the
+> [getting-started guide](https://github.com/JadRizk/nexus/blob/main/docs/getting-started.md).
 
 ## Use
 
@@ -56,7 +57,11 @@ import "@nexus-cyberdeck/tokens/crt.css"; // optional scanline layer
 family and base type size, and hosts the global focus ring.
 
 `tokens.css` also styles `html` and `body` directly, because the system expects
-to own the viewport rather than share the page with other content.
+to own the viewport rather than share the page with other content. For the same
+reason it sets `color-scheme: dark` on `:root`, which switches native controls
+and scrollbars to the browser's dark palette for the whole document — including
+when `data-nx-theme` is scoped to one subtree, since `:root` is not scoped by
+it. Both shipped themes are dark, so there is no light appearance to offer.
 
 ### Typed handles
 
