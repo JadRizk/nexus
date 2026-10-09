@@ -33,6 +33,7 @@ npm run build          # packages + reference/preview.jsx
 npm run build -w apps/showcase   # root `build` does not cover the showcase
 node scripts/check-docs.mjs
 node scripts/check-peer-floor.mjs  # graph vs the oldest three it supports
+node scripts/check-changeset.mjs   # needs origin/main: `git fetch origin main`
 ```
 
 CI runs exactly these, then fails if any generated file has drifted:
@@ -52,7 +53,10 @@ npm run build:preview  # reference/preview.jsx from the packages
 Any change a consumer could notice needs a changeset. CI checks every pull
 request that touches `packages/*/src` for one the pull request itself adds. A
 changeset already pending on `main` from earlier work does not count, however
-many are waiting in the folder: the entry has to be new in your branch.
+many are waiting in the folder: the entry has to be new in your branch. Nor
+does amending one that is already pending, since the check counts only files
+your branch adds: a follow-up pull request adds its own entry (or
+`npx changeset --empty` if it cannot affect a consumer).
 
 ```bash
 npx changeset          # pick packages, pick the bump, describe the change

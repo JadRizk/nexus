@@ -27,6 +27,12 @@ const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const baseBranch = process.env.GITHUB_BASE_REF || "main";
 const base = `origin/${baseBranch}`;
 
+// How git words "that revision is not here" across the versions CI and
+// contributors run. It decides only which explanation to print; a failure
+// that does not match still fails the check.
+const MISSING_REVISION =
+  /bad revision|unknown revision|ambiguous argument|not a valid object name/i;
+
 // `${base}...HEAD` is the merge-base form: it lists what this branch changed
 // relative to where it forked, so commits that landed on the base branch since
 // are never attributed to the pull request.
@@ -44,15 +50,24 @@ function changedFiles(options = [], paths = []) {
       .split("\n")
       .filter(Boolean);
   } catch (error) {
-    const detail = String(error.stderr ?? error.message).trim();
+    // Every failure fails the gate. Only the ones git words as a missing
+    // revision get the fetch-depth explanation; anything else (git absent, not
+    // a repository, a corrupt object) is reported as-is rather than blamed on
+    // the checkout depth.
+    const detail = String(error.stderr || error.message).trim();
+    const missingRef = MISSING_REVISION.test(detail);
     console.error(
-      `Could not diff against ${base}: the ref is not in this checkout.\n\n` +
+      `Could not diff against ${base}.\n\n` +
         `  ${detail.split("\n").join("\n  ")}\n\n` +
-        "The changeset check compares the pull request with its base branch, so the\n" +
-        "base ref has to exist locally. In CI, .github/workflows/ci.yml must check out\n" +
-        "with enough history to contain it: `fetch-depth: 0` on actions/checkout, or an\n" +
-        `explicit \`git fetch origin ${baseBranch}\` before this step. Locally, run\n` +
-        `\`git fetch origin ${baseBranch}\`. Refusing to pass a gate that could not look.\n`,
+        (missingRef
+          ? `${base} is not in this checkout. The changeset check compares the pull\n` +
+            "request with its base branch, so the base ref has to exist locally. In CI,\n" +
+            ".github/workflows/ci.yml must check out with enough history to contain it:\n" +
+            "`fetch-depth: 0` on actions/checkout, or an explicit\n" +
+            `\`git fetch origin ${baseBranch}\` before this step. Locally, run\n` +
+            `\`git fetch origin ${baseBranch}\`.\n\n`
+          : "") +
+        "Refusing to pass a gate that could not look.\n",
     );
     process.exit(1);
   }
@@ -66,12 +81,14 @@ if (!touchesPackages) {
 }
 
 // Only files the pull request ADDS count (`--diff-filter=A`), and only entries:
-// the folder also holds README.md and config.json, which are not changesets
-// however they got there. Everything else in the folder stays visible to the
-// release workflow as usual; it just does not satisfy this check.
+// a top-level `.changeset/<name>.md`, which is all the changesets CLI reads —
+// a Markdown file in a subfolder is never released, so it cannot satisfy the
+// check either. The folder also holds README.md and config.json, which are
+// not changesets however they got there. Everything else in the folder stays
+// visible to the release workflow as usual; it just does not satisfy this check.
 const notAnEntry = new Set([".changeset/README.md", ".changeset/config.json"]);
 const added = changedFiles(["--diff-filter=A"], [".changeset"]).filter(
-  (f) => f.endsWith(".md") && !notAnEntry.has(f),
+  (f) => /^\.changeset\/[^/]+\.md$/.test(f) && !notAnEntry.has(f),
 );
 
 if (added.length === 0) {
