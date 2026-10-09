@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { createRef, useState } from "react";
 import { CommandPalette } from "./CommandPalette.js";
 
@@ -297,5 +297,57 @@ describe("CommandPalette when items change while open", () => {
     const [onlyOption] = screen.getAllByRole("option");
     expect(onlyOption).toHaveAttribute("aria-selected", "true");
     expect(input).toHaveAttribute("aria-activedescendant", onlyOption?.id);
+  });
+});
+
+describe("CommandPalette focus, scrolling and key handling", () => {
+  it("focuses the search input on the animation frame after opening", () => {
+    const frames: FrameRequestCallback[] = [];
+    const raf = vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => {
+      frames.push(cb);
+      return frames.length;
+    });
+    try {
+      render(<CommandPalette open onClose={() => {}} items={ITEMS} onSelect={() => {}} />);
+      const input = screen.getByRole("combobox");
+      // The focus trap also lands on the input synchronously (its first
+      // focusable), so move focus elsewhere inside the dialog to observe the
+      // palette's own deferred focus on its own.
+      act(() => screen.getByRole("dialog").focus());
+      expect(input).not.toHaveFocus();
+      act(() => {
+        for (const cb of frames.splice(0)) cb(0);
+      });
+      expect(input).toHaveFocus();
+    } finally {
+      raf.mockRestore();
+    }
+  });
+
+  it("scrolls the active option into view, nearest edge, as the cursor moves", () => {
+    const scrollIntoView = vi.fn();
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = scrollIntoView;
+    try {
+      render(<CommandPalette open onClose={() => {}} items={ITEMS} onSelect={() => {}} />);
+      const input = screen.getByRole("combobox");
+      scrollIntoView.mockClear();
+      fireEvent.keyDown(input, { key: "ArrowDown" });
+      const activeId = input.getAttribute("aria-activedescendant") ?? "";
+      expect(activeId).not.toBe("");
+      expect(scrollIntoView).toHaveBeenCalledTimes(1);
+      expect(scrollIntoView).toHaveBeenCalledWith({ block: "nearest" });
+      expect(scrollIntoView.mock.contexts[0]).toBe(document.getElementById(activeId));
+    } finally {
+      Element.prototype.scrollIntoView = original;
+    }
+  });
+
+  it("prevents the default caret movement on ArrowDown and ArrowUp", () => {
+    render(<CommandPalette open onClose={() => {}} items={ITEMS} onSelect={() => {}} />);
+    const input = screen.getByRole("combobox");
+    // fireEvent returns false when the handler called preventDefault.
+    expect(fireEvent.keyDown(input, { key: "ArrowDown" })).toBe(false);
+    expect(fireEvent.keyDown(input, { key: "ArrowUp" })).toBe(false);
   });
 });
