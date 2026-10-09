@@ -3,20 +3,14 @@ import type { Page } from "@playwright/test";
 import { gotoPage } from "./harness.js";
 
 /* ============================================================================
-   Glitch Lab (effects/GlitchLab.jsx).
-
-   Its picture is a shader pipeline on the frame clock, so the route is never
-   screenshotted. These cover what it does instead: the engine mounts without
-   a shader fault, a preset sets the resting stack, and an event fired from
-   its trigger or its hotkey opens in the inspector. Written before the lab's
-   TypeScript move (#90), so that move can show it changed none of this.
+   Glitch Lab. Its picture is a shader pipeline on the frame clock, so the
+   route is never screenshotted; these cover its behaviour instead.
 
    Only uncaught page errors fail the run. console.error is not checked:
-   firing an event that is already live logs a duplicate-key warning, which is
-   known and out of scope here.
+   firing an event that is already live logs a known duplicate-key warning.
 
-   The engine runs on a software WebGL renderer in the container, so the test
-   is marked slow: a full parallel run starves it.
+   test.slow: the container's software WebGL renderer is starved under a full
+   parallel run.
    ========================================================================== */
 
 const panel = (page: Page, heading: string) =>
