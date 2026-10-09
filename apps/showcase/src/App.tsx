@@ -162,8 +162,10 @@ function Shell() {
   );
 }
 
-/* A banner landmark: screen-reader users can jump to it, and tests scope the
-   theme and CRT controls to it. */
+/**
+ * A banner landmark: screen-reader users can jump to it, and tests scope the
+ * theme and CRT controls to it.
+ */
 function SiteHeader({ path }: { path: string }) {
   return (
     <Panel
@@ -204,10 +206,12 @@ function SiteHeader({ path }: { path: string }) {
   );
 }
 
-/* Links, not buttons: each one goes somewhere, so it can be opened in a new
-   tab or copied. They wear the button class so the header looks as it did;
-   line-height and decoration are the two things a <button> gets from the UA
-   sheet that an <a> does not. */
+/**
+ * Links, not buttons: each one goes somewhere, so it can be opened in a new
+ * tab or copied. They wear the button class so the header looks as it did;
+ * line-height and decoration are the two things a <button> gets from the UA
+ * sheet that an <a> does not.
+ */
 function NavLinks({ path }: { path: string }) {
   return (
     <nav aria-label="Sections" style={{ display: "flex", gap: "var(--nx-space-2)", flex: 1 }}>

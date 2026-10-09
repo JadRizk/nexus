@@ -61,9 +61,11 @@ function LayersSpec() {
   return (
     <Spec
       name="Layers"
-      note="Lint enforces the boundary between the first two: a component stylesheet that
-            references a primitive fails lint. The third layer has no lint of its own;
-            it is a set of names each component promises to read."
+      note={
+        "Lint enforces the boundary between the first two: a component stylesheet that\n" +
+        "              references a primitive fails lint. The third layer has no lint of its own;\n" +
+        "              it is a set of names each component promises to read."
+      }
     >
       <Row align="stretch" gap="var(--nx-space-5)">
         <Layer name="primitive" count={primitives.length}>
@@ -188,8 +190,10 @@ function UsingTokensSpec() {
   return (
     <Spec
       name="Using tokens"
-      note="Each foundations page lists its tokens with the CSS name, the typed accessor where
-            the package exports one, the value in both themes, and which components read it."
+      note={
+        "Each foundations page lists its tokens with the CSS name, the typed accessor where\n" +
+        "              the package exports one, the value in both themes, and which components read it."
+      }
       code={`/* CSS — any framework, or none */
 .panel-title { color: var(--nx-fg-accent); padding: var(--nx-space-4); }
 
