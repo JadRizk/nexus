@@ -17,12 +17,9 @@ import {
 
 /* ============================================================================
    Characterisation of the Glitch Lab engine.
-
-   These tests freeze what the engine does today, right or wrong, so the move
-   to TypeScript can prove it changed nothing. They assert behaviour, not
-   intent: a snapshot that looks like a bug is still the behaviour to keep
-   until a later change fixes it on purpose. Only the import path above should
-   change as the engine moves.
+   Freezes what the engine does today, right or wrong: a snapshot that looks
+   like a bug is still the behaviour to keep. Only the import path above
+   should change as the engine moves.
    ========================================================================== */
 
 type Ref<T> = { current: T };
@@ -205,15 +202,19 @@ describe("fireEvent", () => {
   it("a known id appends the event at the current time and returns its definition", () => {
     stubClock(1500);
     stubRandom(0.25);
-    const activeRef: Ref<unknown[]> = { current: [] };
+    const existing = { def: null, t0: 0, seed: 0 };
+    const activeRef: Ref<Array<{ def: unknown; t0: number; seed: number }>> = {
+      current: [existing],
+    };
     const id = EVENTS[0].id;
 
     const def = fireEvent(activeRef, id);
 
     expect(def).toBe(EV_BY_ID[id]);
-    expect(activeRef.current).toHaveLength(1);
-    expect(activeRef.current[0]).toEqual({ def: EV_BY_ID[id], t0: 1.5, seed: 250 });
-    expect((activeRef.current[0] as { def: unknown }).def).toBe(EV_BY_ID[id]);
+    expect(activeRef.current).toHaveLength(2);
+    expect(activeRef.current[0]).toBe(existing);
+    expect(activeRef.current[1]).toEqual({ def: EV_BY_ID[id], t0: 1.5, seed: 250 });
+    expect(activeRef.current[1]?.def).toBe(EV_BY_ID[id]);
   });
 
   it("an unknown id returns undefined and leaves the bus unchanged", () => {
