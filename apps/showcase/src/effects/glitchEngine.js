@@ -5,53 +5,27 @@ import { EV_BY_ID, EVENTS } from "./glitch/data/events/index.js";
 import { PRESETS } from "./glitch/data/presets.js";
 import { COMMON } from "./glitch/shaders/common.js";
 import { SRC_FS } from "./glitch/shaders/source.js";
+import { resolveEvents } from "./glitch/core/resolveEvents.js";
 
 export { CHAINS, COMMON, EFFECTS, EV_BY_ID, EVENTS, PRESETS, SRC_FS };
+export { chaosEnv } from "./glitch/core/chaosEnv.js";
+export { configFor } from "./glitch/core/config.js";
+export { fireEvent, shuffleSeed } from "./glitch/core/events.js";
+export { hashf } from "./glitch/core/hash.js";
+export { sampleKeys } from "./glitch/core/sampleKeys.js";
 
 /* ============================================================================
    GLITCH ENGINE
    Glitch Lab's signal path, apart from its UI: the event bus (keyframed
    faults) and the WebGL render loop as a hook. The shaders, effects, events,
-   chains and presets it runs live in ./glitch/. Glitch Lab drives every knob
+   chains and presets it runs live in ./glitch/data and ./glitch/shaders, and
+   the pure steps of the loop in ./glitch/core. Glitch Lab drives every knob
    of it; Home's hero drives a few. One copy, so the two can never drift apart.
 
    The pipeline is ordered as a real signal path — see GlitchLab.jsx:
 
      SOURCE → TAPE → COMPOSITE SIGNAL → DIGITAL → DISPLAY → GLASS
    ========================================================================== */
-
-/** Sample a keyframe track. A "step" key holds the previous value, then jumps. */
-export function sampleKeys(keys, u) {
-  if (u <= keys[0][0]) return keys[0][1];
-  for (let i = 1; i < keys.length; i++) {
-    const k1 = keys[i],
-      k0 = keys[i - 1];
-    if (u <= k1[0]) {
-      if (k1[2] === "step") return k0[1];
-      const t = (u - k0[0]) / Math.max(1e-6, k1[0] - k0[0]);
-      return k0[1] + (k1[1] - k0[1]) * t;
-    }
-  }
-  return keys[keys.length - 1][1];
-}
-
-export const hashf = (n) => {
-  const s = Math.sin(n) * 43758.5453123;
-  return s - Math.floor(s);
-};
-
-/**
- * The chaos term. Quantised to ~24Hz so it stutters like frames dropping
- * rather than shimmering like noise, and it only ever *reduces* the envelope —
- * a fault that randomly gets stronger than its own peak feels wrong.
- */
-export function chaosEnv(u, chaos, seed) {
-  if (chaos <= 0) return 1;
-  const f = Math.floor(u * 24);
-  const n = hashf(f * 7.13 + seed * 31.7);
-  const dip = n > 0.72 ? 1 - chaos * (0.35 + 0.65 * hashf(f * 3.1 + seed)) : 1;
-  return dip;
-}
 
 /* ================================================================== WebGL */
 function compile(gl, type, src) {
@@ -95,40 +69,6 @@ function makeRT(gl, w, h) {
   gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   return { tex, fb };
-}
-
-/**
- * A full effect config: every effect at its parameter defaults (only the CRT
- * on), with the named preset applied over it. A fresh object each call.
- *
- * @param {string} preset A key of PRESETS.
- * @returns {Record<string, Record<string, number>>} Effect id → its knobs.
- */
-export function configFor(preset) {
-  const cfg = {};
-  for (const e of EFFECTS) {
-    cfg[e.id] = { on: e.id === "crt" ? 1 : 0, amt: 1 };
-    for (const [k, , , d] of e.params) cfg[e.id][k] = d;
-  }
-  for (const [k, v] of Object.entries(PRESETS[preset])) Object.assign(cfg[k], v);
-  return cfg;
-}
-
-/**
- * Starts the event `id` on an engine's event bus (its `activeRef`), now.
- *
- * @returns The event's definition, or undefined for an unknown id.
- */
-export function fireEvent(activeRef, id) {
-  const def = EV_BY_ID[id];
-  if (def)
-    activeRef.current.push({ def, t0: performance.now() / 1000, seed: Math.random() * 1000 });
-  return def;
-}
-
-/** Gives the graph source a new layout: a fresh seed in `seedRef`, never 0. */
-export function shuffleSeed(seedRef) {
-  seedRef.current = 1 + Math.floor(Math.random() * 997);
 }
 
 // The clock a still frame is drawn at, so it is the same frame every time.
@@ -292,29 +232,7 @@ export function useGlitchEngine(
         }
       }
 
-      // Resolve every active event into a per-effect override layer. Multiple
-      // events stack: `max` takes the strongest, `add` accumulates.
-      const ov = {};
-      const running = [];
-      for (let i = activeRef.current.length - 1; i >= 0; i--) {
-        const ev = activeRef.current[i];
-        const u = (time - ev.t0) / ev.def.dur;
-        if (u >= 1) {
-          activeRef.current.splice(i, 1);
-          continue;
-        }
-        if (u < 0) continue;
-        const env = chaosEnv(u, ev.def.chaos, ev.seed);
-        running.push({ id: ev.def.id, label: ev.def.label, u });
-        for (const tr of ev.def.tracks) {
-          const raw = sampleKeys(tr.keys, u);
-          const v = tr.param === "amt" ? raw * env : raw;
-          const slot = (ov[tr.fx] ||= {});
-          if (tr.mode === "max") slot[tr.param] = Math.max(slot[tr.param] ?? 0, v);
-          else if (tr.mode === "add") slot[tr.param] = (slot[tr.param] ?? 0) + v;
-          else slot[tr.param] = v;
-        }
-      }
+      const { overrides, running } = resolveEvents(activeRef.current, time);
       liveT += dt;
       if (liveT > 0.05) {
         liveT = 0;
@@ -338,7 +256,7 @@ export function useGlitchEngine(
 
       for (const e of EFFECTS) {
         const b = base[e.id];
-        const o = ov[e.id];
+        const o = overrides[e.id];
         const restAmt = b.on ? b.amt : 0;
         const amt = o?.amt !== undefined ? Math.max(restAmt, o.amt) : restAmt;
         if (amt <= 0.001) continue;

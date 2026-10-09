@@ -14,6 +14,7 @@ import {
   sampleKeys,
   shuffleSeed,
 } from "./glitchEngine.js";
+import type { Key } from "./glitch/data/types.js";
 
 /* ============================================================================
    Characterisation of the Glitch Lab engine.
@@ -92,12 +93,12 @@ describe("sampleKeys", () => {
   });
 
   it("a one-key track", () => {
-    const track = [[0.5, 3]];
+    const track: Key[] = [[0.5, 3]];
     expect([0, 0.5, 1].map((u) => sampleKeys(track, u))).toMatchSnapshot();
   });
 
   it("two keys at the same time", () => {
-    const track = [
+    const track: Key[] = [
       [0, 0],
       [0.5, 1],
       [0.5, 2],
@@ -107,7 +108,7 @@ describe("sampleKeys", () => {
   });
 
   it("a step key in the last position", () => {
-    const track = [
+    const track: Key[] = [
       [0, 0],
       [0.5, 1],
       [1, 2, "step"],
@@ -116,7 +117,7 @@ describe("sampleKeys", () => {
   });
 
   it("u = NaN", () => {
-    const track = [
+    const track: Key[] = [
       [0, 0],
       [0.5, 1],
       [1, 2],
