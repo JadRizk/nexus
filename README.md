@@ -314,8 +314,10 @@ Any change a consumer could notice needs one:
 npx changeset      # pick packages, pick the bump, describe the change
 ```
 
-CI asks for one on any pull request that touches `packages/*/src`. The entry
-you write becomes the changelog verbatim, so write it for someone upgrading.
+A pull request that touches `packages/*/src` must add its own changeset, and
+CI fails it otherwise; a changeset already pending on `main` from earlier work
+does not count. The entry you write becomes the changelog verbatim, so write
+it for someone upgrading.
 
 ### What counts as breaking
 

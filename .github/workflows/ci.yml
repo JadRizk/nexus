@@ -15,6 +15,12 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The changeset check at the end of this job diffs the pull request
+          # against its base branch, so the clone has to contain that branch.
+          # The default depth of 1 holds only the commit under test, and the
+          # check used to skip itself every run because origin/main was absent.
+          fetch-depth: 0
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -136,8 +142,11 @@ jobs:
       # A changeset is how a consumer finds out what changed. Asking for one on
       # the pull request is the only moment anybody remembers the reasoning; a
       # changelog reconstructed from commit messages at release time is written
-      # by whoever is releasing, about work they may not have done.
-      - name: Changeset present for package changes
+      # by whoever is releasing, about work they may not have done. The script
+      # requires the pull request itself to add one: entries already pending on
+      # main do not count, and it fails rather than skips if the base branch is
+      # not in the clone (which is what the fetch-depth above is for).
+      - name: Pull request adds a changeset for its package changes
         if: github.event_name == 'pull_request'
         run: node scripts/check-changeset.mjs
 
