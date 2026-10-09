@@ -417,25 +417,8 @@ function baseLayer() {
     .trimEnd();
 }
 
-function buildCss(table) {
-  const out = [];
-
-  out.push(cssHeader());
-
-  /* ---- primitives (theme-invariant only) ---- */
-  out.push(`/* ============================================================================
-   PRIMITIVES
-   Never referenced from a component — use the semantic layer. Contrast figures
-   are computed against --nx-bg-surface (${SURFACE}) at build time, not typed in.
-   ========================================================================== */`);
-  out.push(":root {");
-  // Both shipped themes are dark. Without this, a native control (scrollbar,
-  // <select>, form field) renders with the light UA palette and clashes with
-  // everything around it, because the browser has no other signal that this
-  // page never offers a light appearance.
-  out.push("  color-scheme: dark;");
-  out.push("");
-
+/** Each primitive group's theme-invariant tokens; themed ones go in the theme blocks. */
+function primitiveSections() {
   const groups = [
     ["primitive.colour", "surfaces + signature palette"],
     ["primitive.font", "typography"],
@@ -450,46 +433,70 @@ function buildCss(table) {
     ["primitive.effect", "elevation + scrim"],
     ["primitive.crt", "CRT layer"],
   ];
+  return groups
+    .map(([prefix, label]) => ({ label, prefix, entries: primitiveEntries(prefix) }))
+    .filter((s) => s.entries.length);
+}
 
-  const sections = [];
-  for (const [prefix, label] of groups) {
-    const entries = [];
-    for (const [path, node] of byPath) {
-      if (!path.startsWith(prefix + ".")) continue;
-      if (isThemed(path)) continue; // emitted per theme below
+/** One group's declarations, each colour annotated with its ratio against the surface. */
+function primitiveEntries(prefix) {
+  return [...byPath]
+    .filter(([path]) => path.startsWith(prefix + ".") && !isThemed(path))
+    .map(([path, node]) => {
       const name = path.split(".").pop();
       const value = resolveValue(path, DEFAULT_THEME);
       const comment =
         isOpaqueHex(value) && !NOT_FOREGROUND.has(name)
           ? `${ratio2(value, SURFACE).toFixed(2)}:1`
           : null;
-      entries.push([cssName(path), toCssValue(node, path), comment]);
-    }
-    if (!entries.length) continue;
-    sections.push({ label, entries, prefix });
-  }
+      return [cssName(path), toCssValue(node, path), comment];
+    });
+}
 
-  for (const [i, s] of sections.entries()) {
-    if (i) out.push("");
-    if (s.label) out.push(`  /* ${s.label} */`);
-    // The restricted colour keeps its warning inline — it is the one token
-    // whose $description is a rule rather than a note.
-    const alarm = byPath.get("primitive.colour.alarm");
-    if (s.prefix === "primitive.colour" && alarm) {
-      const idx = s.entries.findIndex(([n]) => n === "--nx-alarm");
-      const head = declBlock(s.entries.slice(0, idx));
-      out.push(head);
-      out.push("");
-      out.push(
-        `  /* ${alarm.$description.replace(/\s+/g, " ").replace(/(.{68}) /g, "$1\n     ")} */`,
-      );
-      out.push(declBlock(s.entries.slice(idx)));
-    } else {
-      out.push(declBlock(s.entries));
-    }
-  }
-  out.push("}");
-  out.push("");
+/**
+ * The colour group, with the restricted colour's warning inline: it is the one
+ * token whose $description is a rule rather than a note.
+ */
+function colourSection(entries) {
+  const alarm = byPath.get("primitive.colour.alarm");
+  if (!alarm) return declBlock(entries);
+  const idx = entries.findIndex(([n]) => n === "--nx-alarm");
+  return [
+    declBlock(entries.slice(0, idx)),
+    "",
+    `  /* ${alarm.$description.replace(/\s+/g, " ").replace(/(.{68}) /g, "$1\n     ")} */`,
+    declBlock(entries.slice(idx)),
+  ].join("\n");
+}
+
+function primitivesBlock() {
+  const sections = primitiveSections().map((s) => {
+    const body = s.prefix === "primitive.colour" ? colourSection(s.entries) : declBlock(s.entries);
+    return s.label ? `  /* ${s.label} */\n${body}` : body;
+  });
+  return [
+    `/* ============================================================================
+   PRIMITIVES
+   Never referenced from a component — use the semantic layer. Contrast figures
+   are computed against --nx-bg-surface (${SURFACE}) at build time, not typed in.
+   ========================================================================== */`,
+    ":root {",
+    // Both shipped themes are dark; without this, native controls (scrollbar,
+    // <select>, form fields) render in the light UA palette.
+    "  color-scheme: dark;",
+    "",
+    sections.join("\n\n"),
+    "}",
+    "",
+  ].join("\n");
+}
+
+function buildCss(table) {
+  const out = [];
+
+  out.push(cssHeader());
+
+  out.push(primitivesBlock());
 
   /* ---- semantic (defaults) ----
      Emitted before the theme blocks on purpose: when the theme attribute sits
