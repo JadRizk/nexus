@@ -107,7 +107,10 @@ interface InternalController {
 // works in `unknown` because it never reads `data`; describe() copies the
 // reference from `nodes[i]` onto the snapshot and nothing else touches it, so
 // whatever `T` the caller's nodes carry is what comes back. `T` defaults to
-// `unknown`, which is what every caller that never names it already had.
+// `unknown`, which is what every caller that never names it already had. The
+// cast's `displayName?` is not set here; it keeps the member the old
+// ForwardRefExoticComponent type declared, so code that reads or assigns
+// `GraphCanvas.displayName` still compiles.
 export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
   function GraphCanvas(props, ref) {
     const {

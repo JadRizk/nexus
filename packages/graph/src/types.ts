@@ -147,7 +147,7 @@ export interface GraphController<T = unknown> {
   getNode(id: GraphNode["id"]): GraphNodeSnapshot<T> | null;
 }
 
-/** `T` is the node `data` type, inferred from `nodes`; `onSelect` and the controller's `getNode` hand it back typed. Defaults to `unknown`. */
+/** `T` is the node `data` type, inferred from `nodes`, `ref` and `onSelect` together — an untyped `GraphController` ref widens it to `unknown`; `onSelect` and the controller's `getNode` hand it back typed. Defaults to `unknown`. */
 export interface GraphCanvasProps<T = unknown> {
   nodes: readonly GraphNode<T>[];
   edges: readonly GraphEdge[];
