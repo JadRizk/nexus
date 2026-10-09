@@ -46,7 +46,7 @@ var Button = forwardRef2(function Button2({ active, className, children, ...rest
 Button.displayName = "Button";
 
 // packages/react/src/components/CommandPalette/CommandPalette.tsx
-import { forwardRef as forwardRef6, useEffect as useEffect3, useId, useMemo, useRef as useRef3, useState } from "react";
+import { forwardRef as forwardRef6, useId } from "react";
 
 // packages/react/src/components/Panel/Panel.tsx
 import { forwardRef as forwardRef3 } from "react";
@@ -256,6 +256,52 @@ function useHotkey(combo, handler) {
   }, [combo, key, wantMod, wantShift, wantCtrl, wantAlt, wantMeta]);
 }
 
+// packages/react/src/refs.ts
+function mergeRefs(...refs) {
+  return (node) => {
+    for (const ref of refs) {
+      if (typeof ref === "function") ref(node);
+      else if (ref) ref.current = node;
+    }
+  };
+}
+
+// packages/react/src/components/CommandPalette/announceResults.ts
+function announceResults(count, resultsLabel) {
+  if (typeof resultsLabel === "function") return resultsLabel(count);
+  if (typeof resultsLabel === "string") return resultsLabel;
+  return `${count} result${count === 1 ? "" : "s"}`;
+}
+
+// packages/react/src/components/CommandPalette/cursor.ts
+function nextCursor(key, cursor, count) {
+  switch (key) {
+    case "ArrowDown":
+      return Math.min(count - 1, cursor + 1);
+    case "ArrowUp":
+      return Math.max(0, cursor - 1);
+    case "Home":
+      return 0;
+    case "End":
+      return Math.max(0, count - 1);
+    default:
+      return void 0;
+  }
+}
+
+// packages/react/src/components/CommandPalette/useFocusOnOpen.ts
+import { useEffect as useEffect3, useRef as useRef3 } from "react";
+function useFocusOnOpen(isOpen) {
+  const ref = useRef3(null);
+  useEffect3(() => {
+    if (isOpen) requestAnimationFrame(() => ref.current?.focus());
+  }, [isOpen]);
+  return ref;
+}
+
+// packages/react/src/components/CommandPalette/usePaletteSearch.ts
+import { useMemo, useState } from "react";
+
 // packages/react/src/search/rankItems.ts
 function rankItems(items, query, limit = 40) {
   const needle = query.trim().toLowerCase();
@@ -278,17 +324,76 @@ function rankItems(items, query, limit = 40) {
   return scored.slice(0, limit).map(([, it]) => it);
 }
 
-// packages/react/src/refs.ts
-function mergeRefs(...refs) {
-  return (node) => {
-    for (const ref of refs) {
-      if (typeof ref === "function") ref(node);
-      else if (ref) ref.current = node;
+// packages/react/src/components/CommandPalette/usePaletteSearch.ts
+function usePaletteSearch(isOpen, items) {
+  const [query, setQueryState] = useState("");
+  const [requestedCursor, requestCursor] = useState(0);
+  const [didRenderOpen, setDidRenderOpen] = useState(isOpen);
+  if (isOpen !== didRenderOpen) {
+    setDidRenderOpen(isOpen);
+    if (isOpen) {
+      setQueryState("");
+      requestCursor(0);
     }
+  }
+  const hits = useMemo(() => rankItems(items, query), [items, query]);
+  const cursor = Math.min(requestedCursor, Math.max(0, hits.length - 1));
+  const setQuery = (next) => {
+    setQueryState(next);
+    requestCursor(0);
   };
+  return { query, setQuery, hits, cursor, requestCursor };
+}
+
+// packages/react/src/components/CommandPalette/useScrollActiveIntoView.ts
+import { useEffect as useEffect4, useRef as useRef4 } from "react";
+function useScrollActiveIntoView(activeIndex) {
+  const listRef = useRef4(null);
+  useEffect4(() => {
+    const el = listRef.current?.children[activeIndex];
+    el?.scrollIntoView?.({ block: "nearest" });
+  }, [activeIndex]);
+  return listRef;
 }
 
 // packages/react/src/components/CommandPalette/CommandPalette.tsx
+function PaletteOption({
+  item,
+  id,
+  isActive,
+  onHover,
+  onChoose,
+  renderMeta
+}) {
+  return /* @__PURE__ */ React.createElement(
+    "li",
+    {
+      id,
+      role: "option",
+      "aria-selected": isActive,
+      className: "nx-palette__option",
+      onMouseEnter: onHover,
+      onMouseDown: (e) => {
+        e.preventDefault();
+        onChoose(item);
+      }
+    },
+    item.shape && /* @__PURE__ */ React.createElement(Glyph, { shape: item.shape, colour: item.colour, size: 10 }),
+    /* @__PURE__ */ React.createElement("span", { className: "nx-palette__label" }, item.label),
+    item.code && /* @__PURE__ */ React.createElement(
+      "span",
+      {
+        className: "nx-palette__code",
+        style: { "--nx-palette-code-fg": item.colour }
+      },
+      item.code
+    ),
+    renderMeta?.(item)
+  );
+}
+function PaletteHints({ hint }) {
+  return /* @__PURE__ */ React.createElement("div", { "aria-hidden": "true", className: "nx-palette__hints" }, hint.map(([key, action]) => /* @__PURE__ */ React.createElement("span", { key }, key, " ", action)));
+}
 function CommandPaletteInner({
   open,
   onClose,
@@ -306,35 +411,11 @@ function CommandPaletteInner({
   renderMeta,
   width = 520
 }, ref) {
-  const [query, setQuery] = useState("");
-  const [requestedCursor, setRequestedCursor] = useState(0);
-  const [wasOpen, setWasOpen] = useState(open);
-  const inputRef = useRef3(null);
-  const listRef = useRef3(null);
+  const { query, setQuery, hits, cursor, requestCursor } = usePaletteSearch(open, items);
   const trapRef = useFocusTrap(open, onClose);
+  const inputRef = useFocusOnOpen(open);
+  const listRef = useScrollActiveIntoView(cursor);
   const listId = useId();
-  if (open !== wasOpen) {
-    setWasOpen(open);
-    if (open) {
-      setQuery("");
-      setRequestedCursor(0);
-    }
-  }
-  useEffect3(() => {
-    if (open) requestAnimationFrame(() => inputRef.current?.focus());
-  }, [open]);
-  const hits = useMemo(() => rankItems(items, query), [items, query]);
-  const cursor = Math.min(requestedCursor, Math.max(0, hits.length - 1));
-  const dialogLabel = label ?? placeholder;
-  const announceResults = (count) => {
-    if (typeof resultsLabel === "function") return resultsLabel(count);
-    if (typeof resultsLabel === "string") return resultsLabel;
-    return `${count} result${count === 1 ? "" : "s"}`;
-  };
-  useEffect3(() => {
-    const el = listRef.current?.children[cursor];
-    el?.scrollIntoView?.({ block: "nearest" });
-  }, [cursor]);
   if (!open) return null;
   const active = hits[cursor];
   return /* @__PURE__ */ React.createElement(
@@ -351,7 +432,7 @@ function CommandPaletteInner({
         ref: mergeRefs(trapRef, ref),
         role: "dialog",
         "aria-modal": "true",
-        "aria-label": dialogLabel,
+        "aria-label": label ?? placeholder,
         tabIndex: -1,
         className: "nx-palette",
         style: { "--nx-palette-width": `${width}px` }
@@ -361,10 +442,7 @@ function CommandPaletteInner({
         {
           ref: inputRef,
           value: query,
-          onChange: (e) => {
-            setQuery(e.target.value);
-            setRequestedCursor(0);
-          },
+          onChange: (e) => setQuery(e.target.value),
           placeholder,
           className: "nx-palette__input",
           role: "combobox",
@@ -374,25 +452,17 @@ function CommandPaletteInner({
           "aria-activedescendant": active ? `${listId}-${cursor}` : void 0,
           "aria-label": placeholder,
           onKeyDown: (e) => {
-            if (e.key === "ArrowDown") {
+            const requested = nextCursor(e.key, cursor, hits.length);
+            if (requested !== void 0) {
               e.preventDefault();
-              setRequestedCursor(Math.min(hits.length - 1, cursor + 1));
-            } else if (e.key === "ArrowUp") {
-              e.preventDefault();
-              setRequestedCursor(Math.max(0, cursor - 1));
-            } else if (e.key === "Home") {
-              e.preventDefault();
-              setRequestedCursor(0);
-            } else if (e.key === "End") {
-              e.preventDefault();
-              setRequestedCursor(Math.max(0, hits.length - 1));
+              requestCursor(requested);
             } else if (e.key === "Enter" && active) {
               e.preventDefault();
               onSelect(active);
             }
           }
         }
-      ), /* @__PURE__ */ React.createElement("span", { "aria-hidden": "true", className: "nx-palette__count" }, hits.length)), /* @__PURE__ */ React.createElement(HazardRule, { className: "nx-palette__rule" }), /* @__PURE__ */ React.createElement("div", { className: "nx-sr", role: "status", "aria-live": "polite" }, announceResults(hits.length)), hits.length === 0 && /* @__PURE__ */ React.createElement("div", { className: "nx-palette__empty" }, emptyLabel), /* @__PURE__ */ React.createElement(
+      ), /* @__PURE__ */ React.createElement("span", { "aria-hidden": "true", className: "nx-palette__count" }, hits.length)), /* @__PURE__ */ React.createElement(HazardRule, { className: "nx-palette__rule" }), /* @__PURE__ */ React.createElement("div", { className: "nx-sr", role: "status", "aria-live": "polite" }, announceResults(hits.length, resultsLabel)), hits.length === 0 && /* @__PURE__ */ React.createElement("div", { className: "nx-palette__empty" }, emptyLabel), /* @__PURE__ */ React.createElement(
         "ul",
         {
           ref: listRef,
@@ -401,33 +471,19 @@ function CommandPaletteInner({
           "aria-label": "Results",
           className: "nx-palette__list"
         },
-        hits.map((it, i) => /* @__PURE__ */ React.createElement(
-          "li",
+        hits.map((item, i) => /* @__PURE__ */ React.createElement(
+          PaletteOption,
           {
-            key: it.id,
+            key: item.id,
+            item,
             id: `${listId}-${i}`,
-            role: "option",
-            "aria-selected": i === cursor,
-            className: "nx-palette__option",
-            onMouseEnter: () => setRequestedCursor(i),
-            onMouseDown: (e) => {
-              e.preventDefault();
-              onSelect(it);
-            }
-          },
-          it.shape && /* @__PURE__ */ React.createElement(Glyph, { shape: it.shape, colour: it.colour, size: 10 }),
-          /* @__PURE__ */ React.createElement("span", { className: "nx-palette__label" }, it.label),
-          it.code && /* @__PURE__ */ React.createElement(
-            "span",
-            {
-              className: "nx-palette__code",
-              style: { "--nx-palette-code-fg": it.colour }
-            },
-            it.code
-          ),
-          renderMeta?.(it)
+            isActive: i === cursor,
+            onHover: () => requestCursor(i),
+            onChoose: onSelect,
+            renderMeta
+          }
         ))
-      ), /* @__PURE__ */ React.createElement("div", { "aria-hidden": "true", className: "nx-palette__hints" }, hint.map(([k, v]) => /* @__PURE__ */ React.createElement("span", { key: k }, k, " ", v))))
+      ), /* @__PURE__ */ React.createElement(PaletteHints, { hint }))
     )
   );
 }
@@ -656,11 +712,11 @@ var Stat = forwardRef15(function Stat2({ label, value, tone: tone2, colour, mute
 Stat.displayName = "Stat";
 
 // packages/react/src/components/TabStrip/TabStrip.tsx
-import { forwardRef as forwardRef16, useId as useId4, useRef as useRef4 } from "react";
+import { forwardRef as forwardRef16, useId as useId4, useRef as useRef5 } from "react";
 function TabStripInner({ tabs, value, onChange, label = "View", style, id, panelId }, ref) {
   const generatedId = useId4();
   const baseId = id ?? generatedId;
-  const refs = useRef4([]);
+  const refs = useRef5([]);
   const idx = tabs.findIndex((t) => t.value === value);
   const move = (delta) => {
     const n = (idx + delta + tabs.length) % tabs.length;
