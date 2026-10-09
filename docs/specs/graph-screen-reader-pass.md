@@ -56,11 +56,15 @@ readers may add their own role or state words around it.
    - The details drawer opens on the right. Focus stays on the graph, and the
      node is announced as pressed/selected.
    - Heard: "Selected".
-7. **Step out.** Press Escape three times.
-   - First: "Deselected", and the drawer closes.
-   - Second: nothing (or the tooltip closes, if the pointer was over a node).
-   - Third: focus leaves to the graph group itself, not to the page body.
-8. **Tab out.** From the graph, press Tab once.
+7. **Step out.** Press Escape until focus leaves the graph. Each press undoes
+   one thing, in this order:
+   - "Deselected", and the drawer closes (only if something is selected).
+   - The tooltip closes (only if the pointer is resting on a node).
+   - Focus leaves to the graph group itself, not to the page body. With nothing
+     selected and no tooltip, this is the first press.
+   - **Check:** if a node was isolated, it stays isolated: stepping out of the
+     graph doesn't reset the view.
+8. **Tab out.** From the graph, or from the group after step 7, press Tab once.
    - Focus goes to the console's first control. There's no second node to tab
      through.
 9. **Filtered away.** Focus a node, then use the reader to toggle that node's

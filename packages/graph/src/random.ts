@@ -26,10 +26,10 @@ export function mulberry32(seed: number): () => number {
 /**
  * A 32-bit seed derived from a set of node ids: FNV-1a over the ids, sorted,
  * so the same set of ids gives the same seed whatever order the array lists
- * them in. Ids are compared as strings, so `1` and `"1"` hash alike — they
- * can't both be present anyway, since GraphCanvas rejects duplicate ids only
- * by strict equality, and a consumer mixing the two would already be asking
- * for trouble elsewhere.
+ * them in. Ids are compared as strings, so `1` and `"1"` hash alike. Both can
+ * be present (validation compares ids strictly, so it accepts them as two
+ * nodes); that costs nothing here, since this only picks a seed, and the
+ * layout still tells the two apart by index.
  *
  * This is what makes "the same data draws the same picture on every visit"
  * the default rather than something a consumer has to opt into.

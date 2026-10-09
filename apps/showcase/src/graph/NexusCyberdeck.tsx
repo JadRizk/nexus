@@ -159,8 +159,12 @@ export default function NexusCyberdeck() {
   }, []);
 
   useEffect(() => {
+    // A page-wide "Escape resets the view". Not for an Escape something has
+    // already handled: the graph's own Escape steps out one stage at a time
+    // (selection, tooltip, then the graph), and clearing the isolation on top
+    // of "leave the graph" would throw away the reader's context.
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
+      if (e.key === "Escape" && !e.defaultPrevented) {
         setSelected(null);
         setIsolate(null);
       }
@@ -499,9 +503,11 @@ export default function NexusCyberdeck() {
             >
               Reseed
             </Button>
+            {/* An action that names where it goes, not a toggle: a pressed
+              button whose name flips reads as "View as graph, pressed" while
+              the list is showing. */}
             <Button
               style={{ minWidth: 0, gridColumn: "1 / -1" }}
-              aria-pressed={listView}
               onClick={() => setListView((v) => !v)}
             >
               {listView ? "View as graph" : "View as list"}
@@ -891,8 +897,9 @@ function InspectorDrawer({
             <Button style={{ flex: 1 }} onClick={onFocus}>
               Focus
             </Button>
+            {/* A real toggle, so one name: "Isolate", pressed while it holds. */}
             <Button style={{ flex: 1 }} active={isolate === selected.id} onClick={onIsolate}>
-              {isolate === selected.id ? "Restore" : "Isolate"}
+              Isolate
             </Button>
           </div>
         </Panel>

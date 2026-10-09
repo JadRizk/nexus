@@ -191,6 +191,30 @@ test.describe("graph canvas", () => {
     expect(await graph.evaluate((g) => g.contains(document.activeElement))).toBe(false);
   });
 
+  test("stepping out of the graph with Escape keeps an isolation", async ({ page }) => {
+    await page.goto("/#/labs/graph");
+    const graph = page.locator('[aria-roledescription="graph"]');
+    const target = graph.locator("[data-nx-graph-focus]");
+    await target.focus();
+    await page.keyboard.press(" ");
+    await page.getByRole("dialog").getByRole("button", { name: "Isolate" }).click();
+    await expect.poll(() => statText(page, "NODES"), { timeout: 30_000 }).toContain("/");
+
+    // Deselect, then leave: both are the graph's own Escape, and neither is
+    // the page's "reset the view".
+    await target.focus();
+    await page.keyboard.press("Escape");
+    await page.keyboard.press("Escape");
+    await expect(graph).toBeFocused();
+    // Back in, the summary counts what is drawn, at once (the stats panel only
+    // ticks every half second of frames): still the isolated few, not all 200.
+    await target.focus();
+    const summary = await graph.locator("[aria-live]").textContent();
+    const shown = Number(/^Graph, (\d+) nodes/.exec(summary ?? "")?.[1]);
+    expect(shown).toBeGreaterThan(0);
+    expect(shown).toBeLessThan(200);
+  });
+
   test("Back keeps focus when it runs out of history", async ({ page }) => {
     await page.goto("/#/labs/graph");
     const target = page.locator('[aria-roledescription="graph"] [data-nx-graph-focus]');

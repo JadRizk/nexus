@@ -9,6 +9,7 @@ See **Migrating from 1.x** in the package README for every breaking change in 2.
 **Breaking**
 
 - **`LinkCategory.arrow` is removed.** Direction is drawn by the edge's end pads instead: a filled bar at the source end and an open bracket at the target end. They stay readable with motion turned off. Set `directed: false` on a category with no direction (it then gets a bar at both ends). Delete `arrow` from your categories, and use `directed: false` where it was `false`.
+- **`LinkCategory.curve` only bows edges with `routing: "arc"`.** In 1.x every edge was bowed by `curve`; the default routing is now `"straight"`, which ignores it. Add `routing: "arc"` to a category to keep it curved.
 - **`LinkCategory.dash` is now a period in screen pixels**, the same at any zoom. Values written for 1.x (around 1–3) need to grow to roughly 4–8.
 - **New default optics**, tuned for the new shader: `edgeWidth` 2.4 → 1.3, `edgeOpacity` 0.5 → 0.4, `aberr` 1.0 → 0.5. `edgeWidth` is now a half-width the shader scales up, so keeping 2.4 draws edges about twice as heavy. If you copied the old defaults into your own controls, use the new `DEFAULT_OPTICS` and `DEFAULT_PHYSICS` exports instead.
 

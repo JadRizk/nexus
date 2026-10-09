@@ -365,25 +365,32 @@ each is to affect you:
 
 1. **`LinkCategory.arrow` is gone.** Direction is drawn by the end pads. Delete
    `arrow`, and set `directed: false` where it was `false`.
-2. **`LinkCategory.dash` is in screen pixels.** 1.x values of about 1–3 need to
+2. **`LinkCategory.curve` only bows `routing: "arc"` edges.** In 1.x every edge
+   was bowed by its category's `curve`; the default routing is now `"straight"`,
+   which ignores it. Add `routing: "arc"` to keep a category curved.
+3. **`LinkCategory.dash` is in screen pixels.** 1.x values of about 1–3 need to
    grow to about 4–8.
-3. **Default optics changed** for the new edge shader: `edgeWidth` 2.4 → 1.3,
+4. **Default optics changed** for the new edge shader: `edgeWidth` 2.4 → 1.3,
    `edgeOpacity` 0.5 → 0.4, `aberr` 1.0 → 0.5. `edgeWidth` is now a half-width
    the shader scales up, so keeping 2.4 draws edges about twice as heavy. If
    you copied the old defaults into your own controls, use `DEFAULT_OPTICS`.
-4. **The root is a named `role="group"`, not `role="img"`**, because the
+5. **The root is a named `role="group"`, not `role="img"`**, because the
    keyboard's focus target lives inside it. Tests that find the graph with
    `getByRole("img")` should use `getByRole("group", { name })`, or pass
    `keyboardNavigation={false}` to keep the image role.
-5. **The layout is the same every visit by default.** The seed is derived from
+6. **The layout is the same every visit by default.** The seed is derived from
    the node ids. Pass `seed={null}` for 1.x's random layout per mount.
-6. **The intro and selection camera behave differently.** The intro tracks the
+7. **The intro and selection camera behave differently.** The intro tracks the
    settling layout instead of landing on a fixed guess; selection framing
    follows the node while it settles, and respects `fitInset`. Pass
    `followSelection={false}` to drive the camera yourself.
-7. **A click selects without grabbing.** Dragging starts after a few pixels of
+8. **A click selects without grabbing.** Dragging starts after a few pixels of
    movement, so selecting no longer reheats the layout.
-8. **`GraphStats` gained `drawnNodes`**, required if you construct one.
+9. **New required fields, if you build these objects yourself:**
+   `GraphStats.drawnNodes`, and `sectorForce` and `radiusForce` on
+   `PhysicsConfig` and `PhysicsParams` (0 turns either off). Spread
+   `DEFAULT_PHYSICS` to pick them up. The `physics` prop is a `Partial`, so
+   passing it is unaffected.
 
 Everything else is additive. See the [CHANGELOG](./CHANGELOG.md) for the full
 list.
