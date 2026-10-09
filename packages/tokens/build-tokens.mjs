@@ -491,33 +491,16 @@ function primitivesBlock() {
   ].join("\n");
 }
 
-function buildCss(table) {
-  const out = [];
+/** The lowest and highest themed ratio in one theme, e.g. "4.61–7.02:1". */
+function mutedRange(themed, ratios) {
+  const found = themed.map((p) => ratios[p.split(".").pop()]).filter((r) => r !== undefined);
+  return found.length ? `${Math.min(...found).toFixed(2)}–${Math.max(...found).toFixed(2)}:1` : "";
+}
 
-  out.push(cssHeader());
-
-  out.push(primitivesBlock());
-
-  /* ---- semantic (defaults) ----
-     Emitted before the theme blocks on purpose: when the theme attribute sits
-     on the same element as :root, both selectors match at equal specificity
-     and the later declaration wins. The theme has to be the later one. */
-  out.push(semanticBlock());
-
-  /* ---- per-theme blocks ---- */
-  const themed = [...byPath.keys()].filter(isThemed);
-  const sensitive = [...byPath.keys()].filter((p) => isThemeSensitive(p) && !isThemed(p));
-  for (const theme of THEMES) {
-    const meta = tokens.theme[theme];
-    const isDefault = theme === DEFAULT_THEME;
-    const ratios = themed
-      .map((p) => table[theme][p.split(".").pop()])
-      .filter((r) => r !== undefined);
-    const range = ratios.length
-      ? `${Math.min(...ratios).toFixed(2)}–${Math.max(...ratios).toFixed(2)}:1`
-      : "";
-
-    out.push(`/* ============================================================================
+function themeBanner(theme, range) {
+  const meta = tokens.theme[theme];
+  const isDefault = theme === DEFAULT_THEME;
+  return `/* ============================================================================
    THEME: ${theme}${isDefault ? " (default)" : ""} — ${meta.label}.${
      meta.wcag
        ? ` Signature colours untouched; only the
@@ -525,37 +508,55 @@ function buildCss(table) {
        : `
    ${wrap(`${meta.note} Muted range ${range}.`)}`
    }
-   ========================================================================== */`);
-    out.push(isDefault ? `:root,\n[data-nx-theme="${theme}"] {` : `[data-nx-theme="${theme}"] {`);
+   ========================================================================== */`;
+}
 
-    const entries = themed.map((path) => {
-      const name = path.split(".").pop();
-      const value = resolveValue(path, theme);
-      const r = table[theme][name];
-      let comment = r !== undefined ? `${r.toFixed(2)}:1` : null;
-      // A description like "target 7.0 — AAA body text" is a statement about
-      // the theme that was solved for those targets. Repeating it in a theme
-      // that misses them by half would be actively misleading, so descriptions
-      // only travel with the theme that declares WCAG targets of its own.
-      const desc = meta.wcag ? byPath.get(path).$description : null;
-      if (comment && desc) comment += `  ${desc.replace(/\.$/, "")}`;
-      return [cssName(path), value, comment];
-    });
-    out.push(declBlock(entries));
+/**
+ * One themed primitive, annotated with its ratio. Descriptions such as
+ * "target 7.0 — AAA body text" state what a theme was solved for, so they
+ * only travel with a theme that declares WCAG targets of its own.
+ */
+function themedDecl(path, theme, ratios, wcag) {
+  const r = ratios[path.split(".").pop()];
+  let comment = r !== undefined ? `${r.toFixed(2)}:1` : null;
+  const desc = wcag ? byPath.get(path).$description : null;
+  if (comment && desc) comment += `  ${desc.replace(/\.$/, "")}`;
+  return [cssName(path), resolveValue(path, theme), comment];
+}
 
-    // Everything downstream of a themed primitive, re-resolved in this scope.
-    if (sensitive.length) {
-      out.push("");
-      out.push("  /* re-resolved here so the theme works on any element, not only :root */");
-      out.push(declBlock(sensitive.map((p) => [cssName(p), toCssValue(byPath.get(p), p), null])));
-    }
-    out.push("}");
+/** One theme's scope: its themed primitives, then everything downstream of them. */
+function themeBlock({ theme, table, themed, sensitive }) {
+  const ratios = table[theme];
+  const { wcag } = tokens.theme[theme];
+  const out = [
+    themeBanner(theme, mutedRange(themed, ratios)),
+    theme === DEFAULT_THEME
+      ? `:root,\n[data-nx-theme="${theme}"] {`
+      : `[data-nx-theme="${theme}"] {`,
+    declBlock(themed.map((path) => themedDecl(path, theme, ratios, wcag))),
+  ];
+  if (sensitive.length) {
     out.push("");
+    out.push("  /* re-resolved here so the theme works on any element, not only :root */");
+    out.push(declBlock(sensitive.map((p) => [cssName(p), toCssValue(byPath.get(p), p), null])));
   }
+  out.push("}", "");
+  return out.join("\n");
+}
 
-  out.push(baseLayer());
-
-  return out.join("\n") + "\n";
+function buildCss(table) {
+  const themed = [...byPath.keys()].filter(isThemed);
+  const sensitive = [...byPath.keys()].filter((p) => isThemeSensitive(p) && !isThemed(p));
+  const blocks = [
+    cssHeader(),
+    primitivesBlock(),
+    // The semantic defaults precede the themes: on an element that is both
+    // :root and themed, equal specificity lets the later block win.
+    semanticBlock(),
+    ...THEMES.map((theme) => themeBlock({ theme, table, themed, sensitive })),
+    baseLayer(),
+  ];
+  return blocks.join("\n") + "\n";
 }
 
 /* ---------------------------------------------------------------- TS output */
