@@ -42,7 +42,7 @@ function resolve(path: string): View {
 function titleOf(view: View): string {
   switch (view.kind) {
     case "home":
-      return "Nexus Cyberdeck — Showcase";
+      return __NX_TITLE__;
     case "graph":
       return "Graph — Nexus Cyberdeck";
     case "glitch":

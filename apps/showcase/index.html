@@ -3,7 +3,37 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Nexus Cyberdeck — Showcase</title>
+    <!-- The brand head block. Each %NX_…% value is filled at build and in dev
+         by the nx-brand-head plugin in vite.config.ts, from
+         scripts/brand-meta.mjs: the strings decided in
+         brand/references/positioning.md and the ground colour read from
+         tokens.json, because platform metadata cannot read a custom property.
+         Crawlers do not run JavaScript, so everything a link preview needs is
+         here in the served HTML, with absolute https URLs. Icon paths are
+         root-relative; Vite prefixes them with the base (/nexus/ on Pages).
+         The manifest is generated, not a public file, so the plugin writes
+         the base into its link instead. -->
+    <title>%NX_TITLE%</title>
+    <meta name="description" content="%NX_DESCRIPTION%" />
+    <link rel="canonical" href="%NX_SITE_URL%" />
+    <meta name="theme-color" content="%NX_THEME_COLOR%" />
+
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="%NX_BASE%site.webmanifest" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="%NX_NAME%" />
+    <meta property="og:title" content="%NX_OG_TITLE%" />
+    <meta property="og:description" content="%NX_ONE_LINER%" />
+    <meta property="og:url" content="%NX_SITE_URL%" />
+    <meta property="og:image" content="%NX_SITE_URL%og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="%NX_OG_IMAGE_ALT%" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="%NX_SITE_URL%og.png" />
   </head>
   <body>
     <div id="root"></div>
