@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildConnections, defaultRank, visibleConnections } from "./adjacency.js";
-import { initialNavState, navigate } from "./navigator.js";
+import { initialNavState, lastVisible, navigate } from "./navigator.js";
 import type { NavAction, NavContext, NavState } from "./navigator.js";
 import type { LinkCategory } from "../types.js";
 
@@ -261,6 +261,63 @@ describe("when the current node is hidden", () => {
     const [s, fx] = navigate(browsing, { type: "visibility" }, makeCtx());
     expect(s).toMatchObject({ current: 0, cursor: -1 });
     expect(fx).toEqual({});
+  });
+
+  it("keeps the cursor on the same edge when the list changes under it", () => {
+    // On hub's second connection, beta (edge 1). Hiding alpha moves beta to first.
+    const onBeta = run([
+      { type: "enter" },
+      { type: "browse", step: 1 },
+      { type: "browse", step: 1 },
+    ]).s;
+    expect(onBeta.cursor).toBe(1);
+    const [kept] = navigate(onBeta, { type: "visibility", edge: 1 }, makeCtx(new Set([1])));
+    expect(kept.cursor).toBe(0);
+    // And starts over when that edge is gone.
+    const [gone] = navigate(onBeta, { type: "visibility", edge: 1 }, makeCtx(new Set([2])));
+    expect(gone.cursor).toBe(-1);
+  });
+
+  it("moves the Home point to the reader when a filter hides it", () => {
+    const walked = run([{ type: "enter" }, { type: "browse", step: 1 }, { type: "follow" }]).s;
+    const ctx = makeCtx(new Set([0]));
+    const [s] = navigate(walked, { type: "visibility" }, ctx);
+    expect(s).toMatchObject({ current: 1, start: 1 });
+    expect(navigate(s, { type: "home" }, ctx)[1].announce).toBe("alpha");
+  });
+});
+
+describe("going back past hidden places", () => {
+  it("skips steps to nodes a filter has since hidden", () => {
+    // hub → alpha → hub, then alpha is hidden.
+    const walked = run([
+      { type: "enter" },
+      { type: "browse", step: 1 },
+      { type: "follow" },
+      { type: "browse", step: 1 },
+      { type: "follow" },
+    ]).s;
+    expect(walked.history.map((h) => h.node)).toEqual([0, 1]);
+    const [s, fx] = navigate(walked, { type: "back" }, makeCtx(new Set([1])));
+    expect(s).toMatchObject({ current: 0, history: [] });
+    expect(fx.announce).toBe("Back to hub");
+  });
+
+  it("is the start of the path when every earlier step is hidden", () => {
+    const walked = run([{ type: "enter" }, { type: "browse", step: 1 }, { type: "follow" }]).s;
+    const [s, fx] = navigate(walked, { type: "back" }, makeCtx(new Set([0])));
+    expect(s).toMatchObject({ current: 1, history: [] });
+    expect(fx.announce).toBe("Start of path");
+  });
+
+  it("lastVisible finds the newest visible step, or -1", () => {
+    const history = [
+      { node: 0, selected: false },
+      { node: 1, selected: false },
+    ];
+    expect(lastVisible(history, makeCtx())).toBe(1);
+    expect(lastVisible(history, makeCtx(new Set([1])))).toBe(0);
+    expect(lastVisible(history, makeCtx(new Set([0, 1])))).toBe(-1);
   });
 });
 

@@ -279,7 +279,8 @@ Pass `keyboardNavigation={false}` to turn it off, and the root becomes a named
 
 `describeGraph()` returns the whole graph as an outline, worded and ranked the
 same way: a summary, then each category's nodes with their connections. Pass it
-the same filters you pass the canvas, and render it with `<GraphOutline>` from
+the same filters you pass the canvas (the hidden categories and `isolateId`),
+and render it with `<GraphOutline>` from
 `@nexus-cyberdeck/react`, or your own markup:
 
 ```tsx

@@ -133,30 +133,33 @@ export interface GraphOutlineData {
   groups: OutlineGroup[];
 }
 
-export interface DescribeGraphInput {
-  nodes: readonly GraphNode[];
+export interface DescribeGraphInput<T = unknown> {
+  nodes: readonly GraphNode<T>[];
   edges: readonly GraphEdge[];
   nodeCategories: Readonly<Record<string, NodeCategory>>;
   linkCategories: Readonly<Record<string, LinkCategory>>;
   /** Left out of the outline, as they are hidden on the canvas. */
   hiddenNodeCategories?: readonly string[];
   hiddenLinkCategories?: readonly string[];
+  /** As on GraphCanvas: only this node and its direct neighbours are listed. */
+  isolateId?: GraphNode["id"] | null;
   /** As on GraphCanvas. Default "error". */
   invalidEdges?: "error" | "drop";
   /** As on GraphCanvas, so the outline lists connections in the same order the keyboard reads them. */
-  rankConnections?: (a: Connection, b: Connection) => number;
+  rankConnections?: (a: Connection<T>, b: Connection<T>) => number;
   /** As on GraphCanvas. */
-  describeNode?: (node: GraphNode, ctx: DescribeContext) => string;
+  describeNode?: (node: GraphNode<T>, ctx: DescribeContext) => string;
 }
 
 /**
  * The graph as an outline: categories in declaration order, nodes by label
  * within each, and each node's connections ranked as the keyboard navigator
- * ranks them. Hidden categories are left out, and so are connections to them.
+ * ranks them. Hidden categories are left out, and so are connections to them;
+ * with `isolateId`, so is everything outside that node's neighbourhood.
  */
-export function describeGraph(input: DescribeGraphInput): GraphOutlineData {
+export function describeGraph<T = unknown>(input: DescribeGraphInput<T>): GraphOutlineData {
   const { nodes, nodeCategories, linkCategories } = input;
-  const { edges, eA, eB } = validateGraph(
+  const { edges, eA, eB, idToIndex } = validateGraph(
     nodes,
     input.edges,
     nodeCategories,
@@ -189,7 +192,19 @@ export function describeGraph(input: DescribeGraphInput): GraphOutlineData {
     : defaultRank(labels, Object.keys(linkCategories));
   const lists = buildConnections(nodes.length, eA, eB, eCategoryId, linkCategories, rank);
 
-  const isVisible = (i: number) => !hiddenNode.has(nodes[i]!.categoryId);
+  // Isolation as GraphCanvas resolves it: the node plus everything one edge
+  // away, over any edge, hidden category or not.
+  const iso = input.isolateId == null ? -1 : (idToIndex.get(input.isolateId) ?? -1);
+  let allow: Set<number> | null = null;
+  if (iso >= 0) {
+    allow = new Set([iso]);
+    for (let e = 0; e < edges.length; e++) {
+      if (eA[e] === iso) allow.add(eB[e]!);
+      if (eB[e] === iso) allow.add(eA[e]!);
+    }
+  }
+  const isVisible = (i: number) =>
+    !hiddenNode.has(nodes[i]!.categoryId) && (allow === null || allow.has(i));
   const isEdgeVisible = (e: number) => !hiddenLink.has(eCategoryId[e]!);
   const kindOf = (i: number) => nodeCategories[nodes[i]!.categoryId]!.label.toLowerCase();
 

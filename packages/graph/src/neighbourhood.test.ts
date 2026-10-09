@@ -106,4 +106,24 @@ describe("computeNeighbourhood", () => {
     // edge (3,4): node 3 is reached (depth 3), node 4 is not (-1).
     expect(tier[3]).toBe(0);
   });
+
+  it("never crosses a hidden edge, so nodes joined only by one aren't neighbours", () => {
+    // 0—1 visible, 1—2 hidden, 0—3—2 visible: 2 is still reached, the long way.
+    const g = {
+      ...buildGraph(4, [
+        [0, 1],
+        [1, 2],
+        [0, 3],
+        [3, 2],
+      ]),
+      edgeHidden: (e: number) => e === 1,
+    };
+    const depth = new Float32Array(4),
+      tier = new Float32Array(4);
+    computeNeighbourhood(g, 1, depth, tier);
+    // From 1: 0 at 1 hop, 3 at 2, and 2 at 3 — not 1, across the hidden edge.
+    expect([...depth]).toEqual([1, 0, 3, 2]);
+    // Edge (3,2) reaches depth 3, outside NEARBY_DEPTH, so it stays unrelated.
+    expect(tier[3]).toBe(0);
+  });
 });

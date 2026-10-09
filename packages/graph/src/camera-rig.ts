@@ -22,7 +22,7 @@
    unsettled layout keeps rearranging.
    ========================================================================== */
 
-import { fitBounds, insetOffset } from "./camera.js";
+import { fitBounds, insetOffset, ZOOM_MAX } from "./camera.js";
 import type { FitInset } from "./camera.js";
 
 /** World-space box: [x0, y0, x1, y1]. */
@@ -144,6 +144,10 @@ export function createCameraRig(deps: CameraRigDeps): CameraRig {
     frameBox(b);
     [fx0, fy0, fx1, fy1] = b;
   }
+  /** Where the intro sweep starts: tighter than the fit, but never past ZOOM_MAX. */
+  function sweepZoom() {
+    return Math.min(ZOOM_MAX, target.zoom * INTRO_ZOOM_MULTIPLIER);
+  }
   function rideAlong(i: number) {
     const [x, y] = deps.position(i);
     follow = i;
@@ -167,7 +171,7 @@ export function createCameraRig(deps: CameraRigDeps): CameraRig {
       fitToView();
       live.x = target.x;
       live.y = target.y;
-      live.zoom = reduced ? target.zoom : target.zoom * INTRO_ZOOM_MULTIPLIER;
+      live.zoom = reduced ? target.zoom : sweepZoom();
     },
     fit() {
       fitToView();
@@ -226,7 +230,7 @@ export function createCameraRig(deps: CameraRigDeps): CameraRig {
       autoFit = true;
       userOwned = false;
       fitToView();
-      if (sweep) live.zoom = target.zoom * INTRO_ZOOM_MULTIPLIER;
+      if (sweep) live.zoom = sweepZoom();
     },
     takeOver() {
       autoFit = false;

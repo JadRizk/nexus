@@ -88,8 +88,9 @@ export default function NexusCyberdeck() {
 
   const [total, setTotal] = useState(200);
   const [stats, setStats] = useState<GraphStats>(DEFAULT_STATS);
-  // controller.canGoBack is read after each selection change: GraphCanvas's
-  // own effects (a child's) have run by then, so its history is current.
+  // controller.canGoBack is read after each selection change, when GraphCanvas's
+  // own effects (a child's) have run and its history is current, and after
+  // every keyboard step, which can add history without selecting anything.
   const [canGoBack, setCanGoBack] = useState(false);
   // The same graph as a list (GraphOutline), over the canvas. The canvas stays
   // mounted underneath, so closing the list returns to exactly the same view.
@@ -194,6 +195,7 @@ export default function NexusCyberdeck() {
         fitInset={{ left: 12 + 248 + 12, right: selected ? 12 + 296 + 12 : 0 }}
         running={running}
         onSelect={setSelected}
+        onNavigate={() => setCanGoBack(controllerRef.current?.canGoBack ?? false)}
         onStats={setStats}
       />
 
@@ -561,6 +563,7 @@ export default function NexusCyberdeck() {
           edges={sampleGraph.edges}
           hiddenNodeCategories={hiddenNodeCategories}
           hiddenLinkCategories={hiddenLinkCategories}
+          isolateId={isolate}
           selectedId={selected?.id ?? null}
           rightInset={selected ? 12 + 296 + 12 : 12}
           onSelect={(id) => setSelected(controllerRef.current?.getNode(id) ?? null)}
@@ -632,12 +635,14 @@ function InspectorDrawer({
 }) {
   // A selection made from the graph's keyboard navigation must leave focus in
   // the graph, or the reader loses their place mid-walk. So the drawer only
-  // traps focus (and is modal) when focus wasn't inside the graph when it opened.
+  // traps focus (and is modal) when the selection didn't come from the graph's
+  // focus target. Not "focus anywhere in the graph": a mouse click on the
+  // canvas focuses the graph's root too, and a click is a modal open.
   const [fromGraph, setFromGraph] = useState(false);
   const [lastSelected, setLastSelected] = useState(selected);
   if (selected !== lastSelected) {
     setLastSelected(selected);
-    setFromGraph(!!document.activeElement?.closest('[aria-roledescription="graph"]'));
+    setFromGraph(!!document.activeElement?.closest("[data-nx-graph-focus]"));
   }
   const trapRef = useFocusTrap<HTMLDivElement>(!!selected && !fromGraph, onClose);
   const titleId = useId();
@@ -891,6 +896,7 @@ function OutlinePanel({
   edges,
   hiddenNodeCategories,
   hiddenLinkCategories,
+  isolateId,
   selectedId,
   rightInset,
   onSelect,
@@ -899,6 +905,7 @@ function OutlinePanel({
   edges: Parameters<typeof describeGraph>[0]["edges"];
   hiddenNodeCategories: readonly string[];
   hiddenLinkCategories: readonly string[];
+  isolateId: number | null;
   selectedId: string | number | null;
   rightInset: number;
   onSelect: (id: string | number) => void;
@@ -912,8 +919,9 @@ function OutlinePanel({
         linkCategories: LINK_CATEGORIES,
         hiddenNodeCategories,
         hiddenLinkCategories,
+        isolateId,
       }),
-    [nodes, edges, hiddenNodeCategories, hiddenLinkCategories],
+    [nodes, edges, hiddenNodeCategories, hiddenLinkCategories, isolateId],
   );
   return (
     <Panel

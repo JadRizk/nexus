@@ -12,7 +12,7 @@ import { createLabelPlacer } from "./labels.js";
 import type { LabelView, PlacedLabel } from "./labels.js";
 import { validateGraph } from "./validate.js";
 import { buildConnections, defaultRank, visibleConnections } from "./a11y/adjacency.js";
-import { initialNavState, navigate } from "./a11y/navigator.js";
+import { initialNavState, lastVisible, navigate } from "./a11y/navigator.js";
 import type { NavAction, NavContext, NavState } from "./a11y/navigator.js";
 import { createNavOverlay } from "./a11y/overlay.js";
 import type { NavOverlay } from "./a11y/overlay.js";
@@ -1002,7 +1002,16 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           inc[eA[e]!]!.push({ e, other: eB[e]!, categoryId: eCategoryId[e]!, out: true });
           inc[eB[e]!]!.push({ e, other: eA[e]!, categoryId: eCategoryId[e]!, out: false });
         }
-        const neighbourhoodGraph = { inc, eA, eB, hidden: nHide };
+        // Hidden edges (a hidden link category, or a selection-scoped one off
+        // the selection) carry no neighbourhood, as they carry no keyboard
+        // connection: pointer and keyboard readers see the same one.
+        const neighbourhoodGraph = {
+          inc,
+          eA,
+          eB,
+          hidden: nHide,
+          edgeHidden: (e: number) => eP2[e * 4 + A_HIDE] !== 0,
+        };
         // Scratch for computeNeighbourhood's dense per-edge tier output,
         // scattered into eP2 by highlight().
         const eTierBuf = new Float32Array(m);
@@ -1221,9 +1230,13 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           // is a move the reader can go back from. Echoes of the navigator's
           // own select effects arrive here too, and change nothing.
           if (nav) dispatch({ type: "selected", index: idx });
-          if (scopedLinkRef.current?.length) refilter();
+          // A selection-scoped category shows or hides edges on the node the
+          // reader may be browsing, so the edge set (and the neighbourhood
+          // walked over it) has to be rebuilt.
+          const scoped = Boolean(scopedLinkRef.current?.length);
+          if (scoped) refilterKeepingCursor();
           if (idx >= 0) kick(0.22);
-          refresh();
+          refresh(scoped);
           if (idx >= 0 && idx === hoverIdx) showTip(-1);
           if (cameraFollowSelection && followSelectionRef.current) {
             // The selected node plus its direct neighbours — the local
@@ -1406,7 +1419,10 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           if (!nav) return;
           const [next, fx] = navigate(nav, action, navContext);
           nav = next;
-          if (fx.announce) overlay?.announce(fx.announce);
+          // "Moved to …" after a filter change is only news to a reader who
+          // is in the graph; spoken while they work elsewhere, it is noise.
+          if (fx.announce && (action.type !== "visibility" || overlay?.focused))
+            overlay?.announce(fx.announce);
           if (fx.select !== undefined) {
             onSelectRef.current?.(fx.select >= 0 ? describe(fx.select) : null);
           }
@@ -1465,12 +1481,23 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           if (nav.current >= 0) rig.reveal(nav.current);
         };
         api.current.back = () => dispatch({ type: "back" });
-        api.current.canGoBack = () => (nav?.history.length ?? 0) > 0;
+        // Matches what back() does: steps to places since hidden don't count.
+        api.current.canGoBack = () => (nav ? lastVisible(nav.history, navContext) >= 0 : false);
+        /** refilter(), then tell the navigator, keeping its cursor on the same edge. */
+        function refilterKeepingCursor() {
+          // Read from the navigator, not cursorConnection(): the cursor
+          // outlives a Tab out of the graph, and so should its edge.
+          const edge =
+            nav && nav.cursor >= 0
+              ? navContext.connections(nav.current, nav.filter)[nav.cursor]?.edge
+              : undefined;
+          refilter();
+          dispatch(edge === undefined ? { type: "visibility" } : { type: "visibility", edge });
+        }
 
         api.current.params = (p) => sim.setParams(p);
         api.current.refilterInternal = () => {
-          refilter();
-          dispatch({ type: "visibility" });
+          refilterKeepingCursor();
           refresh(true);
           kick(0.14);
         };

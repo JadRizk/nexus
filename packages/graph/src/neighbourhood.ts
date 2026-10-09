@@ -29,6 +29,12 @@ export interface NeighbourhoodGraph {
   eB: Int32Array;
   /** 1 = hidden, 0 = visible. Hidden nodes are never visited and never earn a depth. */
   hidden: Float32Array;
+  /**
+   * True for an edge that isn't drawn (a hidden link category, say). The walk
+   * never crosses one, so two nodes joined only by hidden edges don't read as
+   * neighbours. Omitted, every edge counts.
+   */
+  edgeHidden?: (e: number) => boolean;
 }
 
 /**
@@ -41,7 +47,7 @@ export function computeNeighbourhood(
   outDepth: Float32Array,
   outTier: Float32Array,
 ): void {
-  const { inc, eA, eB, hidden } = graph;
+  const { inc, eA, eB, hidden, edgeHidden } = graph;
   const m = outTier.length;
 
   outDepth.fill(-1);
@@ -55,7 +61,7 @@ export function computeNeighbourhood(
       d = outDepth[v]!;
     if (d >= 3) continue;
     for (const it of inc[v]!) {
-      if (outDepth[it.other]! < -0.5 && hidden[it.other] === 0) {
+      if (outDepth[it.other]! < -0.5 && hidden[it.other] === 0 && !edgeHidden?.(it.e)) {
         outDepth[it.other] = d + 1;
         q.push(it.other);
       }

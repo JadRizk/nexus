@@ -69,7 +69,8 @@ export const GraphOutline = forwardRef<HTMLElement, GraphOutlineProps>(function 
   const base = useId();
   const root = useRef<HTMLElement | null>(null);
   const Heading = `h${headingLevel}` as const;
-  // Ids must be valid and unique per outline; node ids can be anything.
+  // Ids must be valid and unique per outline, and node and category ids can
+  // be anything. Encoded, a space can't split one id into two idrefs.
   const keyOf = (id: string | number) => `${base}-n-${encodeURIComponent(String(id))}`;
 
   // A plain button rather than a #link: hash routers treat any # change as
@@ -94,7 +95,7 @@ export const GraphOutline = forwardRef<HTMLElement, GraphOutlineProps>(function 
     >
       <p className="nx-graph-outline__summary">{data.summary}</p>
       {data.groups.map((group) => {
-        const headingId = `${base}-g-${group.categoryId}`;
+        const headingId = `${base}-g-${encodeURIComponent(group.categoryId)}`;
         return (
           <section
             key={group.categoryId}

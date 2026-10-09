@@ -108,12 +108,13 @@ describe("GraphOutline", () => {
     expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(2);
   });
 
-  it("keeps ids unique and valid whatever the node ids are", () => {
+  it("keeps ids unique and valid whatever the node and category ids are", () => {
     const odd: GraphOutlineData = {
       summary: "",
       groups: [
         {
-          categoryId: "x",
+          // A space would split aria-labelledby into two idrefs, neither real.
+          categoryId: "data source",
           label: "X",
           nodes: [
             { id: 'a b"c', label: "spaced", description: "d", connections: [] },
@@ -126,6 +127,7 @@ describe("GraphOutline", () => {
     const ids = [...container.querySelectorAll("[id]")].map((el) => el.id);
     expect(new Set(ids).size).toBe(ids.length);
     for (const id of ids) expect(id).not.toMatch(/[\s"]/);
+    expect(screen.getByRole("region", { name: "X (2)" })).toBeTruthy();
   });
 
   it("accepts a callback ref, and renders without any ref", () => {

@@ -31,7 +31,7 @@ export interface NavState {
   entered: boolean;
   /** The node the reader is on. */
   current: number;
-  /** Where the reader entered; Home returns here. */
+  /** Where the reader entered; Home returns here. Moves to the reader if a filter hides it. */
   start: number;
   /** Index into `current`'s visible connections under `filter`, or -1 before browsing. */
   cursor: number;
@@ -83,8 +83,12 @@ export type NavAction =
   | { type: "escape" }
   /** The selection changed from outside the navigator (a click, or the consumer). */
   | { type: "selected"; index: number }
-  /** Filters or isolation changed what is visible. */
-  | { type: "visibility" }
+  /**
+   * Filters, isolation or a selection-scoped category changed what is
+   * visible. `edge` is the edge under the cursor before the change, so the
+   * cursor can stay on it in the list as it now reads.
+   */
+  | { type: "visibility"; edge?: number }
   /** controller.focusNode(): put the reader on a node, e.g. from a search box. */
   | { type: "focusNode"; index: number };
 
@@ -122,6 +126,12 @@ function goTo(s: NavState, node: number): NavState {
     cursor: -1,
     filter: "all",
   };
+}
+
+/** Index of the newest history entry whose node is visible, or -1. */
+export function lastVisible(history: readonly HistoryEntry[], ctx: Pick<NavContext, "isVisible">) {
+  for (let k = history.length - 1; k >= 0; k--) if (ctx.isVisible(history[k]!.node)) return k;
+  return -1;
 }
 
 export function navigate(s: NavState, action: NavAction, ctx: NavContext): [NavState, NavEffects] {
@@ -193,11 +203,14 @@ export function navigate(s: NavState, action: NavAction, ctx: NavContext): [NavS
     }
 
     case "back": {
-      const entry = s.history[s.history.length - 1];
-      if (!entry) return [s, { announce: "Start of path" }];
+      // Steps to places a filter has since hidden are skipped: going back
+      // never parks the reader on a node that isn't drawn.
+      const at = lastVisible(s.history, ctx);
+      const entry = s.history[at];
+      if (!entry) return [{ ...s, history: [] }, { announce: "Start of path" }];
       const next: NavState = {
         ...s,
-        history: s.history.slice(0, -1),
+        history: s.history.slice(0, at),
         current: entry.node,
         cursor: -1,
         filter: "all",
@@ -264,8 +277,13 @@ export function navigate(s: NavState, action: NavAction, ctx: NavContext): [NavS
 
     case "visibility": {
       if (s.current >= 0 && ctx.isVisible(s.current)) {
-        // The cursor indexes a list that may have shrunk under it.
-        return [{ ...s, cursor: -1 }, {}];
+        // The cursor indexes a list that may have changed under it: keep it
+        // on the same edge if that is still listed, else start over.
+        const cursor =
+          action.edge === undefined
+            ? -1
+            : ctx.connections(s.current, s.filter).findIndex((c) => c.edge === action.edge);
+        return [{ ...s, cursor, start: ctx.isVisible(s.start) ? s.start : s.current }, {}];
       }
       // The node the reader was on is gone. Land on the nearest visible place
       // they have been, then the selection, then the top-ranked node, and say
@@ -274,7 +292,13 @@ export function navigate(s: NavState, action: NavAction, ctx: NavContext): [NavS
       const to =
         fromHistory ?? (s.selected >= 0 && ctx.isVisible(s.selected) ? s.selected : ctx.fallback());
       if (to === undefined || to < 0) return [{ ...s, cursor: -1 }, {}];
-      const next = { ...s, current: to, cursor: -1, filter: "all" as const };
+      const next = {
+        ...s,
+        current: to,
+        start: ctx.isVisible(s.start) ? s.start : to,
+        cursor: -1,
+        filter: "all" as const,
+      };
       return [
         next,
         s.entered

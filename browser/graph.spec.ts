@@ -117,6 +117,9 @@ test.describe("graph canvas", () => {
     // the drawer that opens on the right.
     expect(await statText(page, "SOLVER")).toBe("LOCKED");
     await selectLandmark(page);
+    // A click is a modal open: only a selection from the keyboard keeps the
+    // drawer non-modal, and a click focuses the graph's root, not its target.
+    await expect(page.getByRole("dialog")).toHaveAttribute("aria-modal", "true");
     await page.clock.runFor(2_000);
     // A click selects; it doesn't grab the node, so the settled layout stays
     // exactly where the reader left it.
@@ -155,7 +158,9 @@ test.describe("graph canvas", () => {
     await expect(graph).toHaveAttribute("role", "group");
     await expect(target).toHaveCount(1);
 
+    const back = page.getByRole("button", { name: "Back", exact: true });
     await target.focus();
+    await expect(back).toBeDisabled();
     await expect(spoken).toHaveText(
       /^Graph, \d+ nodes, \d+ connections in \d+ kinds\. .+ connections?/,
     );
@@ -166,13 +171,17 @@ test.describe("graph canvas", () => {
     const label = await target.getAttribute("aria-label");
     await page.keyboard.press("Enter");
     await expect(target).not.toHaveAttribute("aria-label", label!);
+    // Following a connection is history without a selection; Back sees it.
+    await expect(back).toBeEnabled();
     await page.keyboard.press("Backspace");
     await expect(spoken).toHaveText(/^Back to /);
     await expect(target).toHaveAttribute("aria-label", label!);
+    await expect(back).toBeDisabled();
 
     await page.keyboard.press(" ");
     await expect(target).toHaveAttribute("aria-pressed", "true");
     await expect(page.getByRole("dialog")).toBeVisible();
+    await expect(page.getByRole("dialog")).not.toHaveAttribute("aria-modal", "true");
     // Selecting must not pull keyboard focus out of the graph.
     await expect(target).toBeFocused();
 

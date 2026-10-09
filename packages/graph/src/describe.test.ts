@@ -8,7 +8,7 @@ import {
   relationText,
   summaryText,
 } from "./describe.js";
-import type { LinkCategory } from "./types.js";
+import type { GraphNode, LinkCategory } from "./types.js";
 
 const cat = (over: Partial<LinkCategory> = {}): LinkCategory => ({
   label: "Cites",
@@ -167,5 +167,34 @@ describe("describeGraph", () => {
     expect(() =>
       describeGraph({ ...input, edges: [{ a: "n1", b: "gone", categoryId: "refs" }] }),
     ).toThrow(/unknown node id "gone"/);
+  });
+
+  it("lists only the isolated node and its direct neighbours, as the canvas draws them", () => {
+    const o = describeGraph({ ...input, isolateId: "n1" });
+    expect(o.summary).toBe("Graph, 3 nodes, 2 connections in 2 kinds.");
+    expect(o.groups.map((g) => [g.label, g.nodes.map((n) => n.label)])).toEqual([
+      ["NOTE", ["alpha", "beta"]],
+      ["SOURCE", ["zeta-src"]],
+    ]);
+    // An id that matches nothing isolates nothing, as on the canvas.
+    expect(describeGraph({ ...input, isolateId: "nope" }).summary).toMatch(/^Graph, 4 nodes/);
+  });
+
+  it("types describeNode and rankConnections with the nodes' own data", () => {
+    interface Doc {
+      words: number;
+    }
+    // The same callbacks a GraphCanvas<Doc> takes: no cast to GraphNode<unknown>.
+    const describeNode = (n: GraphNode<Doc>) => `${n.label}, ${n.data!.words} words`;
+    const nodes: GraphNode<Doc>[] = input.nodes.map((n, i) => ({ ...n, data: { words: i } }));
+    const o = describeGraph({
+      ...input,
+      nodes,
+      describeNode,
+      rankConnections: (a, b) => a.other.data!.words - b.other.data!.words,
+    });
+    const beta = o.groups[0]!.nodes[1]!;
+    expect(beta.description).toBe("beta, 1 words");
+    expect(beta.connections.map((c) => c.label)).toEqual(["zeta-src", "alpha"]);
   });
 });

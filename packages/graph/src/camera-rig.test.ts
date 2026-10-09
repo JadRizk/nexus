@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { createCameraRig, FOCUS_ZOOM, INTRO_ZOOM_MULTIPLIER } from "./camera-rig.js";
 import type { Bounds, CameraRig } from "./camera-rig.js";
-import { fitBounds } from "./camera.js";
+import { fitBounds, ZOOM_MAX } from "./camera.js";
 import type { FitInset } from "./camera.js";
 
 const W = 800,
@@ -59,8 +59,21 @@ describe("intro", () => {
     rig.intro(false);
     const f = fitBounds(-100, -50, 100, 50, W, H);
     expect(rig.target).toEqual({ x: f.x, y: f.y, zoom: f.zoom });
-    expect(rig.live.zoom).toBeCloseTo(f.zoom * INTRO_ZOOM_MULTIPLIER);
+    expect(rig.live.zoom).toBeCloseTo(Math.min(ZOOM_MAX, f.zoom * INTRO_ZOOM_MULTIPLIER));
     expect([rig.live.x, rig.live.y]).toEqual([rig.target.x, rig.target.y]);
+  });
+
+  it("never starts the sweep past ZOOM_MAX, however small the graph", () => {
+    // Two nodes a unit apart fit at ZOOM_MAX already; six times that is no zoom at all.
+    pos = [
+      [0, 0],
+      [1, 0],
+    ];
+    rig.intro(false);
+    expect(rig.target.zoom).toBe(ZOOM_MAX);
+    expect(rig.live.zoom).toBe(ZOOM_MAX);
+    rig.reseed(false);
+    expect(rig.live.zoom).toBe(ZOOM_MAX);
   });
 
   it("starts on the fit with no sweep under reduced motion", () => {
@@ -207,7 +220,7 @@ describe("reseed", () => {
     rig.intro(false);
     for (let i = 0; i < 600; i++) rig.tick(STEP);
     rig.reseed(false);
-    expect(rig.live.zoom).toBeCloseTo(rig.target.zoom * INTRO_ZOOM_MULTIPLIER);
+    expect(rig.live.zoom).toBeCloseTo(Math.min(ZOOM_MAX, rig.target.zoom * INTRO_ZOOM_MULTIPLIER));
     expect(rig.autoFit).toBe(true);
   });
 

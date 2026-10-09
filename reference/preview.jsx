@@ -532,7 +532,7 @@ var GraphOutline = forwardRef8(function GraphOutline2({
     },
     /* @__PURE__ */ React.createElement("p", { className: "nx-graph-outline__summary" }, data.summary),
     data.groups.map((group) => {
-      const headingId = `${base}-g-${group.categoryId}`;
+      const headingId = `${base}-g-${encodeURIComponent(group.categoryId)}`;
       return /* @__PURE__ */ React.createElement(
         "section",
         {
