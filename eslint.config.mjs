@@ -61,7 +61,7 @@ const noPrimitiveTokens = {
  *  being merged from its fork, and .design-sync is tooling output. */
 const NOT_YET_STYLED = ["packages/graph/**", ".design-sync/**"];
 
-const TEST_FILES = ["**/*.test.*", "**/*.spec.ts"];
+const TEST_FILES = ["**/*.test.{ts,tsx,js,jsx,mjs}", "**/*.spec.ts"];
 
 /** What `strict` and `stylistic` add beyond `recommended`, at warn. Rules
  *  `recommended` already sets keep their severity and options. */
