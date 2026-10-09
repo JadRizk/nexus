@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-label="Nexus Cyberdeck — graph candidate">
+<title>Nexus Cyberdeck — graph candidate</title>
+<rect x="0" y="0" width="48" height="48" fill="#08090A"/>
+<g stroke="#C6F135" stroke-width="1.5" fill="none"><line x1="14" y1="34" x2="24" y2="14"/><line x1="24" y1="14" x2="35" y2="31"/><line x1="14" y1="34" x2="35" y2="31"/></g>
+<polygon points="24,8 29.2,11 29.2,17 24,20 18.8,17 18.8,11" fill="#C6F135"/>
+<circle cx="14" cy="34" r="5" fill="#C6F135"/>
+<polygon points="35,25.5 40.5,35 29.5,35" fill="#C6F135"/>
+</svg>

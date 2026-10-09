@@ -1,4 +1,4 @@
-# Nexus Cyberdeck
+# ![Nexus Cyberdeck: the HUD that passes the audit.](brand/assets/readme-header.png)
 
 A HUD design system for React: acid green on near-black, hairline borders,
 zero corner radius, corner ticks, monospace everything, and a WCAG AA mode
