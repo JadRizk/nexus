@@ -1,5 +1,5 @@
 import { COMMON } from "../../shaders/common.js";
-import type { EffectDef } from "../types.js";
+import type { EffectOf } from "../types.js";
 
 export const SIGNAL_EFFECTS = [
   {
@@ -91,4 +91,4 @@ void main(){
   gl_FragColor = vec4(texture2D(uTex, uv).rgb, 1.0);
 }`,
   },
-] as const satisfies readonly EffectDef[];
+] as const satisfies readonly EffectOf<"SIGNAL">[];

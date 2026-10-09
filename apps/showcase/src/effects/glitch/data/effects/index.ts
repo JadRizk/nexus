@@ -18,5 +18,4 @@ type Effect = (typeof EFFECTS)[number];
 
 export type EffectId = Effect["id"];
 
-/** The param keys of the effect `Id`. */
 export type EffectParam<Id extends EffectId> = Extract<Effect, { id: Id }>["params"][number][0];

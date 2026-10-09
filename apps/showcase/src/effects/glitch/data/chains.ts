@@ -51,3 +51,5 @@ export const CHAINS = [
     ],
   },
 ] as const satisfies readonly ChainDef[];
+
+export type ChainId = (typeof CHAINS)[number]["id"];

@@ -23,6 +23,6 @@ export const EVENTS = [
 export type EventId = (typeof EVENTS)[number]["id"];
 
 /** Events by id. Keyed by string because callers look up ids from the keyboard and the queue. */
-export const EV_BY_ID: Readonly<Record<string, EventDef>> = Object.fromEntries(
+export const EV_BY_ID: Readonly<Partial<Record<string, EventDef>>> = Object.fromEntries(
   EVENTS.map((e) => [e.id, e]),
 );

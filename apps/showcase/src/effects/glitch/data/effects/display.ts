@@ -1,5 +1,5 @@
 import { COMMON } from "../../shaders/common.js";
-import type { EffectDef } from "../types.js";
+import type { EffectOf } from "../types.js";
 
 export const DISPLAY_EFFECTS = [
   {
@@ -91,4 +91,4 @@ void main(){
   gl_FragColor = vec4(max(c, prev * u_decay * uAmt), 1.0);
 }`,
   },
-] as const satisfies readonly EffectDef[];
+] as const satisfies readonly EffectOf<"DISPLAY">[];

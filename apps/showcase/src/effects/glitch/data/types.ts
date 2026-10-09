@@ -19,6 +19,9 @@ export interface EffectDef {
   readonly frag: string;
 }
 
+/** An effect pinned to one stage, so a file of `G` effects rejects one from another stage. */
+export type EffectOf<G extends EffectGroup> = EffectDef & { readonly group: G };
+
 /**
  * A keyframe: at `at` (0–1 through the event) the track reads `value`. A
  * "step" key holds the previous value until `at`, then jumps.

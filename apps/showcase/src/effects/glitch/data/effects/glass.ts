@@ -1,5 +1,5 @@
 import { COMMON } from "../../shaders/common.js";
-import type { EffectDef } from "../types.js";
+import type { EffectOf } from "../types.js";
 
 export const GLASS_EFFECTS = [
   {
@@ -50,4 +50,4 @@ void main(){
   gl_FragColor = vec4(mix(texture2D(uTex, vUv).rgb, c, uAmt), 1.0);
 }`,
   },
-] as const satisfies readonly EffectDef[];
+] as const satisfies readonly EffectOf<"GLASS">[];

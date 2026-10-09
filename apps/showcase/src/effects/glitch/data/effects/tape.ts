@@ -1,5 +1,5 @@
 import { COMMON } from "../../shaders/common.js";
-import type { EffectDef } from "../types.js";
+import type { EffectOf } from "../types.js";
 
 export const TAPE_EFFECTS = [
   {
@@ -87,4 +87,4 @@ void main(){
   gl_FragColor = vec4(c, 1.0);
 }`,
   },
-] as const satisfies readonly EffectDef[];
+] as const satisfies readonly EffectOf<"TAPE">[];

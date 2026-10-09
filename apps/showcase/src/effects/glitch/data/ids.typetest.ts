@@ -3,6 +3,12 @@
 import type { ChainDef } from "./chains.js";
 import type { Track } from "./events/types.js";
 import type { PresetDef } from "./presets.js";
+import type { EffectOf } from "./types.js";
+
+const fx = { id: "x", label: "X", note: "", params: [], frag: "" } as const;
+export const goodGroup = { ...fx, group: "TAPE" } satisfies EffectOf<"TAPE">;
+// @ts-expect-error a SIGNAL effect does not belong in the TAPE file.
+export const wrongGroup = { ...fx, group: "SIGNAL" } satisfies EffectOf<"TAPE">;
 
 export const goodTrack = { fx: "chroma", param: "width", mode: "set", keys: [] } satisfies Track;
 // @ts-expect-error "smear" is not an effect id.
