@@ -202,8 +202,11 @@ export interface GraphStats {
 
 /**
  * Live per-frame geometry, for a consumer placing its own DOM over the canvas
- * in step with it. Every array is a buffer GraphCanvas reuses frame to frame:
- * read values inside the `onFrame` call and never keep the array itself.
+ * in step with it. GraphCanvas reuses all of it frame to frame: this object,
+ * its `camera` and every array are refilled in place, not reallocated. Read
+ * values inside the `onFrame` call and never keep any of them: storing the
+ * object in React state, for one, never re-renders, because it is always the
+ * same object.
  */
 export interface FrameGeometry {
   /** Node ids in dense-index order; the arrays below are parallel to this. */
@@ -355,7 +358,7 @@ export interface GraphCanvasProps<T = unknown> {
    */
   onSelect?: (node: GraphNodeSnapshot<T> | null, source: SelectSource) => void;
   onStats?: (stats: GraphStats) => void;
-  /** Fires every rendered frame with live geometry. Read it synchronously: the arrays are reused, not reallocated. */
+  /** Fires every rendered frame with live geometry. Read it synchronously: the object, its camera and its arrays are reused, not reallocated, so copy out the values you need rather than keeping the object. */
   onFrame?: (geometry: FrameGeometry) => void;
   /**
    * What to do with an edge whose endpoint id matches no node. `"error"` (the

@@ -217,7 +217,7 @@ state.
 | `describeNode`, `rankConnections`              | your own wording for a node, and your own order for its connections                                                                                                                                                                     |
 | `onSelect`, `onStats`, `onFatal`, `onWarning`  | selection, stats about twice a second, WebGL setup failure or context loss, recoverable problems. A lost context is terminal: three asks the browser to restore it, but the canvas does not resume when it does — remount it to recover |
 | `onNavigate`                                   | after every keyboard or screen-reader step                                                                                                                                                                                              |
-| `onFrame`                                      | every frame, with live node positions and the camera, for syncing your own DOM. The arrays are reused, so read them during the call                                                                                                     |
+| `onFrame`                                      | every frame, with live node positions and the camera, for syncing your own DOM. The object, its camera and its arrays are reused: read values during the call, and copy out what you keep                                               |
 
 ### Controller
 
