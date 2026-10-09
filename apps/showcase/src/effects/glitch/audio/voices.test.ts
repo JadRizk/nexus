@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { EVENTS } from "../data/events/index.js";
-import { createRecordingSynth, sequence } from "./fakes.js";
+import { createRecordingSynth, sequence } from "./fakeAudio.js";
 import { VOICES } from "./voices.js";
 
 afterEach(() => {

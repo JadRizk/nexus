@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { FakeAudio } from "./fakes.js";
-import { createFakeAudioContext } from "./fakes.js";
+import type { FakeAudio } from "./fakeAudio.js";
+import { createFakeAudioContext } from "./fakeAudio.js";
 import type { GlitchAudio } from "./index.js";
 import { createAudio } from "./index.js";
 
@@ -46,6 +46,11 @@ describe("createAudio", () => {
     expect(fake.log).toContainEqual(["compressor#2", "connect", "destination"]);
   });
 
+  it("builds the same master gain and limiter chain", () => {
+    const { fake } = open();
+    expect(fake.log).toMatchSnapshot();
+  });
+
   it("fills a two-second noise table in [-1, 1)", () => {
     vi.spyOn(Math, "random").mockReturnValue(0.75);
     const { fake } = open();
@@ -59,7 +64,13 @@ describe("fire", () => {
     fake.setTime(4);
     fake.log.length = 0;
     audio.fire("degauss");
-    expect(fake.log).toContainEqual(["oscillator#3.frequency", "setValueAtTime", 150, 4 + 0.01]);
+    // Degauss opens on a 150 Hz oscillator, whichever node that turns out to be.
+    expect(fake.log).toContainEqual([
+      expect.stringMatching(/^oscillator#\d+\.frequency$/),
+      "setValueAtTime",
+      150,
+      4 + 0.01,
+    ]);
   });
 
   it("ignores an id with no voice", () => {

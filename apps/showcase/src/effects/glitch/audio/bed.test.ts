@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { startBed, stopBed } from "./bed.js";
-import { createFakeAudioContext } from "./fakes.js";
+import { createFakeAudioContext } from "./fakeAudio.js";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -20,6 +20,13 @@ function setUp() {
 const SOURCE_KINDS = new Set(["oscillator", "bufferSource"]);
 
 describe("startBed", () => {
+  it("builds the same graph", () => {
+    const { fake, target } = setUp();
+    fake.log.length = 0;
+    startBed(target, { hiss: 0.5, hum: 0.4, whine: 0.3 });
+    expect(fake.log).toMatchSnapshot();
+  });
+
   it("starts hiss, two hum partials, the whine and its drift", () => {
     const { target, bedNodes } = setUp();
     const bed = startBed(target);
@@ -43,6 +50,14 @@ describe("startBed", () => {
 });
 
 describe("stopBed", () => {
+  it("tears down the same nodes", () => {
+    const { fake, target } = setUp();
+    const bed = startBed(target);
+    fake.log.length = 0;
+    stopBed(fake.ctx, bed);
+    expect(fake.log).toMatchSnapshot();
+  });
+
   it("stops every source and disconnects every other node", () => {
     const { fake, target, bedNodes } = setUp();
     stopBed(fake.ctx, startBed(target));

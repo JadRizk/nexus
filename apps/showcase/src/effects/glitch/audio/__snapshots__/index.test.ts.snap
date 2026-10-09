@@ -1,0 +1,63 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`createAudio > builds the same master gain and limiter chain 1`] = `
+[
+  [
+    "ctx",
+    "create:gain",
+    "gain#1",
+  ],
+  [
+    "gain#1.gain",
+    "value",
+    0.5,
+  ],
+  [
+    "ctx",
+    "create:compressor",
+    "compressor#2",
+  ],
+  [
+    "compressor#2.threshold",
+    "value",
+    -8,
+  ],
+  [
+    "compressor#2.knee",
+    "value",
+    6,
+  ],
+  [
+    "compressor#2.ratio",
+    "value",
+    12,
+  ],
+  [
+    "compressor#2.attack",
+    "value",
+    0.002,
+  ],
+  [
+    "compressor#2.release",
+    "value",
+    0.15,
+  ],
+  [
+    "gain#1",
+    "connect",
+    "compressor#2",
+  ],
+  [
+    "compressor#2",
+    "connect",
+    "destination",
+  ],
+  [
+    "ctx",
+    "createBuffer",
+    1,
+    16,
+    8,
+  ],
+]
+`;

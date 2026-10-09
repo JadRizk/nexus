@@ -24,6 +24,8 @@ export interface FakeAudio {
   readonly buffers: Float32Array[];
   /** Moves `ctx.currentTime` to `seconds`. */
   setTime(seconds: number): void;
+  /** Calls the `onended` handler set on node `id`, as the browser would when it stops. */
+  end(id: string): void;
 }
 
 const ID = Symbol("fake audio id");
@@ -97,9 +99,9 @@ function nodeMethods(record: FakeNodeRecord, log: AudioLogEntry[]): Labelled {
 }
 
 /** A node whose audio params appear on first read and whose property writes are logged. */
-function createNode(record: FakeNodeRecord, log: AudioLogEntry[]): unknown {
+function createNode(record: FakeNodeRecord, log: AudioLogEntry[], target: Labelled): unknown {
   const params = new Map<string, Labelled>();
-  return new Proxy(nodeMethods(record, log), {
+  return new Proxy(target, {
     get(target, key) {
       if (typeof key !== "string" || !PARAM_NAMES.has(key)) return target[key];
       let param = params.get(key);
@@ -125,6 +127,7 @@ export function createFakeAudioContext(sampleRate = 8): FakeAudio {
   const log: AudioLogEntry[] = [];
   const nodes: FakeNodeRecord[] = [];
   const buffers: Float32Array[] = [];
+  const targets = new Map<string, Labelled>();
   const make = (kind: string) => () => {
     const record = {
       id: `${kind}#${nodes.length + 1}`,
@@ -135,7 +138,9 @@ export function createFakeAudioContext(sampleRate = 8): FakeAudio {
     };
     nodes.push(record);
     log.push(["ctx", `create:${kind}`, record.id]);
-    return createNode(record, log);
+    const target = nodeMethods(record, log);
+    targets.set(record.id, target);
+    return createNode(record, log, target);
   };
   const ctx = {
     sampleRate,
@@ -164,7 +169,12 @@ export function createFakeAudioContext(sampleRate = 8): FakeAudio {
   const setTime = (seconds: number) => {
     ctx.currentTime = seconds;
   };
-  return { ctx: ctx as unknown as AudioContext, log, nodes, buffers, setTime };
+  const end = (id: string) => {
+    const onended = targets.get(id)?.onended;
+    if (typeof onended !== "function") throw new Error(`${id} has no onended handler`);
+    (onended as () => void)();
+  };
+  return { ctx: ctx as unknown as AudioContext, log, nodes, buffers, setTime, end };
 }
 
 /** One call a voice made on the synth. */
