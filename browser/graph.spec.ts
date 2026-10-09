@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
-import { banner, setTheme } from "./harness";
+import { runSiteAction, setTheme } from "./harness";
 
 /* ============================================================================
    The graph canvas, in a real browser.
@@ -52,8 +52,10 @@ async function openGraphFrozen(page: Page) {
   await page.goto("/#/labs/graph");
   // The same header setup gotoPage does, minus its settle(): that waits on
   // requestAnimationFrame, which a paused clock never fires.
-  const crt = banner(page).getByRole("button", { name: "CRT", exact: true });
-  if ((await crt.getAttribute("aria-pressed")) === "true") await crt.click();
+  const root = page.locator(".nx-root");
+  if ((await root.getAttribute("data-nx-crt")) !== "off")
+    await runSiteAction(page, "Turn the CRT layer off");
+  await expect(root).toHaveAttribute("data-nx-crt", "off");
   await setTheme(page, "hud-aa");
   await page.evaluate(() => document.fonts.ready);
   await page.clock.runFor(SETTLE_MS);
