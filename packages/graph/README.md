@@ -247,9 +247,9 @@ state is mirrored onto the `<canvas>` as `data-nx-reduced-motion="true"` or
 
 - Set `optics.curve` to `0` to disable the barrel warp entirely. That removes
   the warp, not the cost: the CRT pipeline is three offscreen render targets
-  and four passes per frame (the scene, two bloom passes and the full-screen
-  composite), all of which run regardless of `curve`. It is meant for a hero
-  canvas, not a thumbnail.
+  and four passes per frame (render to texture, a thresholded horizontal blur,
+  a vertical blur, then the full-screen composite), all of which run regardless
+  of `curve`. It is meant for a hero canvas, not a thumbnail.
 - The physics solver, camera maths and shader sources are exported too
   (`createPhysics`, `project`, `unproject`, `NODE_FS`, …) for anyone who
   wants to build a different renderer on the same engine.

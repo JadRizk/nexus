@@ -100,7 +100,7 @@ remounting it.
 - [Tokens reference](packages/tokens/README.md): every custom property, the typed accessors, the DTCG-shaped source file.
 - [Graph reference](packages/graph/README.md): data model, props, controller.
 - [STYLING.md](packages/react/STYLING.md): the rule behind the component-token layer and the specificity trap it avoids.
-- The showcase (`npm run dev`) renders every component with a rationale note and, where it applies, an accessibility note and a code sample, plus the graph and a shader lab.
+- The showcase (`npm run dev`) renders every component live, most with a rationale note and a code sample and some with an accessibility note, plus the graph and a shader lab.
 
 ## Repository layout
 
@@ -264,10 +264,10 @@ Verified behaviours:
 
 ## CRT layer
 
-The graph's CRT is a four-pass GPU pipeline: render to texture, bright-pass,
-two blurs, then a composite with barrel distortion, chromatic aberration,
-aperture grille, rolling refresh bar, grain and glitch slicing. You cannot run
-that behind every panel in an application.
+The graph's CRT is a four-pass GPU pipeline: render to texture, a thresholded
+horizontal blur, a vertical blur, then a composite with barrel distortion,
+chromatic aberration, aperture grille, rolling refresh bar, grain and glitch
+slicing. You cannot run that behind every panel in an application.
 
 `crt.css` gets most of the read for one composited pseudo-element and no
 JavaScript. Reserve the shader version for a hero canvas.
@@ -357,10 +357,13 @@ unreachable. `@nexus-cyberdeck/graph` versions independently, because it is a
 product built _with_ the system rather than part of it.
 
 The packages are still `"private": true`, and that flag is the deliberate hold
-on the first publish: with it set, `changeset publish` versions and tags but
-never pushes to the registry, and a by-hand `npm publish` is refused. The
-release workflow is already wired, and it publishes through npm trusted
-publishing (OIDC) — see
+on the first publish. With it set, `changeset version` (run as
+`version:packages` when the release workflow opens the Version Packages pull
+request) still bumps the version and writes the changelog, and
+`changeset publish` creates the git tag but skips the registry
+(`privatePackages: { version: true, tag: true }` in `.changeset/config.json`),
+while a by-hand `npm publish` is refused. The release workflow is already
+wired, and it publishes through npm trusted publishing (OIDC) — see
 [How publishing is authorised](CONTRIBUTING.md#how-publishing-is-authorised)
 in CONTRIBUTING. There is no `NPM_TOKEN` secret and none should be added: a
 token on the publish step would make npm use it instead and silently bypass

@@ -127,6 +127,15 @@ const CHECKS = [
       { expected: ratio("hud", "grey-200"), what: "hud UI-boundary contrast" },
     ],
   },
+  // The preview's hand-authored tail (below the PAGES boundary, which
+  // build-preview.mjs copies verbatim) quotes the same hud boundary figure in
+  // its muted-ramp a11y note. Slider tracks use --nx-border-strong, grey-200.
+  {
+    file: "reference/preview.jsx",
+    pattern: /border token used for slider tracks sits at (\d+\.\d+):1/g,
+    expected: ratio("hud", "grey-200"),
+    what: "hud slider-track (UI-boundary) contrast",
+  },
 ];
 
 const problems = [];

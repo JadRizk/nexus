@@ -2329,7 +2329,7 @@ function TokensPage() {
       </Spec>
       <Spec name={`Muted ramp — ${theme}`} note="Solved against exact contrast targets rather than picked by eye: hue 100°, saturation 13%, binary-searched per step. Switch the theme in the header to see what the prototype's ramp actually looked like."
         a11y={aa ? "This ramp meets AA: disabled text clears 4.5:1 and UI boundaries clear 3:1 (WCAG 1.4.11)."
-                 : "This ramp fails AA. Eight of nine muted tokens sit below 4.5:1, and the border token used for slider tracks sits at 1.21:1 against a required 3:1."}>
+                 : "This ramp fails AA. Eight of nine muted tokens sit below 4.5:1, and the border token used for slider tracks sits at 1.57:1 against a required 3:1."}>
         <Row>{ramp.map(([n, v, r]) => <Swatch key={n} name={n} value={v} ratio={r} />)}</Row>
       </Spec>
       <Spec name="Restricted colour" note="Magenta is reserved for alarm states — unresolved items and conflicts, nothing else. In the token graph it is reachable only through --nx-fg-critical; there is no general accent alias, so it cannot quietly become a button colour."

@@ -69,10 +69,16 @@ jobs:
       # changelogs are written, and this workflow runs again on the merge
       # commit with no changesets left, at which point `publish` runs instead.
       #
-      # While the packages are still `"private": true`, `changeset publish`
-      # versions and tags but pushes nothing to the registry. Removing
-      # `private` from a package is the only change needed to start
-      # publishing it; nothing here has to be edited.
+      # While a package is still `"private": true` — the deliberate hold on its
+      # first publish — `changeset version` still bumps it and writes its
+      # changelog, and `changeset publish` tags it but skips the registry
+      # (`privatePackages: { version: true, tag: true }` in
+      # .changeset/config.json). Removing `private` is not enough on its own:
+      # trusted publishing can only be configured for a package that already
+      # exists, so each package's first publish is done by hand, with
+      # `private` removed in that same pull request, and this workflow
+      # publishes it from the next release on. See "How publishing is
+      # authorised" in CONTRIBUTING.md.
       #
       # `version:packages` is `changeset version` plus `build:preview`, not
       # `changeset version` alone. reference/preview.jsx is a committed
