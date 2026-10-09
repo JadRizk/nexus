@@ -7,6 +7,8 @@ import { useFocusTrap } from "../../hooks/index.js";
 import { rankItems } from "../../search/index.js";
 import type { PaletteItem } from "../../search/index.js";
 import { mergeRefs } from "../../refs.js";
+import { announceResults } from "./announceResults.js";
+import { nextCursor } from "./cursor.js";
 
 export interface CommandPaletteProps<T extends PaletteItem = PaletteItem> {
   open: boolean;
@@ -97,12 +99,6 @@ function CommandPaletteInner<T extends PaletteItem = PaletteItem>(
   // before `label` existed.
   const dialogLabel = label ?? placeholder;
 
-  const announceResults = (count: number): string => {
-    if (typeof resultsLabel === "function") return resultsLabel(count);
-    if (typeof resultsLabel === "string") return resultsLabel;
-    return `${count} result${count === 1 ? "" : "s"}`;
-  };
-
   // keep the active option in view without moving focus off the input
   useEffect(() => {
     const el = listRef.current?.children[cursor] as HTMLElement | undefined;
@@ -157,18 +153,10 @@ function CommandPaletteInner<T extends PaletteItem = PaletteItem>(
               aria-activedescendant={active ? `${listId}-${cursor}` : undefined}
               aria-label={placeholder}
               onKeyDown={(e) => {
-                if (e.key === "ArrowDown") {
+                const requested = nextCursor(e.key, cursor, hits.length);
+                if (requested !== undefined) {
                   e.preventDefault();
-                  setRequestedCursor(Math.min(hits.length - 1, cursor + 1));
-                } else if (e.key === "ArrowUp") {
-                  e.preventDefault();
-                  setRequestedCursor(Math.max(0, cursor - 1));
-                } else if (e.key === "Home") {
-                  e.preventDefault();
-                  setRequestedCursor(0);
-                } else if (e.key === "End") {
-                  e.preventDefault();
-                  setRequestedCursor(Math.max(0, hits.length - 1));
+                  setRequestedCursor(requested);
                 } else if (e.key === "Enter" && active) {
                   e.preventDefault();
                   onSelect(active);
@@ -183,7 +171,7 @@ function CommandPaletteInner<T extends PaletteItem = PaletteItem>(
           <HazardRule className="nx-palette__rule" />
 
           <div className="nx-sr" role="status" aria-live="polite">
-            {announceResults(hits.length)}
+            {announceResults(hits.length, resultsLabel)}
           </div>
 
           {/* The empty message sits outside the listbox, not inside it as an
