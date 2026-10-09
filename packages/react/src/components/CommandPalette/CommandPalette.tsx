@@ -116,7 +116,7 @@ function CommandPaletteInner<T extends PaletteItem = PaletteItem>(
   }: CommandPaletteProps<T>,
   ref: ForwardedRef<HTMLDivElement>,
 ) {
-  const { query, setQuery, hits, cursor, setCursor } = usePaletteSearch(open, items);
+  const { query, setQuery, hits, cursor, requestCursor } = usePaletteSearch(open, items);
   const trapRef = useFocusTrap<HTMLDivElement>(open, onClose);
   const inputRef = useFocusOnOpen<HTMLInputElement>(open);
   const listRef = useScrollActiveIntoView(cursor);
@@ -164,7 +164,7 @@ function CommandPaletteInner<T extends PaletteItem = PaletteItem>(
                 const requested = nextCursor(e.key, cursor, hits.length);
                 if (requested !== undefined) {
                   e.preventDefault();
-                  setCursor(requested);
+                  requestCursor(requested);
                 } else if (e.key === "Enter" && active) {
                   e.preventDefault();
                   onSelect(active);
@@ -198,7 +198,7 @@ function CommandPaletteInner<T extends PaletteItem = PaletteItem>(
                 item={item}
                 id={`${listId}-${i}`}
                 isActive={i === cursor}
-                onHover={() => setCursor(i)}
+                onHover={() => requestCursor(i)}
                 onChoose={onSelect}
                 renderMeta={renderMeta}
               />
