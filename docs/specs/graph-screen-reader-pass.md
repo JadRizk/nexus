@@ -56,6 +56,8 @@ readers may add their own role or state words around it.
    - The details drawer opens on the right. Focus stays on the graph, and the
      node is announced as pressed/selected.
    - Heard: "Selected".
+   - **Check:** in browse mode too, the reader's own activate command
+     (VO+Space, or Enter in NVDA and JAWS browse mode) selects and deselects.
 7. **Step out.** Press Escape until focus leaves the graph. Each press undoes
    one thing, in this order:
    - "Deselected", and the drawer closes (only if something is selected).

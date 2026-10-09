@@ -148,8 +148,15 @@ export function createNavOverlay(opts: NavOverlayOptions): NavOverlay {
     ev.preventDefault();
     onAction(action);
   };
+  // A screen reader in browse mode doesn't send Enter or Space to the page:
+  // it activates the button with a click (VoiceOver's VO+Space, NVDA's and
+  // JAWS's Enter). The button is a toggle, so that click toggles, as Space
+  // does. Real Enter and Space keydowns are preventDefault-ed above, so they
+  // never become a click as well.
+  const onClick = () => onAction({ type: "toggleSelect" });
   const onFocus = () => onFocusChange(true);
   const onBlur = () => onFocusChange(false);
+  button.addEventListener("click", onClick);
   button.addEventListener("keydown", onKeyDown);
   button.addEventListener("focus", onFocus);
   button.addEventListener("blur", onBlur);
@@ -195,6 +202,7 @@ export function createNavOverlay(opts: NavOverlayOptions): NavOverlay {
       return document.activeElement === button;
     },
     dispose() {
+      button.removeEventListener("click", onClick);
       button.removeEventListener("keydown", onKeyDown);
       button.removeEventListener("focus", onFocus);
       button.removeEventListener("blur", onBlur);

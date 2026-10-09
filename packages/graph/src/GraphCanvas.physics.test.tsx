@@ -465,6 +465,16 @@ describe("GraphCanvas keyboard and screen-reader navigation", () => {
     expect(document.activeElement).toBe(group);
   });
 
+  it("selects when a screen reader activates the focus target with a click", () => {
+    const onSelect = vi.fn();
+    mount(undefined, props({ onSelect }));
+    act(() => focusTarget()!.focus());
+    act(() => focusTarget()!.click());
+    // A keyboard selection: the reader is still in the graph.
+    expect(onSelect).toHaveBeenLastCalledWith(expect.objectContaining({ id: "a" }), "keyboard");
+    expect(spoken()).toBe("Selected");
+  });
+
   it("after stepping out, the next Tab leaves the graph instead of re-entering it", () => {
     mount(undefined, props());
     act(() => focusTarget()!.focus());

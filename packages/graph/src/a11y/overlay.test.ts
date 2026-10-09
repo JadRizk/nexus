@@ -109,6 +109,14 @@ describe("the focus target", () => {
     expect(onFocusChange).toHaveBeenLastCalledWith(false);
   });
 
+  it("toggles the selection when a screen reader activates it with a click", () => {
+    button().click();
+    expect(onAction).toHaveBeenCalledWith({ type: "toggleSelect" });
+    // Enter and Space are handled on keydown and never turn into a click too.
+    expect(press("Enter").defaultPrevented).toBe(true);
+    expect(press(" ").defaultPrevented).toBe(true);
+  });
+
   it("can be taken out of the tab order and still be focused by script", () => {
     expect(button().tabIndex).toBe(0);
     overlay.setTabbable(false);

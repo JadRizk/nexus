@@ -348,7 +348,8 @@ export interface GraphCanvasProps<T = unknown> {
   /**
    * The reader selected a node, or cleared the selection (null). `source` says
    * how: `"pointer"` for a click, `"keyboard"` for a key inside the graph
-   * (Space, Escape, Backspace), `"controller"` for `back()`. A detail panel
+   * (Space, Escape, Backspace) or a screen reader activating its focus target,
+   * `"controller"` for `back()`. A detail panel
    * can stay non-modal for a keyboard selection, so the reader keeps their
    * place in the graph, and take focus for the others.
    */

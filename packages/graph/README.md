@@ -249,17 +249,17 @@ The graph is a single Tab stop, a named group. Tabbing in speaks a summary
 From there you travel along connections rather than tabbing node by node,
 because a graph has no reading order to tab through:
 
-| Key       | Does                                                                   |
-| --------- | ---------------------------------------------------------------------- |
-| ← →       | browse the current node's connections, strongest first, without moving |
-| ↑ ↓       | show all, outgoing or incoming connections                             |
-| Enter     | follow the connection under the cursor                                 |
-| Backspace | go back the way you came                                               |
-| Home      | return to where you entered                                            |
-| Space     | select or deselect the node (through `onSelect`)                       |
-| D         | describe the node in detail                                            |
-| ?         | list the keys                                                          |
-| Escape    | clear the selection, then dismiss the tooltip, then leave the graph    |
+| Key       | Does                                                                                         |
+| --------- | -------------------------------------------------------------------------------------------- |
+| ← →       | browse the current node's connections, strongest first, without moving                       |
+| ↑ ↓       | show all, outgoing or incoming connections                                                   |
+| Enter     | follow the connection under the cursor                                                       |
+| Backspace | go back the way you came                                                                     |
+| Home      | return to where you entered                                                                  |
+| Space     | select or deselect the node (through `onSelect`); so does activating it with a screen reader |
+| D         | describe the node in detail                                                                  |
+| ?         | list the keys                                                                                |
+| Escape    | clear the selection, then dismiss the tooltip, then leave the graph                          |
 
 Each step is spoken through a polite live region, as relation, far node, kind
 and position: "cites ARCHIVE-343, source. 1 of 6, strongest". Name your
@@ -273,7 +273,8 @@ is a step `back()` can undo, the same as Backspace, so a Back button in your
 own UI behaves like the key.
 
 `onSelect`'s second argument says where a selection came from: `"pointer"`,
-`"keyboard"` (a key inside the graph) or `"controller"` (`back()`). A detail
+`"keyboard"` (a key inside the graph, or a screen reader activating its focus
+target) or `"controller"` (`back()`). A detail
 panel that opens on selection should stay non-modal for `"keyboard"`, so focus
 stays in the graph and the reader keeps their place, and take focus for the
 others. The showcase's drawer does exactly that.
