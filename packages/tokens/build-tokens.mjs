@@ -383,12 +383,12 @@ function semanticBlock() {
   return block.join("\n");
 }
 
-function buildCss(table) {
-  const out = [];
-
-  out.push(GENERATED("src/tokens.json"));
-  out.push("");
-  out.push(`/* ${tokens.$description.split(". ")[0]}.
+/** The generated-file banner and the usage note, one line per theme. */
+function cssHeader() {
+  return [
+    GENERATED("src/tokens.json"),
+    "",
+    `/* ${tokens.$description.split(". ")[0]}.
 
    Zero dependencies. Works with React, Vue, Svelte, plain HTML, or a Tailwind
    preset generated from the same tokens.json.
@@ -400,8 +400,27 @@ ${THEMES.filter((t) => t !== DEFAULT_THEME)
   .join("\n")}
 
    Every semantic name exists in every theme, so swapping never touches
-   component code. */`);
-  out.push("");
+   component code. */`,
+    "",
+  ].join("\n");
+}
+
+/** The hand-authored base layer, copied from base.css from its BASE banner on. */
+function baseLayer() {
+  const base = readFileSync(src("base.css"), "utf8");
+  return base
+    .slice(
+      base.indexOf(
+        "/* ============================================================================\n   BASE",
+      ),
+    )
+    .trimEnd();
+}
+
+function buildCss(table) {
+  const out = [];
+
+  out.push(cssHeader());
 
   /* ---- primitives (theme-invariant only) ---- */
   out.push(`/* ============================================================================
@@ -527,17 +546,7 @@ ${THEMES.filter((t) => t !== DEFAULT_THEME)
     out.push("");
   }
 
-  /* ---- hand-authored base layer ---- */
-  const base = readFileSync(src("base.css"), "utf8");
-  out.push(
-    base
-      .slice(
-        base.indexOf(
-          "/* ============================================================================\n   BASE",
-        ),
-      )
-      .trimEnd(),
-  );
+  out.push(baseLayer());
 
   return out.join("\n") + "\n";
 }
