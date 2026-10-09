@@ -176,6 +176,16 @@ test.describe("token reference", () => {
     await expect(spec(page, "Text & icon roles")).toHaveScreenshot("tokens-text-roles.png");
   });
 
+  test("the layer cards", async ({ page }) => {
+    await gotoPage(page, "foundations/tokens");
+    await expect(spec(page, "Layers")).toHaveScreenshot("tokens-layers.png");
+  });
+
+  test("the themes table", async ({ page }) => {
+    await gotoPage(page, "foundations/tokens");
+    await expect(spec(page, "Themes")).toHaveScreenshot("tokens-themes.png");
+  });
+
   test("the AA comparison table", async ({ page }) => {
     await gotoPage(page, "foundations/tokens");
     await expect(spec(page, "AA compliance")).toHaveScreenshot("tokens-aa.png");
