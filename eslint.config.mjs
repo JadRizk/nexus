@@ -66,6 +66,12 @@ export default tseslint.config(
       "browser/.results/**",
       "playwright-report/**",
       ".ds-sync/**",
+      // Agent worktrees: whole checkouts of this repository living inside it,
+      // gitignored but not invisible to a linter that walks the tree. Each one
+      // carries its own reference/preview.jsx, which the relative ignore below
+      // does not match, so without this a developer with worktrees present
+      // lints every copy and sees hundreds of errors CI never reports.
+      ".claude/**",
       // Generated from packages/react/src by scripts/build-preview.mjs; the
       // CI drift check is what guards this file, not the linter.
       "reference/preview.jsx",
