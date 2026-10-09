@@ -266,3 +266,36 @@ describe("CommandPalette", () => {
     expect(screen.queryByText("ESC CLOSE")).not.toBeInTheDocument();
   });
 });
+
+describe("CommandPalette when items change while open", () => {
+  it("currently leaves no option active after ArrowDown on no results, then items arrive", () => {
+    // Pins today's behaviour: ArrowDown on an empty list stores -1. Logged as a bug on #91.
+    const { rerender } = render(
+      <CommandPalette open onClose={() => {}} items={[]} onSelect={() => {}} />,
+    );
+    const input = screen.getByRole("combobox");
+    fireEvent.keyDown(input, { key: "ArrowDown" });
+
+    rerender(<CommandPalette open onClose={() => {}} items={ITEMS} onSelect={() => {}} />);
+    expect(screen.getAllByRole("option")).toHaveLength(3);
+    expect(input).not.toHaveAttribute("aria-activedescendant");
+    for (const option of screen.getAllByRole("option")) {
+      expect(option).toHaveAttribute("aria-selected", "false");
+    }
+  });
+
+  it("keeps the active option on the last result when items shrink under the cursor", () => {
+    const { rerender } = render(
+      <CommandPalette open onClose={() => {}} items={ITEMS} onSelect={() => {}} />,
+    );
+    const input = screen.getByRole("combobox");
+    fireEvent.keyDown(input, { key: "End" });
+
+    rerender(
+      <CommandPalette open onClose={() => {}} items={ITEMS.slice(0, 1)} onSelect={() => {}} />,
+    );
+    const [onlyOption] = screen.getAllByRole("option");
+    expect(onlyOption).toHaveAttribute("aria-selected", "true");
+    expect(input).toHaveAttribute("aria-activedescendant", onlyOption?.id);
+  });
+});
