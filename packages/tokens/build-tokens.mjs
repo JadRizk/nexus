@@ -405,18 +405,6 @@ ${THEMES.filter((t) => t !== DEFAULT_THEME)
   ].join("\n");
 }
 
-/** The hand-authored base layer, copied from base.css from its BASE banner on. */
-function baseLayer() {
-  const base = readFileSync(src("base.css"), "utf8");
-  return base
-    .slice(
-      base.indexOf(
-        "/* ============================================================================\n   BASE",
-      ),
-    )
-    .trimEnd();
-}
-
 /** Each primitive group's theme-invariant tokens; themed ones go in the theme blocks. */
 function primitiveSections() {
   const groups = [
@@ -481,11 +469,12 @@ function primitivesBlock() {
    are computed against --nx-bg-surface (${SURFACE}) at build time, not typed in.
    ========================================================================== */`,
     ":root {",
-    // Both shipped themes are dark; without this, native controls (scrollbar,
-    // <select>, form fields) render in the light UA palette.
+    // Both shipped themes are dark, and the browser has no other signal that
+    // this page never offers a light appearance; without it, native controls
+    // (scrollbar, <select>, form fields) render in the light UA palette.
     "  color-scheme: dark;",
     "",
-    sections.join("\n\n"),
+    ...(sections.length ? [sections.join("\n\n")] : []),
     "}",
     "",
   ].join("\n");
@@ -528,20 +517,34 @@ function themedDecl(path, theme, ratios, wcag) {
 function themeBlock({ theme, table, themed, sensitive }) {
   const ratios = table[theme];
   const { wcag } = tokens.theme[theme];
-  const out = [
+  return [
     themeBanner(theme, mutedRange(themed, ratios)),
     theme === DEFAULT_THEME
       ? `:root,\n[data-nx-theme="${theme}"] {`
       : `[data-nx-theme="${theme}"] {`,
     declBlock(themed.map((path) => themedDecl(path, theme, ratios, wcag))),
-  ];
-  if (sensitive.length) {
-    out.push("");
-    out.push("  /* re-resolved here so the theme works on any element, not only :root */");
-    out.push(declBlock(sensitive.map((p) => [cssName(p), toCssValue(byPath.get(p), p), null])));
-  }
-  out.push("}", "");
-  return out.join("\n");
+    ...(sensitive.length
+      ? [
+          "",
+          "  /* re-resolved here so the theme works on any element, not only :root */",
+          declBlock(sensitive.map((p) => [cssName(p), toCssValue(byPath.get(p), p), null])),
+        ]
+      : []),
+    "}",
+    "",
+  ].join("\n");
+}
+
+/** The hand-authored base layer, copied from base.css from its BASE banner on. */
+function baseLayer() {
+  const base = readFileSync(src("base.css"), "utf8");
+  return base
+    .slice(
+      base.indexOf(
+        "/* ============================================================================\n   BASE",
+      ),
+    )
+    .trimEnd();
 }
 
 function buildCss(table) {
