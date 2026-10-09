@@ -49,8 +49,10 @@ npm run build:preview  # reference/preview.jsx from the packages
 
 ## Changesets
 
-Any change a consumer could notice needs a changeset, and CI asks for one on
-every pull request that touches `packages/*/src`:
+Any change a consumer could notice needs a changeset. CI checks every pull
+request that touches `packages/*/src` for one the pull request itself adds. A
+changeset already pending on `main` from earlier work does not count, however
+many are waiting in the folder: the entry has to be new in your branch.
 
 ```bash
 npx changeset          # pick packages, pick the bump, describe the change
