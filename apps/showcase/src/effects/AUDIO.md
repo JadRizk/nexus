@@ -76,7 +76,8 @@ For anything shipped in a product, this library is out.
   date. Retroactive licence changes have happened; a demand letter is too late
   to start looking.
 - **`exponentialRampToValueAtTime` must never target 0.** It produces silent
-  NaN in Chrome. Ramp to `0.0001` instead — asserted in the test above.
+  NaN in Chrome. Ramp to `0.0001` (`SILENT`) instead — asserted by "never ramp
+  exponentially to 0" in `glitch/audio/synth.test.ts`.
 
 ## Voice design
 

@@ -2,6 +2,7 @@
    and immediately miss when it cuts. Off by default; the CRT whine especially
    is not for everyone. */
 
+import type { AudioTarget } from "./synth.js";
 import { ignoringErrors } from "./synth.js";
 import { MAINS, NTSC_SCAN } from "./tuning.js";
 
@@ -28,22 +29,15 @@ export interface Bed {
   readonly out: GainNode;
 }
 
-/** The context a bed is built in. */
-export interface BedTarget {
-  readonly ctx: BaseAudioContext;
-  readonly master: AudioNode;
-  readonly noiseBuffer: AudioBuffer;
-}
-
-/** Context time the layers start at (s), and the bed they join. */
-interface Layering {
+/** Where a layer goes: the context, the time it starts at (s) and the bed it joins. */
+interface LayerTarget {
   readonly ctx: BaseAudioContext;
   readonly start: number;
   readonly bed: Bed;
 }
 
-function addHiss(layering: Layering, noiseBuffer: AudioBuffer, level: number): void {
-  const { ctx, start, bed } = layering;
+function addHiss(target: LayerTarget, noiseBuffer: AudioBuffer, level: number): void {
+  const { ctx, start, bed } = target;
   const source = ctx.createBufferSource();
   source.buffer = noiseBuffer;
   source.loop = true;
@@ -61,8 +55,8 @@ function addHiss(layering: Layering, noiseBuffer: AudioBuffer, level: number): v
 }
 
 /** Mains hum plus its second harmonic. */
-function addHum(layering: Layering, level: number): void {
-  const { ctx, start, bed } = layering;
+function addHum(target: LayerTarget, level: number): void {
+  const { ctx, start, bed } = target;
   [MAINS, MAINS * 2].forEach((frequency, harmonic) => {
     const oscillator = ctx.createOscillator();
     oscillator.type = harmonic ? "sine" : "sawtooth";
@@ -81,12 +75,9 @@ function addHum(layering: Layering, level: number): void {
   });
 }
 
-/**
- * The flyback whine. Many adults cannot hear 15.7 kHz at all — that is
- * authentic, and the reason it is opt-in and separately levelled.
- */
-function addWhine(layering: Layering, level: number): void {
-  const { ctx, start, bed } = layering;
+/** The flyback whine at the scan rate; it keeps its own level (see AUDIO.md). */
+function addWhine(target: LayerTarget, level: number): void {
+  const { ctx, start, bed } = target;
   const whine = ctx.createOscillator();
   whine.type = "sine";
   whine.frequency.value = NTSC_SCAN;
@@ -107,7 +98,7 @@ function addWhine(layering: Layering, level: number): void {
 }
 
 /** Starts a bed now, fading in over `options.fade` seconds if set. */
-export function startBed({ ctx, master, noiseBuffer }: BedTarget, options: BedOptions = {}): Bed {
+export function startBed({ ctx, master, noiseBuffer }: AudioTarget, options: BedOptions = {}): Bed {
   const { hiss = 0.35, hum = 0.3, whine = 0.25, fade = 0 } = options;
   const start = ctx.currentTime;
   const out = ctx.createGain();
@@ -117,10 +108,10 @@ export function startBed({ ctx, master, noiseBuffer }: BedTarget, options: BedOp
     out.gain.setTargetAtTime(1, start, fade / 4);
   }
   const bed: Bed = { sources: [], chain: [out], out };
-  const layering = { ctx, start, bed };
-  addHiss(layering, noiseBuffer, hiss);
-  addHum(layering, hum);
-  addWhine(layering, whine);
+  const target = { ctx, start, bed };
+  addHiss(target, noiseBuffer, hiss);
+  addHum(target, hum);
+  addWhine(target, whine);
   return bed;
 }
 

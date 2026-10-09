@@ -62,15 +62,15 @@ export function ignoringErrors(action: () => void): void {
   }
 }
 
-/** Where the primitives play: the context, the bus they feed and the noise table they read. */
-interface SynthTarget {
+/** Where sound is made: the context, the master bus it feeds and the shared noise table. */
+export interface AudioTarget {
   readonly ctx: BaseAudioContext;
   readonly master: AudioNode;
   readonly noiseBuffer: AudioBuffer;
 }
 
 function playNoise(
-  { ctx, master, noiseBuffer }: SynthTarget,
+  { ctx, master, noiseBuffer }: AudioTarget,
   start: number,
   duration: number,
   options: NoiseOptions = {},
@@ -117,7 +117,7 @@ function playNoise(
 }
 
 function playTone(
-  { ctx, master }: SynthTarget,
+  { ctx, master }: AudioTarget,
   start: number,
   duration: number,
   options: ToneOptions = {},
@@ -161,7 +161,7 @@ export function createSynth(
   master: AudioNode,
   noiseBuffer: AudioBuffer,
 ): Synth {
-  const target: SynthTarget = { ctx, master, noiseBuffer };
+  const target: AudioTarget = { ctx, master, noiseBuffer };
   return {
     noise: (start, duration, options) => playNoise(target, start, duration, options),
     tone: (start, duration, options) => playTone(target, start, duration, options),
