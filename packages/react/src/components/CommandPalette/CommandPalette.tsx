@@ -1,14 +1,16 @@
-import { forwardRef, useEffect, useId, useMemo, useRef, useState } from "react";
+import { forwardRef, useId } from "react";
 import type { CSSProperties, ForwardedRef, ReactNode } from "react";
 import { Panel } from "../Panel/index.js";
 import { HazardRule } from "../HazardRule/index.js";
 import { Glyph } from "../Glyph/index.js";
 import { useFocusTrap } from "../../hooks/index.js";
-import { rankItems } from "../../search/index.js";
 import type { PaletteItem } from "../../search/index.js";
 import { mergeRefs } from "../../refs.js";
 import { announceResults } from "./announceResults.js";
 import { nextCursor } from "./cursor.js";
+import { useFocusOnOpen } from "./useFocusOnOpen.js";
+import { usePaletteSearch } from "./usePaletteSearch.js";
+import { useScrollActiveIntoView } from "./useScrollActiveIntoView.js";
 
 export interface CommandPaletteProps<T extends PaletteItem = PaletteItem> {
   open: boolean;
@@ -29,16 +31,71 @@ export interface CommandPaletteProps<T extends PaletteItem = PaletteItem> {
    */
   resultsLabel?: string | ((count: number) => string);
   emptyLabel?: string;
-  hint?: ReadonlyArray<readonly [string, string]>;
+  hint?: readonly (readonly [string, string])[];
   /** Extra content on the right of a result row, e.g. a degree count. */
   renderMeta?: (item: T) => ReactNode;
   width?: number;
 }
 
-// forwardRef's own type isn't generic, so a component that is generic over
-// its item type has to be written as a plain function first and cast back to
-// a generic call signature afterward — the cast is compile-time only, the
-// runtime value underneath is still the same forwardRef-wrapped component.
+interface PaletteOptionProps<T extends PaletteItem> {
+  item: T;
+  id: string;
+  isActive: boolean;
+  onHover: () => void;
+  onChoose: (item: T) => void;
+  renderMeta: ((item: T) => ReactNode) | undefined;
+}
+
+function PaletteOption<T extends PaletteItem>({
+  item,
+  id,
+  isActive,
+  onHover,
+  onChoose,
+  renderMeta,
+}: PaletteOptionProps<T>) {
+  return (
+    <li
+      id={id}
+      role="option"
+      aria-selected={isActive}
+      className="nx-palette__option"
+      onMouseEnter={onHover}
+      onMouseDown={(e) => {
+        e.preventDefault();
+        onChoose(item);
+      }}
+    >
+      {item.shape && <Glyph shape={item.shape} colour={item.colour} size={10} />}
+      <span className="nx-palette__label">{item.label}</span>
+      {item.code && (
+        <span
+          className="nx-palette__code"
+          // The class code is tinted by the item's own category.
+          style={{ "--nx-palette-code-fg": item.colour } as CSSProperties}
+        >
+          {item.code}
+        </span>
+      )}
+      {renderMeta?.(item)}
+    </li>
+  );
+}
+
+function PaletteHints({ hint }: { hint: NonNullable<CommandPaletteProps["hint"]> }) {
+  return (
+    <div aria-hidden="true" className="nx-palette__hints">
+      {hint.map(([key, action]) => (
+        <span key={key}>
+          {key} {action}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+// forwardRef's type isn't generic, so the component is written as a plain
+// generic function and cast back to a generic signature below (compile-time only).
 function CommandPaletteInner<T extends PaletteItem = PaletteItem>(
   {
     open,
@@ -59,51 +116,11 @@ function CommandPaletteInner<T extends PaletteItem = PaletteItem>(
   }: CommandPaletteProps<T>,
   ref: ForwardedRef<HTMLDivElement>,
 ) {
-  const [query, setQuery] = useState("");
-  // What the last key or pointer move asked for. It is never read directly:
-  // `cursor` below clamps it to the current results, so it cannot go stale
-  // when `items` or the query changes the size of the list under it.
-  const [requestedCursor, setRequestedCursor] = useState(0);
-  const [wasOpen, setWasOpen] = useState(open);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const listRef = useRef<HTMLUListElement>(null);
+  const { query, setQuery, hits, cursor, setCursor } = usePaletteSearch(open, items);
   const trapRef = useFocusTrap<HTMLDivElement>(open, onClose);
+  const inputRef = useFocusOnOpen<HTMLInputElement>(open);
+  const listRef = useScrollActiveIntoView(cursor);
   const listId = useId();
-
-  // Each opening starts from an empty query and the first result. Adjusted
-  // during render rather than in an effect: the palette stays mounted while
-  // closed, so the state has to be reset on the open edge, and doing it here
-  // means the reopened palette never paints a frame of the previous search.
-  if (open !== wasOpen) {
-    setWasOpen(open);
-    if (open) {
-      setQuery("");
-      setRequestedCursor(0);
-    }
-  }
-
-  useEffect(() => {
-    if (open) requestAnimationFrame(() => inputRef.current?.focus());
-  }, [open]);
-
-  const hits = useMemo(() => rankItems(items, query), [items, query]);
-  // Clamped on read, so a result set that shrinks or grows under the same
-  // query — `items` is a plain prop with no contract that it stay stable while
-  // the palette is open — can never leave the cursor past the end of the list
-  // and `active` undefined. With no results it is 0, never -1, so Enter has
-  // nothing to select until results appear and then selects the first.
-  const cursor = Math.min(requestedCursor, Math.max(0, hits.length - 1));
-
-  // The dialog's own accessible name, distinct from the input's placeholder.
-  // Falls back to `placeholder` so the default reads exactly as it did
-  // before `label` existed.
-  const dialogLabel = label ?? placeholder;
-
-  // keep the active option in view without moving focus off the input
-  useEffect(() => {
-    const el = listRef.current?.children[cursor] as HTMLElement | undefined;
-    el?.scrollIntoView?.({ block: "nearest" });
-  }, [cursor]);
 
   if (!open) return null;
 
@@ -117,19 +134,13 @@ function CommandPaletteInner<T extends PaletteItem = PaletteItem>(
       }}
     >
       <div
-        // useFocusTrap needs its own handle on this node to find focusable
-        // descendants; the forwarded ref gives a consumer a second one. Both
-        // point at the same element, so they're merged into one callback ref
-        // rather than fighting over the single `ref` prop (see Drawer.tsx,
-        // which shares this exact shape).
+        // The focus trap and the consumer each need a handle on this node.
         ref={mergeRefs(trapRef, ref)}
         role="dialog"
         aria-modal="true"
-        aria-label={dialogLabel}
+        aria-label={label ?? placeholder}
         tabIndex={-1}
         className="nx-palette"
-        // Per-instance: a palette over a short list wants to be narrower than
-        // one over a corpus.
         style={{ "--nx-palette-width": `${width}px` } as CSSProperties}
       >
         <Panel padded={false} raised className="nx-palette__panel">
@@ -140,10 +151,7 @@ function CommandPaletteInner<T extends PaletteItem = PaletteItem>(
             <input
               ref={inputRef}
               value={query}
-              onChange={(e) => {
-                setQuery(e.target.value);
-                setRequestedCursor(0);
-              }}
+              onChange={(e) => setQuery(e.target.value)}
               placeholder={placeholder}
               className="nx-palette__input"
               role="combobox"
@@ -156,7 +164,7 @@ function CommandPaletteInner<T extends PaletteItem = PaletteItem>(
                 const requested = nextCursor(e.key, cursor, hits.length);
                 if (requested !== undefined) {
                   e.preventDefault();
-                  setRequestedCursor(requested);
+                  setCursor(requested);
                 } else if (e.key === "Enter" && active) {
                   e.preventDefault();
                   onSelect(active);
@@ -174,13 +182,7 @@ function CommandPaletteInner<T extends PaletteItem = PaletteItem>(
             {announceResults(hits.length, resultsLabel)}
           </div>
 
-          {/* The empty message sits outside the listbox, not inside it as an
-              unroled <li>. A `role="listbox"` may only contain `option` (or
-              `group`) children, so the old markup produced two violations the
-              moment a search missed: aria-required-children on the listbox and
-              an orphaned listitem, because `role="listbox"` also stops the
-              <ul> being a list. An empty listbox is perfectly valid ARIA; a
-              listbox holding a stray list item is not. */}
+          {/* Outside the listbox: a listbox may only contain options or groups. */}
           {hits.length === 0 && <div className="nx-palette__empty">{emptyLabel}</div>}
 
           <ul
@@ -190,42 +192,20 @@ function CommandPaletteInner<T extends PaletteItem = PaletteItem>(
             aria-label="Results"
             className="nx-palette__list"
           >
-            {hits.map((it, i) => (
-              <li
-                key={it.id}
+            {hits.map((item, i) => (
+              <PaletteOption
+                key={item.id}
+                item={item}
                 id={`${listId}-${i}`}
-                role="option"
-                aria-selected={i === cursor}
-                className="nx-palette__option"
-                onMouseEnter={() => setRequestedCursor(i)}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  onSelect(it);
-                }}
-              >
-                {it.shape && <Glyph shape={it.shape} colour={it.colour} size={10} />}
-                <span className="nx-palette__label">{it.label}</span>
-                {it.code && (
-                  <span
-                    className="nx-palette__code"
-                    // The class code is tinted by the item's own category.
-                    style={{ "--nx-palette-code-fg": it.colour } as CSSProperties}
-                  >
-                    {it.code}
-                  </span>
-                )}
-                {renderMeta?.(it)}
-              </li>
+                isActive={i === cursor}
+                onHover={() => setCursor(i)}
+                onChoose={onSelect}
+                renderMeta={renderMeta}
+              />
             ))}
           </ul>
 
-          <div aria-hidden="true" className="nx-palette__hints">
-            {hint.map(([k, v]) => (
-              <span key={k}>
-                {k} {v}
-              </span>
-            ))}
-          </div>
+          <PaletteHints hint={hint} />
         </Panel>
       </div>
     </div>
