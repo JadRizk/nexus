@@ -31,7 +31,7 @@ export interface GraphNode<T = unknown> {
   /** Display text — on-screen label, hover tooltip, inspector title. */
   label: string;
   state?: NodeState;
-  /** Opaque consumer payload. Never read internally; round-tripped through onSelect/getNode. */
+  /** Opaque consumer payload. Never read internally; round-tripped through onSelect/getNode as `GraphNodeSnapshot.data`, the same reference. */
   data?: T;
 }
 
@@ -103,7 +103,8 @@ export interface OpticsConfig {
   glitch: number;
 }
 
-export interface GraphNodeSnapshot {
+/** `T` is the type of the node's `data` payload — the same `T` as `GraphNode<T>`. */
+export interface GraphNodeSnapshot<T = unknown> {
   id: GraphNode["id"];
   categoryId: string;
   label: string;
@@ -116,6 +117,8 @@ export interface GraphNodeSnapshot {
     categoryId: string;
     rows: ReadonlyArray<{ id: GraphNode["id"]; label: string; categoryId: string; out: boolean }>;
   }>;
+  /** The node's own `data`, handed back as the same reference rather than a copy; `undefined` when the node has none. */
+  data?: T;
 }
 
 /**
@@ -134,17 +137,19 @@ export interface GraphStats {
   settled: boolean;
 }
 
-export interface GraphController {
+/** `T` is the node `data` type `getNode` returns; it matches the `T` of the `<GraphCanvas>` the ref is attached to. */
+export interface GraphController<T = unknown> {
   /** Frames the camera to fit every currently-visible node. */
   fit(): void;
   focus(id: GraphNode["id"]): void;
   /** Nudges the solver back above rest; `v` is the alpha floor (default matches the original UI's Reheat button). */
   reheat(v?: number): void;
-  getNode(id: GraphNode["id"]): GraphNodeSnapshot | null;
+  getNode(id: GraphNode["id"]): GraphNodeSnapshot<T> | null;
 }
 
-export interface GraphCanvasProps {
-  nodes: readonly GraphNode[];
+/** `T` is the node `data` type, inferred from `nodes`, `ref` and `onSelect` together — an untyped `GraphController` ref widens it to `unknown`; `onSelect` and the controller's `getNode` hand it back typed. Defaults to `unknown`. */
+export interface GraphCanvasProps<T = unknown> {
+  nodes: readonly GraphNode<T>[];
   edges: readonly GraphEdge[];
   nodeCategories: Record<string, NodeCategory>;
   linkCategories: Record<string, LinkCategory>;
@@ -161,7 +166,7 @@ export interface GraphCanvasProps {
   /** Pauses the physics solver (dragging still works) when false. Default true. */
   running?: boolean;
   /** Fires when the user clicks a node (or clicks empty space, with `null`) — update `selectedId` in response. */
-  onSelect?: (node: GraphNodeSnapshot | null) => void;
+  onSelect?: (node: GraphNodeSnapshot<T> | null) => void;
   onStats?: (stats: GraphStats) => void;
   /** Called once if WebGL setup throws (including an invalid graph: an edge to an unknown node id, a duplicate node id, or a category id missing from the maps) or the WebGL context is lost — the canvas renders nothing further after this. */
   onFatal?: (message: string) => void;

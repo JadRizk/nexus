@@ -149,9 +149,10 @@ content, so `hiddenNodeCategories={["note"]}` written in place costs nothing.
 ## Data model
 
 - **`GraphNode`**: `id`, `categoryId`, `label`, optional `state` (0 dormant,
-  1 stable, 2 hot, 3 orphan) and an opaque `data` payload that is round-tripped
-  through `onSelect` and `getNode` and never read internally. A node with no
-  edges is always drawn as an orphan.
+  1 stable, 2 hot, 3 orphan) and an opaque `data` payload that comes back as
+  `data` on the `GraphNodeSnapshot` that `onSelect` and `getNode` return — the
+  same reference, never read internally. A node with no edges is always drawn
+  as an orphan.
 - **`GraphEdge`**: `a`, `b`, `categoryId`, optional `data`.
 - **`NodeCategory`**: how a category looks and behaves. `shape` is an index into
   the six glyph silhouettes (circle, hexagon, diamond, ring, square, triangle),
@@ -209,8 +210,15 @@ The `ref` exposes a `GraphController`:
 controller.current?.fit(); // frame every visible node
 controller.current?.focus(id); // frame one node
 controller.current?.reheat(); // nudge the solver back above rest
-controller.current?.getNode(id); // GraphNodeSnapshot with degree and adjacency
+controller.current?.getNode(id); // GraphNodeSnapshot with degree, adjacency and your data
 ```
+
+`GraphCanvasProps`, `GraphController` and `GraphNodeSnapshot` take the payload
+type as a parameter (`unknown` by default). `<GraphCanvas>` infers it from
+`nodes`, so `GraphNode<Ticket>[]` hands `onSelect` a
+`GraphNodeSnapshot<Ticket>` — but the ref is an inference site too, so type it
+`useRef<GraphController<Ticket>>(null)`; an untyped `useRef<GraphController>`
+widens the payload back to `unknown` for `onSelect` as well as `getNode`.
 
 ## Reduced motion
 
