@@ -151,6 +151,8 @@ describe("describeGraph", () => {
     expect(o.summary).toBe("Graph, 3 nodes, 1 connection in 1 kind.");
     expect(o.groups.map((g) => g.label)).toEqual(["NOTE", "TAG"]);
     expect(o.groups[0]!.nodes[1]!.connections.map((c) => c.label)).toEqual(["alpha"]);
+    // The spoken count is the listed one: beta's citation leads to a hidden node.
+    expect(o.groups[0]!.nodes[1]!.description).toBe("beta, note, 1 connection");
   });
 
   it("follows describeNode, rankConnections and invalidEdges like GraphCanvas", () => {

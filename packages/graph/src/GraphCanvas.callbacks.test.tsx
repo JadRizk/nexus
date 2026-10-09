@@ -131,5 +131,7 @@ describe("GraphCanvas callback refs", () => {
 
     expect(second).toHaveBeenCalledTimes(1);
     expect(first).not.toHaveBeenCalled();
+    // And says the selection came from the pointer.
+    expect(second.mock.lastCall?.[1]).toBe("pointer");
   });
 });

@@ -126,16 +126,29 @@ export const GraphOutline = forwardRef<HTMLElement, GraphOutlineProps>(function 
                           {selected ? " · selected" : ""}
                         </span>
                       </summary>
-                      {onSelect && (
-                        <button
-                          type="button"
-                          className="nx-graph-outline__select"
-                          aria-pressed={selected}
-                          onClick={() => onSelect(node.id)}
-                        >
-                          {selected ? "Selected in graph" : "Select in graph"}
-                        </button>
-                      )}
+                      {/* A one-way action, not a toggle: selecting again changes
+                        nothing, so the selected node gets a note in its place
+                        rather than a pressed button that can't be released. */}
+                      {onSelect &&
+                        (selected ? (
+                          <p className="nx-graph-outline__selected">Selected in graph</p>
+                        ) : (
+                          <button
+                            type="button"
+                            className="nx-graph-outline__select"
+                            onClick={(ev) => {
+                              // The button gives way to the note once selected;
+                              // focus goes to the entry rather than to <body>.
+                              ev.currentTarget
+                                .closest("details")
+                                ?.querySelector("summary")
+                                ?.focus();
+                              onSelect(node.id);
+                            }}
+                          >
+                            Select in graph
+                          </button>
+                        ))}
                       {node.connections.length > 0 && (
                         <ul
                           className="nx-graph-outline__connections"

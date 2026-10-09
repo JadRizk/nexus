@@ -303,11 +303,13 @@ describe("going back past hidden places", () => {
     expect(fx.announce).toBe("Back to hub");
   });
 
-  it("is the start of the path when every earlier step is hidden", () => {
+  it("is the start of the path when every earlier step is hidden, and keeps them", () => {
     const walked = run([{ type: "enter" }, { type: "browse", step: 1 }, { type: "follow" }]).s;
     const [s, fx] = navigate(walked, { type: "back" }, makeCtx(new Set([0])));
-    expect(s).toMatchObject({ current: 1, history: [] });
+    expect(s).toBe(walked);
     expect(fx.announce).toBe("Start of path");
+    // Once the filter lifts, the step is there to go back to.
+    expect(navigate(s, { type: "back" }, makeCtx())[0].current).toBe(0);
   });
 
   it("lastVisible finds the newest visible step, or -1", () => {

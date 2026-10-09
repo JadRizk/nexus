@@ -90,9 +90,14 @@ describe("GraphOutline", () => {
     expect(onSelect).toHaveBeenCalledWith("s1");
 
     rerender(<GraphOutline data={data} onSelect={onSelect} selectedId="s1" />);
-    const selected = screen.getByRole("button", { name: "Selected in graph" });
-    expect(selected).toHaveAttribute("aria-pressed", "true");
+    // Not a pressed toggle that can't be released: a note, and no button.
+    const selected = screen.getByText("Selected in graph");
+    expect(selected.tagName).toBe("P");
+    expect(screen.getAllByRole("button", { name: /in graph/ })).toHaveLength(1);
+    for (const b of screen.getAllByRole("button")) expect(b).not.toHaveAttribute("aria-pressed");
     expect(selected.closest("details")!.open).toBe(true);
+    // The button that was pressed is gone; focus went to its entry, not <body>.
+    expect(document.activeElement).toBe(selected.closest("details")!.querySelector("summary"));
     expect(selected.closest("details")!.querySelector("summary")).toHaveAccessibleName(
       "archive-1, source, 1 connection, selected",
     );

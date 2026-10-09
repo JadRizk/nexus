@@ -42,6 +42,12 @@ export interface NavOverlay {
   announce(text: string): void;
   /** Show or hide the key hint, at the bottom of the free box. */
   setHints(visible: boolean, inset: FitInset): void;
+  /**
+   * Whether Tab can reach the focus target. Off while the graph's root holds
+   * focus after Escape, so the next Tab leaves the graph instead of landing
+   * straight back inside it.
+   */
+  setTabbable(tabbable: boolean): void;
   focus(): void;
   blur(): void;
   readonly focused: boolean;
@@ -175,6 +181,9 @@ export function createNavOverlay(opts: NavOverlayOptions): NavOverlay {
       hints.style.left = `${inset.left + 12}px`;
       hints.style.bottom = `${inset.bottom + 12}px`;
       hints.style.maxWidth = `calc(100% - ${inset.left + inset.right + 24}px)`;
+    },
+    setTabbable(tabbable) {
+      button.tabIndex = tabbable ? 0 : -1;
     },
     focus() {
       button.focus({ preventScroll: true });

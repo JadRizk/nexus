@@ -108,6 +108,16 @@ describe("the focus target", () => {
     expect(overlay.focused).toBe(false);
     expect(onFocusChange).toHaveBeenLastCalledWith(false);
   });
+
+  it("can be taken out of the tab order and still be focused by script", () => {
+    expect(button().tabIndex).toBe(0);
+    overlay.setTabbable(false);
+    expect(button().tabIndex).toBe(-1);
+    overlay.focus();
+    expect(overlay.focused).toBe(true);
+    overlay.setTabbable(true);
+    expect(button().tabIndex).toBe(0);
+  });
 });
 
 describe("the live region", () => {

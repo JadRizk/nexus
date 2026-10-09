@@ -272,6 +272,12 @@ History is shared with the pointer: clicking a node or clearing the selection
 is a step `back()` can undo, the same as Backspace, so a Back button in your
 own UI behaves like the key.
 
+`onSelect`'s second argument says where a selection came from: `"pointer"`,
+`"keyboard"` (a key inside the graph) or `"controller"` (`back()`). A detail
+panel that opens on selection should stay non-modal for `"keyboard"`, so focus
+stays in the graph and the reader keeps their place, and take focus for the
+others. The showcase's drawer does exactly that.
+
 Pass `keyboardNavigation={false}` to turn it off, and the root becomes a named
 `role="img"` instead.
 

@@ -559,16 +559,18 @@ var GraphOutline = forwardRef8(function GraphOutline2({
               /* @__PURE__ */ React.createElement("span", { className: "nx-graph-outline__label" }, node.label),
               /* @__PURE__ */ React.createElement("span", { className: "nx-graph-outline__meta" }, node.connections.length, " ", node.connections.length === 1 ? "connection" : "connections", selected ? " \xB7 selected" : "")
             ),
-            onSelect && /* @__PURE__ */ React.createElement(
+            onSelect && (selected ? /* @__PURE__ */ React.createElement("p", { className: "nx-graph-outline__selected" }, "Selected in graph") : /* @__PURE__ */ React.createElement(
               "button",
               {
                 type: "button",
                 className: "nx-graph-outline__select",
-                "aria-pressed": selected,
-                onClick: () => onSelect(node.id)
+                onClick: (ev) => {
+                  ev.currentTarget.closest("details")?.querySelector("summary")?.focus();
+                  onSelect(node.id);
+                }
               },
-              selected ? "Selected in graph" : "Select in graph"
-            ),
+              "Select in graph"
+            )),
             node.connections.length > 0 && /* @__PURE__ */ React.createElement(
               "ul",
               {
@@ -1414,13 +1416,16 @@ body {
   --nx-btn-border: var(--nx-border-accent);
 }
 
-.nx-btn:disabled {
+/* aria-disabled reads the same as disabled. It is the one to use for a
+   button that can lose its action while it holds focus: a disabled button
+   drops focus to <body>, an aria-disabled one keeps it. */
+.nx-btn:is(:disabled, [aria-disabled="true"]) {
   --nx-btn-fg: var(--nx-fg-disabled);
 
   cursor: not-allowed;
 }
 
-.nx-btn:disabled:hover {
+.nx-btn:is(:disabled, [aria-disabled="true"]):hover {
   --nx-btn-bg: transparent;
   --nx-btn-border: var(--nx-border-default);
 }
@@ -1790,8 +1795,13 @@ body {
   text-underline-offset: 2px;
 }
 
-.nx-graph-outline__select {
+.nx-graph-outline__select,
+.nx-graph-outline__selected {
   margin: 0 0 var(--nx-space-2) var(--nx-space-4);
+}
+
+.nx-graph-outline__selected {
+  color: var(--nx-fg-accent);
 }
 
 /* ---------------------------------------------------------------- HazardRule */

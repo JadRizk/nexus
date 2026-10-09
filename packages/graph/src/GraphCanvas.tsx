@@ -52,6 +52,7 @@ import type {
   GraphStats,
   PhysicsConfig,
   OpticsConfig,
+  SelectSource,
 } from "./types.js";
 
 /* ============================================================================
@@ -130,6 +131,25 @@ const MAX_DPR = 1.6;
 const unbounded = (geometry: THREE.BufferGeometry): void => {
   geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), Infinity);
 };
+
+// Not @types/node: the package runs in browsers. Declared here so the check
+// below can spell `process.env.NODE_ENV` out literally.
+declare const process: { env: { NODE_ENV?: string } };
+
+/**
+ * Development builds only. Written as the literal `process.env.NODE_ENV`,
+ * because that exact expression is what bundlers replace in a production
+ * build; read through anything else (globalThis.process, say), it survives
+ * into the bundle, finds no `process` in the browser, and reads as
+ * development. Unbundled, where `process` doesn't exist at all, it is.
+ */
+function isDevelopment(): boolean {
+  try {
+    return process.env.NODE_ENV !== "production";
+  } catch {
+    return true;
+  }
+}
 
 const hex4 = (i: number): string =>
   (((i * 2654435761) >>> 0) % 65536).toString(16).toUpperCase().padStart(4, "0");
@@ -270,9 +290,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
     // unnamed one fails WCAG 4.1.2. Warn once per mount, in development.
     const hasName = Boolean(ariaLabel);
     useEffect(() => {
-      const env = (globalThis as { process?: { env?: { NODE_ENV?: string } } }).process?.env
-        ?.NODE_ENV;
-      if (keyboardNavigation && !hasName && env !== "production")
+      if (keyboardNavigation && !hasName && isDevelopment())
         console.warn(
           "GraphCanvas: keyboard navigation is on but no ariaLabel was given — screen readers will announce an unnamed group.",
         );
@@ -1325,9 +1343,13 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           }
           return best;
         };
+        // What the reader can reach from `i`: the count spoken on landing has
+        // to match the list browsing it reads ("1 of 2"), not the graph's.
+        const reachable = (i: number) =>
+          visibleConnections(connections[i]!, isVisible, isEdgeVisible, "all");
         const describeCtx = (i: number, selected: boolean) => ({
           categoryLabel: categoryLabel(i),
-          connections: connections[i]!.length,
+          connections: reachable(i).length,
           selected,
         });
         const navContext: NavContext = {
@@ -1360,7 +1382,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
             filter: filterText,
             detail: (i, selected) => {
               const counts = new Map<string, number>();
-              for (const c of connections[i]!) {
+              for (const c of reachable(i)) {
                 const rel = relationText(linkCategories[c.categoryId]!, c.direction);
                 counts.set(rel, (counts.get(rel) ?? 0) + 1);
               }
@@ -1415,7 +1437,8 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
             overlay.setHints(overlay.focused && keyHintsRef.current, fitInsetRef.current);
           }
         }
-        function dispatch(action: NavAction) {
+        /** `via` is what onSelect reports for any selection this step makes. */
+        function dispatch(action: NavAction, via: SelectSource = "keyboard") {
           if (!nav) return;
           const [next, fx] = navigate(nav, action, navContext);
           nav = next;
@@ -1424,12 +1447,16 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           if (fx.announce && (action.type !== "visibility" || overlay?.focused))
             overlay?.announce(fx.announce);
           if (fx.select !== undefined) {
-            onSelectRef.current?.(fx.select >= 0 ? describe(fx.select) : null);
+            onSelectRef.current?.(fx.select >= 0 ? describe(fx.select) : null, via);
           }
-          if (fx.leave) {
+          if (fx.leave && rootEl) {
+            // Out to the graph as a whole. The focus target is the root's own
+            // first tabbable child, so it leaves the tab order until focus
+            // moves on; otherwise the next Tab would land straight back in.
+            overlay?.setTabbable(false);
             overlay?.blur();
-            rootEl?.focus({ preventScroll: true });
-          }
+            rootEl.focus({ preventScroll: true });
+          } else if (fx.leave) overlay?.blur();
           // Keyboard travel keeps the node in view; a click or the consumer
           // moving the selection is the selection camera's business.
           if (fx.moved && overlay?.focused && nav.current >= 0) rig.reveal(nav.current);
@@ -1464,6 +1491,11 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           });
           const o = overlay;
           disposables.push(() => o.dispose());
+          if (rootEl) {
+            const onRootBlur = () => o.setTabbable(true);
+            rootEl.addEventListener("blur", onRootBlur);
+            disposables.push(() => rootEl.removeEventListener("blur", onRootBlur));
+          }
         }
         // For a pointer reader too: Escape dismisses a hover tooltip without
         // having to move the pointer off the node (WCAG 1.4.13).
@@ -1480,7 +1512,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           overlay.focus();
           if (nav.current >= 0) rig.reveal(nav.current);
         };
-        api.current.back = () => dispatch({ type: "back" });
+        api.current.back = () => dispatch({ type: "back" }, "controller");
         // Matches what back() does: steps to places since hidden don't count.
         api.current.canGoBack = () => (nav ? lastVisible(nav.history, navContext) >= 0 : false);
         /** refilter(), then tell the navigator, keeping its cursor on the same edge. */
@@ -1604,6 +1636,9 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           showTip(idx);
         };
         const onDown = (ev: PointerEvent) => {
+          // A click puts focus on the root without leaving it, so the root's
+          // blur won't come; Tab from here should go into the graph again.
+          overlay?.setTabbable(true);
           try {
             el.setPointerCapture(ev.pointerId);
           } catch {
@@ -1631,7 +1666,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           const w = toWorld(ev.clientX - rc.left, ev.clientY - rc.top);
           const idx = pickNode(w.x, w.y, n, pos, nRadius, nHide, rig.live.zoom);
           const next = idx >= 0 && idx !== selIdx ? idx : -1;
-          onSelectRef.current?.(next >= 0 ? describe(next) : null);
+          onSelectRef.current?.(next >= 0 ? describe(next) : null, "pointer");
         };
         const onWheel = (ev: WheelEvent) => {
           ev.preventDefault();

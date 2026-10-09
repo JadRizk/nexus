@@ -219,6 +219,9 @@ export interface FrameGeometry {
   viewport: Viewport;
 }
 
+/** How a selection change came about, for `onSelect`. */
+export type SelectSource = "pointer" | "keyboard" | "controller";
+
 /** One of a node's connections, as `rankConnections` sees it. */
 export interface Connection<T = unknown> {
   /** The node at the other end. */
@@ -342,7 +345,14 @@ export interface GraphCanvasProps<T = unknown> {
    */
   followSelection?: boolean;
   /** Fires when the user clicks a node (or clicks empty space, with `null`) — update `selectedId` in response. */
-  onSelect?: (node: GraphNodeSnapshot<T> | null) => void;
+  /**
+   * The reader selected a node, or cleared the selection (null). `source` says
+   * how: `"pointer"` for a click, `"keyboard"` for a key inside the graph
+   * (Space, Escape, Backspace), `"controller"` for `back()`. A detail panel
+   * can stay non-modal for a keyboard selection, so the reader keeps their
+   * place in the graph, and take focus for the others.
+   */
+  onSelect?: (node: GraphNodeSnapshot<T> | null, source: SelectSource) => void;
   onStats?: (stats: GraphStats) => void;
   /** Fires every rendered frame with live geometry. Read it synchronously: the arrays are reused, not reallocated. */
   onFrame?: (geometry: FrameGeometry) => void;

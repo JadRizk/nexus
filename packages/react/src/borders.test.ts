@@ -24,7 +24,7 @@ const components = join(dirname(fileURLToPath(import.meta.url)), "components");
 const REVIEWED: Record<string, string> = {
   "Button/.nx-btn":
     "Text-labelled control. Identified by its label; hover and active change colour and fill.",
-  "Button/.nx-btn:disabled:hover":
+  'Button/.nx-btn:is(:disabled, [aria-disabled="true"]):hover':
     "Resets a disabled button's hover back to the resting hairline. Disabled controls are exempt.",
   "TabStrip/.nx-tabstrip":
     "Outline of a group of text-labelled tabs. The selected tab is an inverted accent block.",

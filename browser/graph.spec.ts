@@ -191,6 +191,31 @@ test.describe("graph canvas", () => {
     expect(await graph.evaluate((g) => g.contains(document.activeElement))).toBe(false);
   });
 
+  test("Back keeps focus when it runs out of history", async ({ page }) => {
+    await page.goto("/#/labs/graph");
+    const target = page.locator('[aria-roledescription="graph"] [data-nx-graph-focus]');
+    const back = page.getByRole("button", { name: "Back", exact: true });
+    await target.focus();
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("Enter");
+    await expect(back).toBeEnabled();
+    await back.focus();
+    await page.keyboard.press("Enter");
+    // aria-disabled, so the button that just ran out keeps focus.
+    await expect(back).toBeDisabled();
+    await expect(back).toBeFocused();
+  });
+
+  test("Escape steps out of the graph, and the next Tab moves on past it", async ({ page }) => {
+    await page.goto("/#/labs/graph");
+    const graph = page.locator('[aria-roledescription="graph"]');
+    await graph.locator("[data-nx-graph-focus]").focus();
+    await page.keyboard.press("Escape");
+    await expect(graph).toBeFocused();
+    await page.keyboard.press("Tab");
+    expect(await graph.evaluate((g) => g.contains(document.activeElement))).toBe(false);
+  });
+
   test("view as list: the outline follows the graph, and selects in it", async ({ page }) => {
     await page.goto("/#/labs/graph");
     await page.getByRole("button", { name: "View as list" }).click();
@@ -204,10 +229,7 @@ test.describe("graph canvas", () => {
     await outline.locator("summary").first().click();
     await outline.getByRole("button", { name: "Select in graph" }).first().click();
     await expect(page.getByRole("dialog")).toBeVisible();
-    await expect(outline.getByRole("button", { name: "Selected in graph" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    await expect(outline.getByText("Selected in graph")).toBeVisible();
 
     await page.getByRole("button", { name: "View as graph" }).click();
     await expect(outline).toBeHidden();

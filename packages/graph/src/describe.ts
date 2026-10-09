@@ -22,7 +22,11 @@ import type { Connection, GraphEdge, GraphNode, LinkCategory, NodeCategory } fro
 export interface DescribeContext {
   /** The node's category label, e.g. "skill". */
   categoryLabel: string;
-  /** Number of connections the node has, counting hidden ones. */
+  /**
+   * Number of connections the reader can reach from the node: hidden
+   * categories and isolation leave theirs out, so this matches what browsing
+   * the node, or its entry in the outline, lists.
+   */
   connections: number;
   selected: boolean;
 }
@@ -226,7 +230,7 @@ export function describeGraph<T = unknown>(input: DescribeGraphInput<T>): GraphO
     const conns = visibleConnections(lists[i]!, isVisible, isEdgeVisible, "all");
     const ctx: DescribeContext = {
       categoryLabel: nodeCategories[node.categoryId]!.label,
-      connections: lists[i]!.length,
+      connections: conns.length,
       selected: false,
     };
     const entry: OutlineNode = {

@@ -84,6 +84,11 @@
   text-underline-offset: 2px;
 }
 
-.nx-graph-outline__select {
+.nx-graph-outline__select,
+.nx-graph-outline__selected {
   margin: 0 0 var(--nx-space-2) var(--nx-space-4);
+}
+
+.nx-graph-outline__selected {
+  color: var(--nx-fg-accent);
 }

@@ -74,13 +74,16 @@
   --nx-btn-border: var(--nx-border-accent);
 }
 
-.nx-btn:disabled {
+/* aria-disabled reads the same as disabled. It is the one to use for a
+   button that can lose its action while it holds focus: a disabled button
+   drops focus to <body>, an aria-disabled one keeps it. */
+.nx-btn:is(:disabled, [aria-disabled="true"]) {
   --nx-btn-fg: var(--nx-fg-disabled);
 
   cursor: not-allowed;
 }
 
-.nx-btn:disabled:hover {
+.nx-btn:is(:disabled, [aria-disabled="true"]):hover {
   --nx-btn-bg: transparent;
   --nx-btn-border: var(--nx-border-default);
 }
@@ -450,8 +453,13 @@
   text-underline-offset: 2px;
 }
 
-.nx-graph-outline__select {
+.nx-graph-outline__select,
+.nx-graph-outline__selected {
   margin: 0 0 var(--nx-space-2) var(--nx-space-4);
+}
+
+.nx-graph-outline__selected {
+  color: var(--nx-fg-accent);
 }
 
 /* ---------------------------------------------------------------- HazardRule */

@@ -387,9 +387,9 @@ describe("GraphCanvas history: controller.back() and canGoBack", () => {
     expect(ref.current!.canGoBack).toBe(true);
 
     act(() => ref.current!.back());
-    expect(onSelect).toHaveBeenLastCalledWith(expect.objectContaining({ id: "b" }));
+    expect(onSelect).toHaveBeenLastCalledWith(expect.objectContaining({ id: "b" }), "controller");
     act(() => ref.current!.back());
-    expect(onSelect).toHaveBeenLastCalledWith(expect.objectContaining({ id: "a" }));
+    expect(onSelect).toHaveBeenLastCalledWith(expect.objectContaining({ id: "a" }), "controller");
     expect(ref.current!.canGoBack).toBe(false);
   });
 
@@ -455,13 +455,41 @@ describe("GraphCanvas keyboard and screen-reader navigation", () => {
     mount(undefined, props({ onSelect }));
     act(() => focusTarget()!.focus());
     press(" ");
-    expect(onSelect).toHaveBeenLastCalledWith(expect.objectContaining({ id: "a" }));
+    expect(onSelect).toHaveBeenLastCalledWith(expect.objectContaining({ id: "a" }), "keyboard");
     expect(focusTarget()!.getAttribute("aria-pressed")).toBe("true");
     press("Escape");
-    expect(onSelect).toHaveBeenLastCalledWith(null);
+    expect(onSelect).toHaveBeenLastCalledWith(null, "keyboard");
     press("Escape");
     // Focus goes to the graph's root, not to <body>.
-    expect(document.activeElement).toBe(container.querySelector('[role="group"]'));
+    const group = container.querySelector<HTMLElement>('[role="group"]')!;
+    expect(document.activeElement).toBe(group);
+  });
+
+  it("after stepping out, the next Tab leaves the graph instead of re-entering it", () => {
+    mount(undefined, props());
+    act(() => focusTarget()!.focus());
+    press("Escape");
+    const group = container.querySelector<HTMLElement>('[role="group"]')!;
+    expect(document.activeElement).toBe(group);
+    // The focus target is the root's first tabbable child; out of the tab
+    // order while the root holds focus, Tab goes on past the graph.
+    expect(focusTarget()!.tabIndex).toBe(-1);
+    // Back in once focus has moved on, or the pointer presses the canvas.
+    act(() => group.blur());
+    expect(focusTarget()!.tabIndex).toBe(0);
+    act(() => focusTarget()!.focus());
+    press("Escape");
+    expect(focusTarget()!.tabIndex).toBe(-1);
+    act(() => {
+      container.querySelector("canvas")!.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+    });
+    expect(focusTarget()!.tabIndex).toBe(0);
+  });
+
+  it("speaks the connections the reader can reach, not ones a filter hides", () => {
+    mount(undefined, props({ hiddenLinkCategories: ["refs"] }));
+    act(() => focusTarget()!.focus());
+    expect(focusTarget()!.getAttribute("aria-label")).toBe("A, atlas, 0 connections");
   });
 
   it("uses describeNode and rankConnections when given", () => {
@@ -494,6 +522,17 @@ describe("GraphCanvas keyboard and screen-reader navigation", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     mount(undefined, { ariaLabel: undefined });
     expect(warn).toHaveBeenCalledWith(expect.stringMatching(/no ariaLabel/));
+  });
+
+  it("keeps that warning out of production builds", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    try {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      mount(undefined, { ariaLabel: undefined });
+      expect(warn).not.toHaveBeenCalledWith(expect.stringMatching(/no ariaLabel/));
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });
 

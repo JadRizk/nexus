@@ -207,7 +207,8 @@ export function navigate(s: NavState, action: NavAction, ctx: NavContext): [NavS
       // never parks the reader on a node that isn't drawn.
       const at = lastVisible(s.history, ctx);
       const entry = s.history[at];
-      if (!entry) return [{ ...s, history: [] }, { announce: "Start of path" }];
+      // Steps that are only hidden stay: lifting the filter brings them back.
+      if (!entry) return [s, { announce: "Start of path" }];
       const next: NavState = {
         ...s,
         history: s.history.slice(0, at),

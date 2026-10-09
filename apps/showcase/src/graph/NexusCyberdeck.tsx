@@ -96,6 +96,10 @@ export default function NexusCyberdeck() {
   // mounted underneath, so closing the list returns to exactly the same view.
   const [listView, setListView] = useState(false);
   const [selected, setSelected] = useState<GraphNodeSnapshot | null>(null);
+  // Whether the current selection came from a key inside the graph (onSelect's
+  // source). The drawer stays non-modal for those, so the reader keeps their
+  // place in the graph; every other way of selecting opens it as a dialog.
+  const [keyboardSelection, setKeyboardSelection] = useState(false);
   useEffect(() => {
     setCanGoBack(controllerRef.current?.canGoBack ?? false);
   }, [selected]);
@@ -147,6 +151,7 @@ export default function NexusCyberdeck() {
     const d = controllerRef.current?.getNode(id);
     if (!d) return;
     setSelected(d);
+    setKeyboardSelection(false);
     controllerRef.current?.focus(id);
     // walking the graph while isolated should move the isolation with you,
     // otherwise the node you just jumped to is the only thing you can't expand
@@ -194,7 +199,10 @@ export default function NexusCyberdeck() {
         // canvas. Framing lands the graph in what they leave, with a 12px gap.
         fitInset={{ left: 12 + 248 + 12, right: selected ? 12 + 296 + 12 : 0 }}
         running={running}
-        onSelect={setSelected}
+        onSelect={(node, source) => {
+          setSelected(node);
+          setKeyboardSelection(source === "keyboard");
+        }}
         onNavigate={() => setCanGoBack(controllerRef.current?.canGoBack ?? false)}
         onStats={setStats}
       />
@@ -499,11 +507,15 @@ export default function NexusCyberdeck() {
               {listView ? "View as graph" : "View as list"}
             </Button>
             {/* Back is the same step Backspace takes inside the graph: the
-              previous node and the selection that went with it. */}
+              previous node and the selection that went with it. aria-disabled,
+              not disabled: pressing Back down to the start would otherwise
+              disable the very button holding focus and drop it on <body>. */}
             <Button
               style={{ minWidth: 0, gridColumn: "1 / -1" }}
-              disabled={!canGoBack}
-              onClick={() => controllerRef.current?.back()}
+              aria-disabled={!canGoBack || undefined}
+              onClick={() => {
+                if (canGoBack) controllerRef.current?.back();
+              }}
             >
               Back
             </Button>
@@ -566,13 +578,17 @@ export default function NexusCyberdeck() {
           isolateId={isolate}
           selectedId={selected?.id ?? null}
           rightInset={selected ? 12 + 296 + 12 : 12}
-          onSelect={(id) => setSelected(controllerRef.current?.getNode(id) ?? null)}
+          onSelect={(id) => {
+            setSelected(controllerRef.current?.getNode(id) ?? null);
+            setKeyboardSelection(false);
+          }}
         />
       )}
 
       {/* ------------------------------------------------------------- drawer */}
       <InspectorDrawer
         selected={selected}
+        modal={!keyboardSelection}
         onClose={() => {
           setSelected(null);
           setIsolate(null);
@@ -620,6 +636,7 @@ export default function NexusCyberdeck() {
    as <Drawer> without inheriting its positioning. */
 function InspectorDrawer({
   selected,
+  modal,
   onClose,
   isolate,
   onIsolate,
@@ -627,6 +644,8 @@ function InspectorDrawer({
   onGoTo,
 }: {
   selected: GraphNodeSnapshot | null;
+  /** False for a selection made with the graph's keyboard navigation. */
+  modal: boolean;
   onClose: () => void;
   isolate: number | null;
   onIsolate: () => void;
@@ -634,23 +653,15 @@ function InspectorDrawer({
   onGoTo: (id: number) => void;
 }) {
   // A selection made from the graph's keyboard navigation must leave focus in
-  // the graph, or the reader loses their place mid-walk. So the drawer only
-  // traps focus (and is modal) when the selection didn't come from the graph's
-  // focus target. Not "focus anywhere in the graph": a mouse click on the
-  // canvas focuses the graph's root too, and a click is a modal open.
-  const [fromGraph, setFromGraph] = useState(false);
-  const [lastSelected, setLastSelected] = useState(selected);
-  if (selected !== lastSelected) {
-    setLastSelected(selected);
-    setFromGraph(!!document.activeElement?.closest("[data-nx-graph-focus]"));
-  }
-  const trapRef = useFocusTrap<HTMLDivElement>(!!selected && !fromGraph, onClose);
+  // the graph, or the reader loses their place mid-walk, so the drawer only
+  // traps focus (and is modal) for the others.
+  const trapRef = useFocusTrap<HTMLDivElement>(!!selected && modal, onClose);
   const titleId = useId();
   return (
     <div
       ref={trapRef}
       role="dialog"
-      aria-modal={fromGraph ? undefined : true}
+      aria-modal={modal ? true : undefined}
       aria-labelledby={selected ? titleId : undefined}
       aria-hidden={selected ? undefined : true}
       tabIndex={-1}
