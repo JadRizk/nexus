@@ -2,9 +2,10 @@
    @nexus-cyberdeck/tokens — crt.css
    A CSS-only approximation of the PoC's four-pass shader pipeline.
 
-   The real thing renders to a texture, bright-passes, blurs twice, then
-   composites with barrel distortion, chromatic aberration, an aperture grille,
-   a rolling refresh bar, grain and glitch slicing. You cannot run that behind
+   The real thing renders to a texture, runs a thresholded horizontal blur
+   (the bright-pass) and a vertical blur, then composites with barrel
+   distortion, chromatic aberration, an aperture grille, a rolling refresh
+   bar, grain and glitch slicing. You cannot run that behind
    every panel in an application — it is a full-screen GPU pipeline.
 
    This gets ~80% of the read for one extra composited pseudo-element and no

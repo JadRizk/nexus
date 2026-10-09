@@ -370,7 +370,8 @@ token on the publish step would make npm use it instead and silently bypass
 provenance. Starting to publish needs the `nexus-cyberdeck` organisation to
 exist on npm. Then `private` comes off a package in the same pull request as
 its manual first publish, `tokens` before `react` (which pins an exact `tokens`
-version), and trusted publishing takes over from the second release on.
+version), and trusted publishing takes over for every release after that
+first manual one.
 
 ## What is deliberately not here
 
