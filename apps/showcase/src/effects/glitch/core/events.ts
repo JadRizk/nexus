@@ -1,4 +1,5 @@
 import { EV_BY_ID } from "../data/events/index.js";
+import type { EventId } from "../data/events/index.js";
 import type { EventDef } from "../data/events/types.js";
 
 /** An event on the bus. */
@@ -20,8 +21,21 @@ export interface EventSink {
  *
  * @param now The clock, in ms; `t0` is stored in seconds.
  * @param random A source in [0, 1) for the event's seed.
- * @returns The event's definition, or undefined for an unknown id.
+ * @returns The event's definition, or undefined for an unknown id; always
+ *   the definition when `id` is typed as an `EventId`.
  */
+export function fireEvent(
+  activeRef: EventSink,
+  id: EventId,
+  now?: () => number,
+  random?: () => number,
+): EventDef;
+export function fireEvent(
+  activeRef: EventSink,
+  id: string,
+  now?: () => number,
+  random?: () => number,
+): EventDef | undefined;
 export function fireEvent(
   activeRef: EventSink,
   id: string,

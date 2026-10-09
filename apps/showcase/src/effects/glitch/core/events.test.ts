@@ -1,5 +1,6 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 import { EV_BY_ID } from "../data/events/index.js";
+import type { EventDef } from "../data/events/types.js";
 import type { ActiveEvent } from "./events.js";
 import { fireEvent, shuffleSeed } from "./events.js";
 
@@ -30,6 +31,13 @@ describe("fireEvent", () => {
     fireEvent({ current: bus }, "boot");
     fireEvent({ current: bus }, "crash");
     expect(bus.map((event) => event.def.id)).toEqual(["boot", "crash"]);
+  });
+
+  it("types a known EventId's result as defined, and any other string's as maybe undefined", () => {
+    expectTypeOf(fireEvent({ current: [] }, "crash")).toEqualTypeOf<EventDef>();
+    expectTypeOf(fireEvent({ current: [] }, "crash" as string)).toEqualTypeOf<
+      EventDef | undefined
+    >();
   });
 
   it("ignores an unknown id and returns undefined", () => {

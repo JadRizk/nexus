@@ -20,6 +20,21 @@ const monitor = (page: Page) => page.locator(".sc-monitor");
 const settled = (page: Page) =>
   expect(monitor(page)).toHaveAttribute("data-fault", "", { timeout: 10_000 });
 
+// The baselines mask the picture, so this is what catches an engine that
+// fails to start. The canvas alone is not enough: it is mounted before the
+// context and the shaders are checked, and stays behind when either fails.
+// Only a started engine sizes it to the screen (the monitor renders at 1×),
+// and it has reported any failure by then.
+test("the monitor mounts a canvas and shows no NO SIGNAL fault", async ({ page }) => {
+  await gotoPage(page, "home");
+  const canvas = page.locator(".sc-monitor__host canvas");
+  await expect(canvas).toBeAttached();
+  await expect
+    .poll(() => canvas.evaluate((el: HTMLCanvasElement) => el.height === el.clientHeight))
+    .toBe(true);
+  await expect(page.locator(".sc-monitor__fault")).toHaveCount(0);
+});
+
 test("each visit lands on a random channel, with a new graph", async ({ page }) => {
   // Under reduced motion the screen is a still, so this is cheap to repeat.
   await page.emulateMedia({ reducedMotion: "reduce" });
