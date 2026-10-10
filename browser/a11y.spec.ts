@@ -5,13 +5,10 @@ import { DOC_ROUTES, gotoPage, spec } from "./harness.js";
 import type { Route } from "./harness.js";
 
 /* ============================================================================
-   Accessibility, first half: axe-core over the real rendered page, per route,
-   per component and per open overlay.
-
-   axe is a floor, not a ceiling: it finds contrast and malformed ARIA, and it
-   is silent about whether a modal steals focus at page load or whether six
-   shapes are actually distinguishable from one another. The claims it cannot
-   make are asserted directly in a11y-claims.spec.ts.
+   Accessibility: axe-core over the real rendered page, per route, per
+   component and per open overlay. axe is a floor, not a ceiling: it is silent
+   about whether a modal steals focus at page load or whether six shapes are
+   distinguishable. Those claims are asserted in a11y-claims.spec.ts.
    ========================================================================== */
 
 // A full axe pass costs a couple of seconds on its own and closer to ten

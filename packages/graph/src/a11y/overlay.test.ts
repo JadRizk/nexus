@@ -28,9 +28,9 @@ const button = () => container.querySelector("button")!;
 const live = () => container.querySelector("[aria-live]")!;
 const hints = () => container.querySelector('[aria-hidden="true"]') as HTMLElement;
 const press = (key: string, init: KeyboardEventInit = {}) => {
-  const ev = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true, ...init });
-  button().dispatchEvent(ev);
-  return ev;
+  const event = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true, ...init });
+  button().dispatchEvent(event);
+  return event;
 };
 
 describe("the key map", () => {
@@ -48,11 +48,9 @@ describe("the key map", () => {
     ["?", { type: "help" }],
   ])("%s → %o", (key, action) => {
     expect(actionForKey({ key })).toEqual(action);
-    const ev = press(key);
+    const event = press(key);
     expect(onAction).toHaveBeenCalledWith(action);
-    // Enter and Space would otherwise click the button; Backspace once
-    // navigated browser history.
-    expect(ev.defaultPrevented).toBe(true);
+    expect(event.defaultPrevented).toBe(true);
   });
 
   it("hands Escape to the engine instead of mapping it", () => {
@@ -79,8 +77,9 @@ describe("the focus target", () => {
 
   it("sits over the node and is never smaller than 24px", () => {
     const box = () => {
-      const m = button().style.transform.match(/translate3d\((-?[\d.]+)px,\s*(-?[\d.]+)px/) ?? [];
-      const [x, y] = [Number(m[1]), Number(m[2])];
+      const match =
+        button().style.transform.match(/translate3d\((-?[\d.]+)px,\s*(-?[\d.]+)px/) ?? [];
+      const [x, y] = [Number(match[1]), Number(match[2])];
       return { x, y, w: parseFloat(button().style.width), h: parseFloat(button().style.height) };
     };
     overlay.place(100, 50, 8);
@@ -91,13 +90,13 @@ describe("the focus target", () => {
 
   it("skips the style writes when nothing moved", () => {
     overlay.place(100, 50, 30);
-    const t = button().style.transform;
-    // A valid value: newer jsdom drops an invalid one, as browsers do.
+    const placed = button().style.transform;
+    // Must be a valid value: jsdom drops an invalid one, as browsers do.
     button().style.transform = "translate3d(1px, 2px, 0px)";
     overlay.place(100.2, 50.2, 30.1);
     expect(button().style.transform).toBe("translate3d(1px, 2px, 0px)");
     overlay.place(110, 50, 30);
-    expect(button().style.transform).not.toBe(t);
+    expect(button().style.transform).not.toBe(placed);
   });
 
   it("reports focus entering and leaving", () => {
@@ -112,7 +111,6 @@ describe("the focus target", () => {
   it("toggles the selection when a screen reader activates it with a click", () => {
     button().click();
     expect(onAction).toHaveBeenCalledWith({ type: "toggleSelect" });
-    // Enter and Space are handled on keydown and never turn into a click too.
     expect(press("Enter").defaultPrevented).toBe(true);
     expect(press(" ").defaultPrevented).toBe(true);
   });

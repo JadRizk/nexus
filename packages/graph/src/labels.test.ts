@@ -10,8 +10,7 @@ import type { Viewport } from "./camera.js";
 
 const VIEWPORT: Viewport = { width: 800, height: 600, curve: 0 };
 
-// Constant, text-independent: keeps box widths predictable across fixtures
-// (17 = 10 + 0*pad + 7, since every fixture label defaults to "").
+// Text-independent, so every fixture's box is 17px wide (10 + 7, empty labels).
 const STUB_MEASURE: MeasureText = () => 10;
 
 interface NodeFixture {
@@ -30,29 +29,29 @@ function makeView(
     Omit<LabelView, "count" | "pos" | "hidden" | "radii" | "depth" | "tier" | "label">
   > = {},
 ): LabelView {
-  const n = nodes.length;
-  const pos = new Float32Array(n * 2),
-    hidden = new Float32Array(n),
-    radii = new Float32Array(n);
-  const depth = new Float32Array(n),
-    tier = new Float32Array(n);
-  const labels = nodes.map((nd) => nd.label ?? "");
-  nodes.forEach((nd, i) => {
-    pos[i * 2] = nd.x;
-    pos[i * 2 + 1] = nd.y;
-    hidden[i] = nd.hidden ? 1 : 0;
-    radii[i] = nd.radius ?? 0;
-    depth[i] = nd.depth ?? -1;
-    tier[i] = nd.tier ?? 3;
+  const nodeCount = nodes.length;
+  const positions = new Float32Array(nodeCount * 2),
+    hidden = new Float32Array(nodeCount),
+    radii = new Float32Array(nodeCount);
+  const depth = new Float32Array(nodeCount),
+    tier = new Float32Array(nodeCount);
+  const labels = nodes.map((node) => node.label ?? "");
+  nodes.forEach((node, i) => {
+    positions[i * 2] = node.x;
+    positions[i * 2 + 1] = node.y;
+    hidden[i] = node.hidden ? 1 : 0;
+    radii[i] = node.radius ?? 0;
+    depth[i] = node.depth ?? -1;
+    tier[i] = node.tier ?? 3;
   });
   return {
-    count: n,
-    pos,
+    count: nodeCount,
+    pos: positions,
     hidden,
     radii,
     depth,
     tier,
-    label: (i) => labels[i]!,
+    label: (index) => labels[index]!,
     zoom: 1,
     cx: 0,
     cy: 0,
@@ -100,11 +99,12 @@ describe("createLabelPlacer / modes", () => {
   });
 
   it("key places landmarks, the target, and depth-1 nodes only", () => {
+    // Tier 0 is a landmark; node 2 is the target.
     const nodes: NodeFixture[] = [
-      { x: -300, y: 0, tier: 0, depth: -1 }, // landmark, not target, not depth-1 -> placed
-      { x: -100, y: 0, tier: 3, depth: 1 }, // depth-1 -> placed
-      { x: 100, y: 0, tier: 3, depth: -1 }, // target -> placed (selIdx below)
-      { x: 300, y: 0, tier: 3, depth: 2 }, // none of the three -> excluded
+      { x: -300, y: 0, tier: 0, depth: -1 },
+      { x: -100, y: 0, tier: 3, depth: 1 },
+      { x: 100, y: 0, tier: 3, depth: -1 },
+      { x: 300, y: 0, tier: 3, depth: 2 },
     ];
     const { out } = place(nodes, { mode: "key" as LabelMode, selIdx: 2 });
     expect([...out.keys()].sort()).toEqual([0, 1, 2]);
@@ -126,8 +126,8 @@ describe("createLabelPlacer / earning and focus", () => {
 
   it("with something selected, a non-landmark node outside the neighbourhood is dropped", () => {
     const nodes: NodeFixture[] = [
-      { x: 0, y: 0, tier: 3, depth: -1 }, // the (unrelated) selection
-      { x: 300, y: 0, tier: 3, depth: -1 }, // outside the flow, not a landmark -> dropped
+      { x: 0, y: 0, tier: 3, depth: -1 },
+      { x: 300, y: 0, tier: 3, depth: -1 },
     ];
     const { out } = place(nodes, { mode: "all" as LabelMode, selIdx: 0 });
     expect(out.has(1)).toBe(false);
@@ -136,7 +136,7 @@ describe("createLabelPlacer / earning and focus", () => {
   it("a landmark outside the neighbourhood is kept while something else is focused, at reduced opacity", () => {
     const nodes: NodeFixture[] = [
       { x: 0, y: 0, tier: 3, depth: -1 },
-      { x: 300, y: 0, tier: 0, depth: -1 }, // landmark, outside the flow -> kept, dimmed
+      { x: 300, y: 0, tier: 0, depth: -1 },
     ];
     const { out } = place(nodes, { mode: "all" as LabelMode, selIdx: 0 });
     expect(out.get(1)?.[2]).toBeCloseTo(0.28);
@@ -146,10 +146,10 @@ describe("createLabelPlacer / earning and focus", () => {
 describe("createLabelPlacer / opacity tiers", () => {
   it("pins the four resting/focused opacity values", () => {
     const nodes: NodeFixture[] = [
-      { x: 0, y: 0, tier: 3, depth: -1 }, // selected -> 1
-      { x: 200, y: 0, tier: 3, depth: 1 }, // in-neighbourhood -> 0.92
-      { x: -400, y: 0, tier: 0, depth: -1 }, // resting landmark, nothing focused -> 0.82
-      { x: -200, y: 0, tier: 3, depth: -1 }, // resting non-landmark, nothing focused -> 0.52
+      { x: 0, y: 0, tier: 3, depth: -1 },
+      { x: 200, y: 0, tier: 3, depth: 1 },
+      { x: -400, y: 0, tier: 0, depth: -1 },
+      { x: -200, y: 0, tier: 3, depth: -1 },
     ];
     const resting = place([nodes[2]!, nodes[3]!], { mode: "all" as LabelMode });
     expect(resting.out.get(0)?.[2]).toBeCloseTo(0.82);
@@ -163,12 +163,10 @@ describe("createLabelPlacer / opacity tiers", () => {
 
 describe("createLabelPlacer / collision and pool", () => {
   it("of two overlapping boxes, only the higher-scoring one is placed", () => {
-    // Same radius (so the glyph offset doesn't itself separate the boxes) —
-    // node 1 outscores node 0 on tier alone, and is processed first as a
-    // result, so this also exercises score-order placement.
+    // Equal radii, so the glyph offset doesn't separate the boxes; only tier differs.
     const nodes: NodeFixture[] = [
       { x: 0, y: 0, radius: 0, tier: 3, depth: -1 },
-      { x: 5, y: 0, radius: 0, tier: 0, depth: -1 }, // landmark: higher score, box overlaps node 0's
+      { x: 5, y: 0, radius: 0, tier: 0, depth: -1 },
     ];
     const { out } = place(nodes, { mode: "all" as LabelMode });
     expect(out.has(1)).toBe(true);
@@ -176,9 +174,7 @@ describe("createLabelPlacer / collision and pool", () => {
   });
 
   it("nudged one pixel apart, both are placed", () => {
-    // Box width is fixed at 17px (10 + 0-length label + 7). Two nodes whose
-    // glyph-adjusted screen x lands exactly 17px apart clear the collision
-    // test; 16px apart, one pixel short, they still collide.
+    // Boxes are 17px wide (see STUB_MEASURE).
     const collide = place(
       [
         { x: 0, y: 0, radius: 0 },
@@ -201,7 +197,7 @@ describe("createLabelPlacer / collision and pool", () => {
   it("equal scores: the lower index wins the collision", () => {
     const nodes: NodeFixture[] = [
       { x: 0, y: 0, radius: 0 },
-      { x: 5, y: 0, radius: 0 }, // identical score to node 0, boxes overlap
+      { x: 5, y: 0, radius: 0 },
     ];
     const { out } = place(nodes, { mode: "all" as LabelMode });
     expect(out.has(0)).toBe(true);
@@ -212,16 +208,16 @@ describe("createLabelPlacer / collision and pool", () => {
     const nodes: NodeFixture[] = Array.from({ length: 10 }, (_, i) => ({
       x: i * 80 - 360,
       y: 0,
-      radius: i, // increasing score with index; spaced but within the precull bound
+      radius: i, // score rises with index
     }));
     const { out } = place(nodes, { mode: "all" as LabelMode }, 3);
     expect(out.size).toBe(3);
-    expect([...out.keys()].sort((a, b) => a - b)).toEqual([7, 8, 9]);
+    expect([...out.keys()].sort((first, second) => first - second)).toEqual([7, 8, 9]);
   });
 
   it("a node far off-screen is never placed, even as the top-scoring candidate", () => {
     const nodes: NodeFixture[] = [
-      { x: 100000, y: 0, radius: 999 }, // far outside the view; would otherwise win every comparison
+      { x: 100000, y: 0, radius: 999 },
       { x: 0, y: 0, radius: 1 },
     ];
     const { out } = place(nodes, { mode: "all" as LabelMode });

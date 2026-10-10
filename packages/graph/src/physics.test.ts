@@ -1,12 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { createPhysics } from "./physics.js";
 
-/** Every force off, so a test can switch on exactly the one it is about. */
 const NO_FORCES = { repulsion: 0, linkDistance: 1, gravity: 0, damping: 0.5, cursorForce: 0 };
 
-// Positions after 120 steps of the graph in the byte-identity test below,
-// recorded from the 1.x solver. Nine significant digits round-trip a float32
-// exactly, so comparing through a Float32Array is still bit-for-bit.
+// Recorded from the 1.x solver; nine significant digits round-trip a float32 exactly.
 // prettier-ignore
 const V1_GOLDEN = [18.9124947,4.15760183,-56.6989594,24.8807526,27.4507599,-50.2749481,-3.16198254,35.3550072,-25.6373863,-39.3361092,74.9694595,29.6277485,-23.4488106,0.641816258,85.5588455,-33.0581703,-39.9154968,84.2616272,-8.41025829,-77.380127,29.3776951,69.8672104,-79.9296341,-44.4288292];
 
@@ -121,10 +118,6 @@ describe("createPhysics", () => {
     });
   });
 
-  // Recorded from the 1.x solver (before sector/radius forces and reseed
-  // existed) at this seed and graph. With both forces at their default of 0
-  // the stepping must match it float for float: the 2.0 additions are opt-in,
-  // and a consumer who never sets them must get the layout they had.
   it("with sectorForce and radiusForce at 0, steps byte-identically to the 1.x solver", () => {
     const sim = createPhysics(
       {
@@ -149,21 +142,17 @@ describe("createPhysics", () => {
 
   it("radius force pulls a node toward its target ring instead of the origin, overriding plain gravity", () => {
     const sim = createPhysics({ nodes: [{ charge: 1, mass: 1, radiusTarget: 150 }], edges: [] });
-    sim.pin(0, 400, 0); // start well outside the target ring
+    sim.pin(0, 400, 0);
     sim.step();
     sim.pin(-1, 0, 0);
     sim.setParams({ ...NO_FORCES, gravity: 0.05, damping: 0.6, radiusForce: 0.05 });
     for (let i = 0; i < 400; i++) sim.step();
-    const r = Math.hypot(sim.pos[0]!, sim.pos[1]!);
-    expect(r).toBeGreaterThan(100); // didn't collapse to the origin despite gravity being on
-    expect(r).toBeLessThan(200); // converged near its 150-unit target, not still out at 400
+    const radius = Math.hypot(sim.pos[0]!, sim.pos[1]!);
+    expect(radius).toBeGreaterThan(100);
+    expect(radius).toBeLessThan(200);
   });
 
-  // The bound above only proves "moved most of the way"; this one proves the
-  // ring spring converges rather than running out of schedule partway. It
-  // guards the structural forces' own slower decay: put them back on the
-  // shared `alpha` and a node this far out stalls short, by more the further
-  // out it started.
+  // Guards the structural forces' own slower decay: on the shared alpha a far node stalls short.
   it("radius force converges from a large displacement, not just partway", () => {
     for (const start of [500, 900, 1400]) {
       const sim = createPhysics({ nodes: [{ charge: 1, mass: 1, radiusTarget: 150 }], edges: [] });
@@ -173,14 +162,12 @@ describe("createPhysics", () => {
       sim.setParams({ ...NO_FORCES, gravity: 0.05, damping: 0.62, radiusForce: 0.05 });
       let steps = 0;
       while (sim.step() && steps < 5000) steps++;
-      const r = Math.hypot(sim.pos[0]!, sim.pos[1]!);
-      expect(Math.abs(r - 150)).toBeLessThan(1.5);
+      const radius = Math.hypot(sim.pos[0]!, sim.pos[1]!);
+      expect(Math.abs(radius - 150)).toBeLessThan(1.5);
     }
   });
 
-  // Critical stiffness is (1-sqrt(damp))^2/damp, so radiusForce 0.05 is
-  // sluggish at the default damping 0.62 but far above critical at 0.90.
-  // Without the radial damping term this overshoots the ring by ~66 units.
+  // Critical stiffness is (1-sqrt(damp))^2/damp, so 0.05 is far above it at damping 0.9.
   it("radius force does not overshoot its ring, even at low-friction damping", () => {
     const sim = createPhysics({ nodes: [{ charge: 1, mass: 1, radiusTarget: 150 }], edges: [] });
     sim.pin(0, 650, 0);
@@ -188,12 +175,12 @@ describe("createPhysics", () => {
     sim.pin(-1, 0, 0);
     sim.setParams({ ...NO_FORCES, gravity: 0.05, damping: 0.9, radiusForce: 0.05 });
     let steps = 0,
-      minR = Infinity;
+      minRadius = Infinity;
     while (sim.step() && steps < 5000) {
-      minR = Math.min(minR, Math.hypot(sim.pos[0]!, sim.pos[1]!));
+      minRadius = Math.min(minRadius, Math.hypot(sim.pos[0]!, sim.pos[1]!));
       steps++;
     }
-    expect(minR).toBeGreaterThan(150 - 5);
+    expect(minRadius).toBeGreaterThan(150 - 5);
     expect(Math.abs(Math.hypot(sim.pos[0]!, sim.pos[1]!) - 150)).toBeLessThan(1.5);
   });
 
@@ -205,7 +192,7 @@ describe("createPhysics", () => {
     sim.setParams({ ...NO_FORCES, gravity: 0.05, damping: 0.6 });
     const before = Math.hypot(sim.pos[0]!, sim.pos[1]!);
     for (let i = 0; i < 300; i++) sim.step();
-    expect(Math.hypot(sim.pos[0]!, sim.pos[1]!)).toBeLessThan(before); // gravity, not a 150-unit ring
+    expect(Math.hypot(sim.pos[0]!, sim.pos[1]!)).toBeLessThan(before);
   });
 
   it("sector force rotates a node toward its arm angle while roughly preserving its radius", () => {
@@ -213,19 +200,18 @@ describe("createPhysics", () => {
       nodes: [{ charge: 1, mass: 1, sectorAngle: Math.PI / 2 }],
       edges: [],
     });
-    sim.pin(0, 100, 0); // on the +x axis — 90° from its +y-axis target
+    sim.pin(0, 100, 0);
     sim.step();
     sim.pin(-1, 0, 0);
     sim.setParams({ ...NO_FORCES, damping: 0.6, sectorForce: 0.02 });
     const before = { x: sim.pos[0]!, y: sim.pos[1]! };
     for (let i = 0; i < 300; i++) sim.step();
     const after = { x: sim.pos[0]!, y: sim.pos[1]! };
-    // Arrived, not merely closer: within 2 degrees of the arm.
     expect(Math.abs(Math.PI / 2 - Math.atan2(after.y, after.x))).toBeLessThan((2 * Math.PI) / 180);
-    const rBefore = Math.hypot(before.x, before.y),
-      rAfter = Math.hypot(after.x, after.y);
-    expect(rAfter).toBeGreaterThan(rBefore * 0.5);
-    expect(rAfter).toBeLessThan(rBefore * 1.5);
+    const radiusBefore = Math.hypot(before.x, before.y),
+      radiusAfter = Math.hypot(after.x, after.y);
+    expect(radiusAfter).toBeGreaterThan(radiusBefore * 0.5);
+    expect(radiusAfter).toBeLessThan(radiusBefore * 1.5);
   });
 
   it("sector force is inert at zero, even on a node carrying a sectorAngle", () => {
@@ -238,7 +224,7 @@ describe("createPhysics", () => {
     sim.pin(-1, 0, 0);
     sim.setParams({ ...NO_FORCES, damping: 0.6 });
     for (let i = 0; i < 100; i++) sim.step();
-    expect(sim.pos[1]).toBeCloseTo(0, 5); // never nudged off the x-axis
+    expect(sim.pos[1]).toBeCloseTo(0, 5);
   });
 
   it("seeds a targeted node near its polar target, within the documented jitter", () => {

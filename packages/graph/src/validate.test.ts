@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { validateGraph } from "./validate.js";
 import type { GraphEdge, GraphNode, LinkCategory, NodeCategory } from "./types.js";
 
-const NODE_CAT: NodeCategory = {
+const NODE_CATEGORY: NodeCategory = {
   label: "NODE",
   shape: 0,
   color: "#ffffff",
@@ -12,34 +12,40 @@ const NODE_CAT: NodeCategory = {
   mass: 1,
   tier: 1,
 };
-const LINK_CAT: LinkCategory = { label: "LINK", color: "#ffffff", width: 1, dist: 1, strength: 1 };
-const nodeCategories = { n: NODE_CAT };
-const linkCategories = { l: LINK_CAT };
+const LINK_CATEGORY: LinkCategory = {
+  label: "LINK",
+  color: "#ffffff",
+  width: 1,
+  dist: 1,
+  strength: 1,
+};
+const nodeCategories = { n: NODE_CATEGORY };
+const linkCategories = { l: LINK_CATEGORY };
 
 const node = (id: string, categoryId = "n"): GraphNode => ({ id, label: id, categoryId });
 const edge = (a: string, b: string, categoryId = "l"): GraphEdge => ({ a, b, categoryId });
 
 describe("validateGraph", () => {
   it("resolves ids to dense indices and edge endpoints to those indices", () => {
-    const v = validateGraph(
+    const validated = validateGraph(
       [node("x"), node("y"), node("z")],
       [edge("x", "z"), edge("z", "y")],
       nodeCategories,
       linkCategories,
     );
-    expect([...v.idToIndex.entries()]).toEqual([
+    expect([...validated.idToIndex.entries()]).toEqual([
       ["x", 0],
       ["y", 1],
       ["z", 2],
     ]);
-    expect([...v.eA]).toEqual([0, 2]);
-    expect([...v.eB]).toEqual([2, 1]);
+    expect([...validated.eA]).toEqual([0, 2]);
+    expect([...validated.eB]).toEqual([2, 1]);
   });
 
   it("accepts an empty graph", () => {
-    const v = validateGraph([], [], nodeCategories, linkCategories);
-    expect(v.idToIndex.size).toBe(0);
-    expect(v.eA.length).toBe(0);
+    const validated = validateGraph([], [], nodeCategories, linkCategories);
+    expect(validated.idToIndex.size).toBe(0);
+    expect(validated.eA.length).toBe(0);
   });
 
   it.each([
@@ -84,11 +90,11 @@ describe("validateGraph", () => {
     const edges = [edge("x", "y"), edge("x", "gone"), edge("ghost", "z"), edge("y", "z")];
 
     it("leaves out edges with an unknown endpoint, keeps the rest in order, and reports which end", () => {
-      const v = validateGraph(nodes, edges, nodeCategories, linkCategories, "drop");
-      expect(v.edges).toEqual([edges[0], edges[3]]);
-      expect([...v.eA]).toEqual([0, 1]);
-      expect([...v.eB]).toEqual([1, 2]);
-      expect(v.dropped).toEqual([
+      const validated = validateGraph(nodes, edges, nodeCategories, linkCategories, "drop");
+      expect(validated.edges).toEqual([edges[0], edges[3]]);
+      expect([...validated.eA]).toEqual([0, 1]);
+      expect([...validated.eB]).toEqual([1, 2]);
+      expect(validated.dropped).toEqual([
         { index: 1, edge: edges[1], end: "b" },
         { index: 2, edge: edges[2], end: "a" },
       ]);
@@ -107,9 +113,9 @@ describe("validateGraph", () => {
     });
 
     it("drops nothing and reports nothing under the default policy", () => {
-      const v = validateGraph(nodes, [edges[0]!], nodeCategories, linkCategories);
-      expect(v.dropped).toEqual([]);
-      expect(v.edges).toEqual([edges[0]]);
+      const validated = validateGraph(nodes, [edges[0]!], nodeCategories, linkCategories);
+      expect(validated.dropped).toEqual([]);
+      expect(validated.edges).toEqual([edges[0]]);
     });
   });
 });

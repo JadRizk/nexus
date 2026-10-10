@@ -4,24 +4,22 @@ import type { Bounds, CameraRig } from "./camera-rig.js";
 import { fitBounds, ZOOM_MAX } from "./camera.js";
 import type { FitInset } from "./camera.js";
 
-const W = 800,
-  H = 600;
+const WIDTH = 800,
+  HEIGHT = 600;
 
-// A movable little world: node positions the tests can shove around to stand
-// in for the solver, and a free box the tests can resize.
-let pos: Array<[number, number]>;
+let positions: Array<[number, number]>;
 let inset: FitInset;
 let rig: CameraRig;
 
 function boundsOf(indices?: readonly number[]): Bounds | null {
-  const ids = indices ?? pos.map((_, i) => i);
+  const ids = indices ?? positions.map((_, i) => i);
   if (ids.length === 0) return null;
   let x0 = Infinity,
     y0 = Infinity,
     x1 = -Infinity,
     y1 = -Infinity;
   for (const i of ids) {
-    const [x, y] = pos[i]!;
+    const [x, y] = positions[i]!;
     x0 = Math.min(x0, x);
     y0 = Math.min(y0, y);
     x1 = Math.max(x1, x);
@@ -34,7 +32,7 @@ const STEP = { dt: 1 / 60, stepped: true, settled: false, reduced: false };
 const SETTLED = { ...STEP, stepped: false, settled: true };
 
 beforeEach(() => {
-  pos = [
+  positions = [
     [-100, -50],
     [100, 50],
     [0, 0],
@@ -43,29 +41,28 @@ beforeEach(() => {
   inset = { top: 0, right: 0, bottom: 0, left: 0 };
   rig = createCameraRig({
     bounds: boundsOf,
-    position: (i) => pos[i]!,
-    viewport: () => ({ width: W, height: H }),
+    position: (i) => positions[i]!,
+    viewport: () => ({ width: WIDTH, height: HEIGHT }),
     inset: () => inset,
   });
 });
 
-/** Spread the layout out, the way a settling solver does. */
-function expand(k: number) {
-  pos = pos.map(([x, y]) => [x * k, y * k]);
+function expand(factor: number) {
+  positions = positions.map(([x, y]) => [x * factor, y * factor]);
 }
 
 describe("intro", () => {
   it("targets the measured fit and starts the live zoom tighter, for the sweep", () => {
     rig.intro(false);
-    const f = fitBounds(-100, -50, 100, 50, W, H);
-    expect(rig.target).toEqual({ x: f.x, y: f.y, zoom: f.zoom });
-    expect(rig.live.zoom).toBeCloseTo(Math.min(ZOOM_MAX, f.zoom * INTRO_ZOOM_MULTIPLIER));
+    const fit = fitBounds(-100, -50, 100, 50, WIDTH, HEIGHT);
+    expect(rig.target).toEqual({ x: fit.x, y: fit.y, zoom: fit.zoom });
+    expect(rig.live.zoom).toBeCloseTo(Math.min(ZOOM_MAX, fit.zoom * INTRO_ZOOM_MULTIPLIER));
     expect([rig.live.x, rig.live.y]).toEqual([rig.target.x, rig.target.y]);
   });
 
   it("never starts the sweep past ZOOM_MAX, however small the graph", () => {
     // Two nodes a unit apart fit at ZOOM_MAX already; six times that is no zoom at all.
-    pos = [
+    positions = [
       [0, 0],
       [1, 0],
     ];
@@ -89,8 +86,7 @@ describe("auto-fit", () => {
     expand(3);
     for (let i = 0; i < 240; i++) rig.tick(STEP);
     expect(rig.target.zoom).toBeLessThan(before);
-    // Converged on the new bounds through the low-pass.
-    expect(rig.target.zoom).toBeCloseTo(fitBounds(-300, -150, 300, 150, W, H).zoom, 2);
+    expect(rig.target.zoom).toBeCloseTo(fitBounds(-300, -150, 300, 150, WIDTH, HEIGHT).zoom, 2);
   });
 
   it("absorbs a one-frame spike instead of zooming with it", () => {
@@ -98,26 +94,25 @@ describe("auto-fit", () => {
     const before = rig.target.zoom;
     expand(5);
     rig.tick(STEP);
-    // One frame of a 5x expansion moves the target only a little.
     expect(rig.target.zoom).toBeGreaterThan(before * 0.9);
   });
 
   it("does nothing on frames the solver didn't step, or once it has settled", () => {
     rig.intro(true);
-    const t = { ...rig.target };
+    const targetBefore = { ...rig.target };
     expand(3);
     rig.tick({ ...STEP, stepped: false });
     rig.tick(SETTLED);
-    expect(rig.target).toEqual(t);
+    expect(rig.target).toEqual(targetBefore);
   });
 
   it("ends when the reader pans or zooms", () => {
     rig.intro(true);
     rig.takeOver();
-    const t = { ...rig.target };
+    const targetBefore = { ...rig.target };
     expand(3);
     for (let i = 0; i < 60; i++) rig.tick(STEP);
-    expect(rig.target).toEqual(t);
+    expect(rig.target).toEqual(targetBefore);
     expect(rig.autoFit).toBe(false);
     expect(rig.userOwned).toBe(true);
   });
@@ -143,10 +138,10 @@ describe("fitInset", () => {
   it("leaves a hand-picked framing alone", () => {
     rig.intro(true);
     rig.takeOver();
-    const t = { ...rig.target };
+    const targetBefore = { ...rig.target };
     inset = { top: 0, right: 300, bottom: 0, left: 0 };
     rig.reframe();
-    expect(rig.target).toEqual(t);
+    expect(rig.target).toEqual(targetBefore);
   });
 });
 
@@ -158,20 +153,20 @@ describe("focus", () => {
     expect(rig.autoFit).toBe(false);
     expect(rig.target.zoom).toBeGreaterThanOrEqual(FOCUS_ZOOM);
     // On screen, the node lands at the free box's centre: (800 - 200) / 2.
-    const sx = W / 2 + (pos[3]![0] - rig.target.x) * rig.target.zoom;
-    expect(sx).toBeCloseTo(300);
+    const screenX = WIDTH / 2 + (positions[3]![0] - rig.target.x) * rig.target.zoom;
+    expect(screenX).toBeCloseTo(300);
   });
 
   it("rides along with the node while the layout moves, then lets go once it settles", () => {
     rig.intro(true);
     rig.focus(3);
-    const dx = rig.target.x - pos[3]![0];
-    pos[3] = [500, 400];
+    const dx = rig.target.x - positions[3]![0];
+    positions[3] = [500, 400];
     rig.tick(STEP);
-    expect(rig.target.x - pos[3]![0]).toBeCloseTo(dx);
+    expect(rig.target.x - positions[3]![0]).toBeCloseTo(dx);
     rig.tick(SETTLED);
     expect(rig.follow).toBe(-1);
-    pos[3] = [900, 900];
+    positions[3] = [900, 900];
     rig.tick(STEP);
     expect(rig.target.x).not.toBeCloseTo(900 + dx);
   });
@@ -180,10 +175,10 @@ describe("focus", () => {
     rig.intro(true);
     rig.focus(3);
     rig.takeOver();
-    const t = { ...rig.target };
-    pos[3] = [500, 400];
+    const targetBefore = { ...rig.target };
+    positions[3] = [500, 400];
     rig.tick(STEP);
-    expect(rig.target).toEqual(t);
+    expect(rig.target).toEqual(targetBefore);
   });
 });
 
@@ -191,8 +186,8 @@ describe("selection framing", () => {
   it("frames the node and its neighbours and rides along with the node", () => {
     rig.intro(true);
     rig.frameAround(2, [3]);
-    const f = fitBounds(0, 0, 40, 10, W, H);
-    expect(rig.target.zoom).toBeCloseTo(f.zoom);
+    const fit = fitBounds(0, 0, 40, 10, WIDTH, HEIGHT);
+    expect(rig.target.zoom).toBeCloseTo(fit.zoom);
     expect(rig.follow).toBe(2);
     expect(rig.autoFit).toBe(false);
   });
@@ -203,7 +198,7 @@ describe("selection framing", () => {
     rig.release();
     expect(rig.autoFit).toBe(true);
     expect(rig.follow).toBe(-1);
-    expect(rig.target.zoom).toBeCloseTo(fitBounds(-100, -50, 100, 50, W, H).zoom);
+    expect(rig.target.zoom).toBeCloseTo(fitBounds(-100, -50, 100, 50, WIDTH, HEIGHT).zoom);
   });
 
   it("frames the whole graph on release but stays put if the reader had taken over", () => {
@@ -269,15 +264,15 @@ describe("easing", () => {
 describe("reveal", () => {
   it("leaves the camera alone when the node is already in view", () => {
     rig.intro(true);
-    const t = { ...rig.target };
+    const targetBefore = { ...rig.target };
     rig.reveal(2);
-    expect(rig.target).toEqual(t);
+    expect(rig.target).toEqual(targetBefore);
     expect(rig.autoFit).toBe(true);
   });
 
   it("pans, at the same zoom, to bring an off-screen node into the free box, and rides along", () => {
     rig.intro(true);
-    pos.push([5000, 0]);
+    positions.push([5000, 0]);
     const zoom = rig.target.zoom;
     rig.reveal(4);
     expect(rig.target.zoom).toBe(zoom);
@@ -290,10 +285,10 @@ describe("reveal", () => {
     rig.intro(true);
     // A node at the left edge of the canvas, under a 300px left panel.
     const zoom = rig.target.zoom;
-    pos.push([rig.target.x - (W / 2 - 20) / zoom, rig.target.y]);
+    positions.push([rig.target.x - (WIDTH / 2 - 20) / zoom, rig.target.y]);
     inset = { top: 0, right: 0, bottom: 0, left: 300 };
     rig.reveal(4);
-    const sx = W / 2 + (pos[4]![0] - rig.target.x) * rig.target.zoom;
-    expect(sx).toBeCloseTo(300 + (W - 300) / 2);
+    const screenX = WIDTH / 2 + (positions[4]![0] - rig.target.x) * rig.target.zoom;
+    expect(screenX).toBeCloseTo(300 + (WIDTH - 300) / 2);
   });
 });

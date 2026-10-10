@@ -43,14 +43,11 @@ function renderRoot(ariaLabel?: string, keyboardNavigation?: boolean) {
   return html;
 }
 
-/** The root element's opening tag. */
 const rootTag = (html: string) => html.slice(0, html.indexOf(">") + 1);
 
 describe("GraphCanvas accessibility (static render)", () => {
   describe("with keyboard navigation (the default)", () => {
-    // The reader tabs into the graph and travels it, so the root is a named
-    // group holding the one focus target. role="img" here would make that
-    // button presentational — invisible to the screen reader it exists for.
+    // role="img" would make the focus target inside presentational.
     it("names the root as a group with a graph role description", () => {
       const root = rootTag(renderRoot("Knowledge graph of imported notes"));
       expect(root).toContain('role="group"');
@@ -65,12 +62,11 @@ describe("GraphCanvas accessibility (static render)", () => {
 
     it("renders a navigation layer that assistive tech can see", () => {
       const html = renderRoot("Graph");
-      // Two layers inside the root: the aria-hidden label layer and the
-      // navigation layer, which must not be hidden.
+      // The aria-hidden label layer plus the navigation layer.
       const layers =
         html.match(/<div[^>]*position:absolute;inset:0;pointer-events:none[^>]*>/g) ?? [];
       expect(layers).toHaveLength(2);
-      expect(layers.filter((l) => l.includes('aria-hidden="true"'))).toHaveLength(1);
+      expect(layers.filter((layer) => layer.includes('aria-hidden="true"'))).toHaveLength(1);
     });
   });
 
@@ -82,10 +78,7 @@ describe("GraphCanvas accessibility (static render)", () => {
       expect(root).not.toContain("tabindex");
     });
 
-    // role="img" with no accessible name is an axe "role-img-alt" failure
-    // (WCAG 2.0 A, serious): a screen reader announces "image" with nothing
-    // to say what it's an image of. Neither an omitted nor an empty label may
-    // slip a nameless role="img" through.
+    // A nameless role="img" is an axe "role-img-alt" failure (WCAG 2.0 A).
     it("carries no role and no aria-label when ariaLabel is omitted or empty", () => {
       for (const label of [undefined, ""]) {
         const root = rootTag(renderRoot(label, false));

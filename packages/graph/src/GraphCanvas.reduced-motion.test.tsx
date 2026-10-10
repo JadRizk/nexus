@@ -4,10 +4,7 @@
  * stubbed to capture the callback, and the test invokes it once per assertion,
  * so what lands in the uniforms is observed directly rather than inferred.
  *
- * Started as the reduced-motion suite and grew into the one that inspects the
- * scene a mount builds — materials, meshes, the per-edge buffers — and what
- * the frame loop hands back (stats, onFrame). The physics file covers what
- * reaches the solver and the camera rig; this one covers what reaches the GPU.
+ * It covers what reaches the GPU; the physics file covers the solver and camera rig.
  *
  * @vitest-environment jsdom
  */
@@ -297,57 +294,57 @@ describe("edge pipeline", () => {
         />,
       );
     });
-    const byFs = (fs: string) =>
-      meshes.filter((m) => (m.material as { fragmentShader?: string }).fragmentShader === fs);
-    return { edges: byFs(EDGE_FS), pads: byFs(PAD_FS) };
+    const byFragmentShader = (source: string) =>
+      meshes.filter(
+        (mesh) => (mesh.material as { fragmentShader?: string }).fragmentShader === source,
+      );
+    return { edges: byFragmentShader(EDGE_FS), pads: byFragmentShader(PAD_FS) };
   }
 
   it("draws edges in two passes and pads between them, under the nodes", () => {
     const { edges, pads } = mountGraph();
-    expect(edges.map((m) => m.renderOrder).sort()).toEqual([0, 2]);
-    expect(pads.map((m) => m.renderOrder)).toEqual([1]);
+    expect(edges.map((mesh) => mesh.renderOrder).sort()).toEqual([0, 2]);
+    expect(pads.map((mesh) => mesh.renderOrder)).toEqual([1]);
     const node = meshes.find(
-      (m) => (m.material as { fragmentShader?: string }).fragmentShader === NODE_FS,
+      (mesh) => (mesh.material as { fragmentShader?: string }).fragmentShader === NODE_FS,
     )!;
     expect(node.renderOrder).toBe(3);
   });
 
   it("composites the resting pass and adds the live one", () => {
     const { edges } = mountGraph();
-    const resting = edges.find((m) => m.renderOrder === 0)!.material as ThreeModule.Material;
-    const live = edges.find((m) => m.renderOrder === 2)!.material as ThreeModule.Material;
+    const resting = edges.find((mesh) => mesh.renderOrder === 0)!.material as ThreeModule.Material;
+    const live = edges.find((mesh) => mesh.renderOrder === 2)!.material as ThreeModule.Material;
     expect(resting.blendDst).toBe(OneMinusSrcAlphaFactor);
     expect(live.blendDst).toBe(OneFactor);
   });
 
   it("encodes routing, signed gain, fray and a symmetric end trim per edge", () => {
     const { edges, pads } = mountGraph();
-    const geo = edges[0]!.geometry;
-    const p0 = geo.getAttribute("iP0").array as Float32Array;
-    const p1 = geo.getAttribute("iP1").array as Float32Array;
-    const p2 = geo.getAttribute("iP2").array as Float32Array;
-    expect(geo.getAttribute("iP2").itemSize).toBe(4);
-    // uses: straight, directed, gain 0.55
+    const geometry = edges[0]!.geometry;
+    const p0 = geometry.getAttribute("iP0").array as Float32Array;
+    const p1 = geometry.getAttribute("iP1").array as Float32Array;
+    const p2 = geometry.getAttribute("iP2").array as Float32Array;
+    expect(geometry.getAttribute("iP2").itemSize).toBe(4);
+    // uses: straight, gain 0.55
     expect(p0[1]).toBe(0);
     expect(p0[3]).toBeCloseTo(0.55);
     // pairs: etched, undirected (negative gain), b end absent
     expect(p0[5]).toBe(-1000);
     expect(p0[7]).toBe(-1);
     expect(p2[4 + 3]).toBe(1);
-    // cites: arc. Arcs alternate sides by index; index 2 is even, so it bows positive.
+    // cites: arcs alternate sides by index, so index 2 bows positive
     expect(p0[9]).toBeGreaterThan(0);
     expect(p0[11]).toBeCloseTo(1.2);
     expect(p2[8 + 3]).toBe(2);
-    // Both ends trimmed by the same multiple of their node's radius.
     expect(p1[2]! / p1[3]!).toBeCloseTo(1);
-    // The pads read the very same instance buffers.
-    expect(pads[0]!.geometry.getAttribute("iP2")).toBe(geo.getAttribute("iP2"));
-    expect(pads[0]!.geometry.getAttribute("iP0")).toBe(geo.getAttribute("iP0"));
+    expect(pads[0]!.geometry.getAttribute("iP2")).toBe(geometry.getAttribute("iP2"));
+    expect(pads[0]!.geometry.getAttribute("iP0")).toBe(geometry.getAttribute("iP0"));
   });
 });
 
 describe("props from qrntn: drop mode, scoped links, drawnNodes, onFrame", () => {
-  const cats: Record<string, LinkCategory> = {
+  const scopedLinkCategories: Record<string, LinkCategory> = {
     refs: { label: "REFS", color: "#ffffff", width: 1, dist: 1, strength: 1 },
     sim: { label: "SIM", color: "#ffffff", width: 1, dist: 1, strength: 1 },
   };
@@ -363,7 +360,7 @@ describe("props from qrntn: drop mode, scoped links, drawnNodes, onFrame", () =>
           nodes={threeNodes}
           edges={[]}
           nodeCategories={nodeCategories}
-          linkCategories={cats}
+          linkCategories={scopedLinkCategories}
           {...props}
         />,
       );
@@ -371,14 +368,14 @@ describe("props from qrntn: drop mode, scoped links, drawnNodes, onFrame", () =>
   }
   /** The per-edge hide flags (iP2.y) the edge shader reads. */
   function hiddenFlags(): number[] {
-    const mesh = meshes.find(
-      (m) => (m.material as { fragmentShader?: string }).fragmentShader === EDGE_FS,
+    const edgeMesh = meshes.find(
+      (mesh) => (mesh.material as { fragmentShader?: string }).fragmentShader === EDGE_FS,
     )!;
-    const p2 = mesh.geometry.getAttribute("iP2").array as Float32Array;
-    return Array.from({ length: p2.length / 4 }, (_, e) => p2[e * 4 + 1]!);
+    const p2 = edgeMesh.geometry.getAttribute("iP2").array as Float32Array;
+    return Array.from({ length: p2.length / 4 }, (_, edge) => p2[edge * 4 + 1]!);
   }
-  const runFrames = (k: number) => {
-    for (let i = 0; i < k; i++) tick();
+  const runFrames = (count: number) => {
+    for (let i = 0; i < count; i++) tick();
   };
 
   it('invalidEdges="drop" draws the rest and reports what it dropped through onWarning', () => {
@@ -423,8 +420,7 @@ describe("props from qrntn: drop mode, scoped links, drawnNodes, onFrame", () =>
   });
 
   it("reports drawnNodes after hidden categories and isolation", () => {
-    // tick() hands out timestamps from 0; the engine's start time comes from
-    // performance.now(), so pin it there or every frame's dt is negative.
+    // tick() stamps frames from 0, so pin the start time there or every dt is negative.
     vi.spyOn(performance, "now").mockReturnValue(0);
     const onStats = vi.fn();
     mountWith({
@@ -434,7 +430,6 @@ describe("props from qrntn: drop mode, scoped links, drawnNodes, onFrame", () =>
     });
     runFrames(40);
     const last = onStats.mock.calls.at(-1)![0];
-    // Isolating "a" keeps it and its one neighbour.
     expect(last).toMatchObject({ nodes: 3, drawnNodes: 2 });
   });
 
@@ -443,21 +438,20 @@ describe("props from qrntn: drop mode, scoped links, drawnNodes, onFrame", () =>
     mountWith({ onFrame: first });
     tick();
     expect(first).toHaveBeenCalledTimes(1);
-    const g = first.mock.calls[0]![0];
-    expect(g.ids).toEqual(["a", "b", "c"]);
-    expect(g.positions).toHaveLength(6);
-    expect(g.radii).toHaveLength(3);
-    expect(g.camera.zoom).toBeGreaterThan(0);
-    // One object, refilled every frame: nothing for the collector per frame.
+    const frame = first.mock.calls[0]![0];
+    expect(frame.ids).toEqual(["a", "b", "c"]);
+    expect(frame.positions).toHaveLength(6);
+    expect(frame.radii).toHaveLength(3);
+    expect(frame.camera.zoom).toBeGreaterThan(0);
+    // One object, refilled every frame, so nothing is allocated per frame.
     tick();
-    expect(first.mock.calls[1]![0]).toBe(g);
-    expect(first.mock.calls[1]![0].camera).toBe(g.camera);
+    expect(first.mock.calls[1]![0]).toBe(frame);
+    expect(first.mock.calls[1]![0].camera).toBe(frame.camera);
     first.mockClear();
     const second = vi.fn();
     mountWith({ onFrame: second });
     tick();
     expect(second).toHaveBeenCalledTimes(1);
-    // The old callback isn't called again once it is replaced.
     expect(first).not.toHaveBeenCalled();
   });
 });

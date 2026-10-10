@@ -10,13 +10,13 @@ import {
 } from "./describe.js";
 import type { GraphNode, LinkCategory } from "./types.js";
 
-const cat = (over: Partial<LinkCategory> = {}): LinkCategory => ({
+const linkCategory = (overrides: Partial<LinkCategory> = {}): LinkCategory => ({
   label: "Cites",
   color: "#fff",
   width: 1,
   dist: 1,
   strength: 1,
-  ...over,
+  ...overrides,
 });
 
 describe("summaryText", () => {
@@ -36,24 +36,26 @@ describe("defaultNodeText", () => {
 
 describe("relationText", () => {
   it("uses the verb outgoing and the inverse verb incoming", () => {
-    const uses = cat({ verb: "uses", inverseVerb: "used by" });
+    const uses = linkCategory({ verb: "uses", inverseVerb: "used by" });
     expect(relationText(uses, "out")).toBe("uses");
     expect(relationText(uses, "in")).toBe("used by");
   });
 
   it("falls back to the label with to / from / with", () => {
-    expect(relationText(cat(), "out")).toBe("cites to");
-    expect(relationText(cat(), "in")).toBe("cites from");
-    expect(relationText(cat(), "both")).toBe("cites with");
+    expect(relationText(linkCategory(), "out")).toBe("cites to");
+    expect(relationText(linkCategory(), "in")).toBe("cites from");
+    expect(relationText(linkCategory(), "both")).toBe("cites with");
   });
 
   it("reads an undirected category's verb from both ends", () => {
-    expect(relationText(cat({ verb: "overlaps", directed: false }), "both")).toBe("overlaps");
+    expect(relationText(linkCategory({ verb: "overlaps", directed: false }), "both")).toBe(
+      "overlaps",
+    );
   });
 });
 
 describe("connectionText", () => {
-  const conn = {
+  const connection = {
     edge: 0,
     other: 1,
     categoryId: "c",
@@ -61,19 +63,19 @@ describe("connectionText", () => {
     out: true,
     strength: 1,
   };
-  const uses = cat({ verb: "uses" });
+  const uses = linkCategory({ verb: "uses" });
 
   it("reads relation, far node, kind and position, marking the first of several as strongest", () => {
-    expect(connectionText(uses, conn, "motion-tokens", "TOKEN SET", 1, 6)).toBe(
+    expect(connectionText(uses, connection, "motion-tokens", "TOKEN SET", 1, 6)).toBe(
       "uses motion-tokens, token set. 1 of 6, strongest",
     );
-    expect(connectionText(uses, conn, "motion-tokens", "TOKEN SET", 2, 6)).toBe(
+    expect(connectionText(uses, connection, "motion-tokens", "TOKEN SET", 2, 6)).toBe(
       "uses motion-tokens, token set. 2 of 6",
     );
   });
 
   it("doesn't call a lone connection the strongest", () => {
-    expect(connectionText(uses, conn, "x", "y", 1, 1)).toBe("uses x, y. 1 of 1");
+    expect(connectionText(uses, connection, "x", "y", 1, 1)).toBe("uses x, y. 1 of 1");
   });
 });
 
@@ -97,7 +99,7 @@ describe("filterText and detailText", () => {
 });
 
 describe("describeGraph", () => {
-  const nodeCat = (label: string) => ({
+  const nodeCategory = (label: string) => ({
     label,
     shape: 0 as const,
     color: "#fff",
@@ -120,18 +122,29 @@ describe("describeGraph", () => {
       { a: "n2", b: "t1", categoryId: "tagged" },
     ],
     // Declared note → source → tag; the outline keeps this order.
-    nodeCategories: { note: nodeCat("NOTE"), source: nodeCat("SOURCE"), tag: nodeCat("TAG") },
+    nodeCategories: {
+      note: nodeCategory("NOTE"),
+      source: nodeCategory("SOURCE"),
+      tag: nodeCategory("TAG"),
+    },
     linkCategories: {
-      cites: cat({ label: "Cite", verb: "cites", inverseVerb: "cited by", strength: 1 }),
-      refs: cat({ label: "Link", strength: 0.5 }),
-      tagged: cat({ label: "Tagged", verb: "tagged with", directed: false, strength: 0.8 }),
+      cites: linkCategory({ label: "Cite", verb: "cites", inverseVerb: "cited by", strength: 1 }),
+      refs: linkCategory({ label: "Link", strength: 0.5 }),
+      tagged: linkCategory({
+        label: "Tagged",
+        verb: "tagged with",
+        directed: false,
+        strength: 0.8,
+      }),
     },
   };
 
   it("groups nodes by category in declaration order, sorted by label, with a summary", () => {
-    const o = describeGraph(input);
-    expect(o.summary).toBe("Graph, 4 nodes, 3 connections in 3 kinds.");
-    expect(o.groups.map((g) => [g.label, g.nodes.map((n) => n.label)])).toEqual([
+    const outline = describeGraph(input);
+    expect(outline.summary).toBe("Graph, 4 nodes, 3 connections in 3 kinds.");
+    expect(
+      outline.groups.map((group) => [group.label, group.nodes.map((node) => node.label)]),
+    ).toEqual([
       ["NOTE", ["alpha", "beta"]],
       ["SOURCE", ["zeta-src"]],
       ["TAG", ["#tag"]],
@@ -150,42 +163,44 @@ describe("describeGraph", () => {
   });
 
   it("leaves out hidden categories, and connections to or along them", () => {
-    const o = describeGraph({
+    const outline = describeGraph({
       ...input,
       hiddenNodeCategories: ["source"],
       hiddenLinkCategories: ["tagged"],
     });
-    expect(o.summary).toBe("Graph, 3 nodes, 1 connection in 1 kind.");
-    expect(o.groups.map((g) => g.label)).toEqual(["NOTE", "TAG"]);
-    expect(o.groups[0]!.nodes[1]!.connections.map((c) => c.label)).toEqual(["alpha"]);
-    // The spoken count is the listed one: beta's citation leads to a hidden node.
-    expect(o.groups[0]!.nodes[1]!.description).toBe("beta, note, 1 connection");
+    expect(outline.summary).toBe("Graph, 3 nodes, 1 connection in 1 kind.");
+    expect(outline.groups.map((group) => group.label)).toEqual(["NOTE", "TAG"]);
+    expect(outline.groups[0]!.nodes[1]!.connections.map((connection) => connection.label)).toEqual([
+      "alpha",
+    ]);
+    expect(outline.groups[0]!.nodes[1]!.description).toBe("beta, note, 1 connection");
   });
 
   it("follows describeNode, rankConnections and invalidEdges like GraphCanvas", () => {
-    const o = describeGraph({
+    const outline = describeGraph({
       ...input,
       edges: [...input.edges, { a: "n1", b: "gone", categoryId: "refs" }],
       invalidEdges: "drop",
-      describeNode: (n) => `NODE ${n.label}`,
-      rankConnections: (a, b) => a.other.label.localeCompare(b.other.label),
+      describeNode: (node) => `NODE ${node.label}`,
+      rankConnections: (first, second) => first.other.label.localeCompare(second.other.label),
     });
-    const beta = o.groups[0]!.nodes[1]!;
+    const beta = outline.groups[0]!.nodes[1]!;
     expect(beta.description).toBe("NODE beta");
-    expect(beta.connections.map((c) => c.label)).toEqual(["alpha", "zeta-src"]);
+    expect(beta.connections.map((connection) => connection.label)).toEqual(["alpha", "zeta-src"]);
     expect(() =>
       describeGraph({ ...input, edges: [{ a: "n1", b: "gone", categoryId: "refs" }] }),
     ).toThrow(/unknown node id "gone"/);
   });
 
   it("lists only the isolated node and its direct neighbours, as the canvas draws them", () => {
-    const o = describeGraph({ ...input, isolateId: "n1" });
-    expect(o.summary).toBe("Graph, 3 nodes, 2 connections in 2 kinds.");
-    expect(o.groups.map((g) => [g.label, g.nodes.map((n) => n.label)])).toEqual([
+    const outline = describeGraph({ ...input, isolateId: "n1" });
+    expect(outline.summary).toBe("Graph, 3 nodes, 2 connections in 2 kinds.");
+    expect(
+      outline.groups.map((group) => [group.label, group.nodes.map((node) => node.label)]),
+    ).toEqual([
       ["NOTE", ["alpha", "beta"]],
       ["SOURCE", ["zeta-src"]],
     ]);
-    // An id that matches nothing isolates nothing, as on the canvas.
     expect(describeGraph({ ...input, isolateId: "nope" }).summary).toMatch(/^Graph, 4 nodes/);
   });
 
@@ -194,16 +209,19 @@ describe("describeGraph", () => {
       words: number;
     }
     // The same callbacks a GraphCanvas<Doc> takes: no cast to GraphNode<unknown>.
-    const describeNode = (n: GraphNode<Doc>) => `${n.label}, ${n.data!.words} words`;
-    const nodes: GraphNode<Doc>[] = input.nodes.map((n, i) => ({ ...n, data: { words: i } }));
-    const o = describeGraph({
+    const describeNode = (node: GraphNode<Doc>) => `${node.label}, ${node.data!.words} words`;
+    const nodes: GraphNode<Doc>[] = input.nodes.map((node, index) => ({
+      ...node,
+      data: { words: index },
+    }));
+    const outline = describeGraph({
       ...input,
       nodes,
       describeNode,
-      rankConnections: (a, b) => a.other.data!.words - b.other.data!.words,
+      rankConnections: (first, second) => first.other.data!.words - second.other.data!.words,
     });
-    const beta = o.groups[0]!.nodes[1]!;
+    const beta = outline.groups[0]!.nodes[1]!;
     expect(beta.description).toBe("beta, 1 words");
-    expect(beta.connections.map((c) => c.label)).toEqual(["zeta-src", "alpha"]);
+    expect(beta.connections.map((connection) => connection.label)).toEqual(["zeta-src", "alpha"]);
   });
 });

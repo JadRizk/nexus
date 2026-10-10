@@ -2,15 +2,9 @@ import { expect, test } from "@playwright/test";
 import { DOC_ROUTES, gotoPage, spec, settle } from "./harness.js";
 import type { Route } from "./harness.js";
 
-/* ============================================================================
-   Accessibility, second half: direct assertions for the README's claims that
-   axe cannot make (a11y.spec.ts runs axe) — a flash rate, a set of
-   distinguishable silhouettes, a focus ring that cannot be removed.
-   ========================================================================== */
+// The README's accessibility claims that axe (a11y.spec.ts) cannot check.
 
-// The same budget as a11y.spec.ts: several of these load every doc route, and
-// under parallel load a page can take as long to settle as an axe pass.
-// Playwright rejects anything but an object pattern here, hence the empty one.
+// Several of these load every doc route; Playwright requires the empty object pattern.
 // eslint-disable-next-line no-empty-pattern
 test.beforeEach(({}, testInfo) => testInfo.setTimeout(120_000));
 
@@ -349,10 +343,7 @@ test.describe("claims axe cannot make", () => {
       await gotoPage(page, route);
       // Controls inside an inert subtree are excluded: a closed Drawer stays
       // mounted with its close button, and that button being unreachable is
-      // the behaviour the Drawer promises, not a defect. The same goes for the
-      // contents of a closed <details> (GraphOutline's node entries): the
-      // browser keeps them out of the tab order until the disclosure opens,
-      // and the <summary> that opens it is checked instead.
+      // the behaviour the Drawer promises, not a defect. So is a closed <details>'s content.
       const controls = page.locator(
         ":is(.nx-root button:not([disabled]), .nx-root input:not([disabled]), .nx-root a[href], .nx-root summary):not([inert] *):not(details:not([open]) > :not(summary) *, details:not([open]) > :not(summary))",
       );

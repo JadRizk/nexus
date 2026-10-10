@@ -31,21 +31,17 @@ type ParamsPatch = Partial<PhysicsParams> & { settle?: number };
 /** Every setParams call any solver created during a test received, in order. */
 const setParamsCalls: ParamsPatch[] = [];
 
-/** Every createPhysics call: the graph and options it got, and a copy of its starting positions. */
 const createCalls: Array<{
   graph: Parameters<typeof PhysicsModule.createPhysics>[0];
   options: Parameters<typeof PhysicsModule.createPhysics>[1];
-  startPos: number[];
+  startPositions: number[];
 }> = [];
 
-/** How many times reseed() reached a solver. */
 let reseedCalls = 0;
 
-/** Every camera-rig method GraphCanvas called, with its arguments, in order. */
 const rigCalls: Array<[string, ...unknown[]]> = [];
 
-// The real rig, with its methods observed: the rules live in camera-rig.ts
-// and are tested there; this file checks GraphCanvas drives them.
+// The real rig, observed: its rules are tested in camera-rig.test.ts.
 vi.mock("./camera-rig.js", async (importOriginal) => {
   const actual = await importOriginal<typeof CameraRigModule>();
   return {
@@ -63,10 +59,10 @@ vi.mock("./camera-rig.js", async (importOriginal) => {
         "takeOver",
       ] as const;
       for (const name of watched) {
-        const fn = rig[name] as (...args: unknown[]) => void;
+        const original = rig[name] as (...args: unknown[]) => void;
         (rig as unknown as Record<string, unknown>)[name] = (...args: unknown[]) => {
           rigCalls.push([name, ...args]);
-          fn(...args);
+          original(...args);
         };
       }
       return rig;
@@ -89,7 +85,7 @@ vi.mock("./physics.js", async (importOriginal) => {
       options?: Parameters<typeof actual.createPhysics>[1],
     ): Physics => {
       const sim = actual.createPhysics(graph, options);
-      createCalls.push({ graph, options, startPos: Array.from(sim.pos) });
+      createCalls.push({ graph, options, startPositions: Array.from(sim.pos) });
       return {
         ...sim,
         setParams: (p: ParamsPatch) => {
@@ -255,7 +251,9 @@ describe("GraphCanvas physics prop", () => {
 describe("GraphCanvas layout seed and structure", () => {
   it("seeds the layout from the node ids when no seed is given", () => {
     mount();
-    expect(createCalls.at(-1)!.options).toEqual({ seed: seedFromIds(nodes.map((n) => n.id)) });
+    expect(createCalls.at(-1)!.options).toEqual({
+      seed: seedFromIds(nodes.map((node) => node.id)),
+    });
   });
 
   it("draws the same starting layout on every mount of the same graph", () => {
@@ -264,7 +262,7 @@ describe("GraphCanvas layout seed and structure", () => {
     root = createRoot(container);
     mount();
     expect(createCalls).toHaveLength(2);
-    expect(createCalls[1]!.startPos).toEqual(createCalls[0]!.startPos);
+    expect(createCalls[1]!.startPositions).toEqual(createCalls[0]!.startPositions);
   });
 
   it("passes an explicit seed through unchanged", () => {
@@ -280,7 +278,7 @@ describe("GraphCanvas layout seed and structure", () => {
   it("rebuilds the scene when the seed changes", () => {
     mount(undefined, { seed: 1 });
     mount(undefined, { seed: 2 });
-    expect(createCalls.map((c) => c.options)).toEqual([{ seed: 1 }, { seed: 2 }]);
+    expect(createCalls.map((call) => call.options)).toEqual([{ seed: 1 }, { seed: 2 }]);
   });
 
   it("gives a node's own sectorAngle/radiusTarget precedence over its category's, and omits absent ones", () => {
@@ -321,7 +319,7 @@ describe("GraphCanvas layout seed and structure", () => {
 });
 
 describe("GraphCanvas camera wiring", () => {
-  const calls = (name: string) => rigCalls.filter((c) => c[0] === name);
+  const calls = (name: string) => rigCalls.filter((call) => call[0] === name);
 
   it("opens with the intro, sweeping unless reduced motion is on", () => {
     mount();
@@ -381,7 +379,6 @@ describe("GraphCanvas history: controller.back() and canGoBack", () => {
     mount(undefined, { ...props, selectedId: "a" });
     expect(ref.current!.canGoBack).toBe(false);
 
-    // A mouse reader clicks "b", then clears the selection.
     mount(undefined, { ...props, selectedId: "b" });
     mount(undefined, { ...props, selectedId: null });
     expect(ref.current!.canGoBack).toBe(true);
@@ -460,7 +457,6 @@ describe("GraphCanvas keyboard and screen-reader navigation", () => {
     press("Escape");
     expect(onSelect).toHaveBeenLastCalledWith(null, "keyboard");
     press("Escape");
-    // Focus goes to the graph's root, not to <body>.
     const group = container.querySelector<HTMLElement>('[role="group"]')!;
     expect(document.activeElement).toBe(group);
   });
@@ -470,7 +466,7 @@ describe("GraphCanvas keyboard and screen-reader navigation", () => {
     mount(undefined, props({ onSelect }));
     act(() => focusTarget()!.focus());
     act(() => focusTarget()!.click());
-    // A keyboard selection: the reader is still in the graph.
+    // A screen reader's click is a keyboard selection: the reader is still in the graph.
     expect(onSelect).toHaveBeenLastCalledWith(expect.objectContaining({ id: "a" }), "keyboard");
     expect(spoken()).toBe("Selected");
   });
@@ -481,10 +477,7 @@ describe("GraphCanvas keyboard and screen-reader navigation", () => {
     press("Escape");
     const group = container.querySelector<HTMLElement>('[role="group"]')!;
     expect(document.activeElement).toBe(group);
-    // The focus target is the root's first tabbable child; out of the tab
-    // order while the root holds focus, Tab goes on past the graph.
     expect(focusTarget()!.tabIndex).toBe(-1);
-    // Back in once focus has moved on, or the pointer presses the canvas.
     act(() => group.blur());
     expect(focusTarget()!.tabIndex).toBe(0);
     act(() => focusTarget()!.focus());
@@ -507,8 +500,7 @@ describe("GraphCanvas keyboard and screen-reader navigation", () => {
     mount(undefined, props({ describeNode }));
     act(() => focusTarget()!.focus());
     const calls = describeNode.mock.calls.length;
-    // Help, describe-free steps and refreshes that leave the node, its
-    // selection and what is visible alone don't call describeNode again.
+    // "?" toggles help, which changes nothing describeNode depends on.
     for (let k = 0; k < 5; k++) press("?");
     expect(describeNode.mock.calls.length).toBe(calls);
     press(" ");
@@ -526,7 +518,7 @@ describe("GraphCanvas keyboard and screen-reader navigation", () => {
       ],
     } as Partial<GraphCanvasProps>);
     const rows = ref.current!.getNode("a")!.groups[0]!.rows;
-    expect(rows.map((r) => [r.id, r.out])).toEqual([
+    expect(rows.map((row) => [row.id, row.out])).toEqual([
       ["a", true],
       ["a", false],
       ["b", true],

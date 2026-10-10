@@ -83,34 +83,30 @@ describe("glyphRadiusPx", () => {
 
 describe("fitBounds", () => {
   it("matches the 1.x framing when there is no inset", () => {
-    // 1.x: centre of the box, zoom = min(W/(gw*1.35), H/(gh*1.35)) clamped.
-    const f = fitBounds(-100, -50, 100, 50, 800, 600);
-    expect(f.x).toBe(0);
-    expect(f.y).toBe(0);
-    expect(f.zoom).toBeCloseTo(Math.min(800 / (200 * 1.35), 600 / (100 * 1.35)));
+    const fit = fitBounds(-100, -50, 100, 50, 800, 600);
+    expect(fit.x).toBe(0);
+    expect(fit.y).toBe(0);
+    expect(fit.zoom).toBeCloseTo(Math.min(800 / (200 * 1.35), 600 / (100 * 1.35)));
   });
 
   it("frames into the free box and centres the graph in it", () => {
     const inset = { top: 0, right: 300, bottom: 0, left: 0 };
-    const f = fitBounds(-100, -100, 100, 100, 900, 600, inset);
-    // Free box is 600x600, so the fit is limited by it, not by the canvas.
-    expect(f.zoom).toBeCloseTo(600 / (200 * 1.35));
-    // The graph's centre lands at the free box's centre: 150px left of the
-    // canvas centre, so the camera sits 150px right of the graph in world units.
-    const sx = 900 / 2 + (0 - f.x) * f.zoom;
-    expect(sx).toBeCloseTo(300);
+    const fit = fitBounds(-100, -100, 100, 100, 900, 600, inset);
+    expect(fit.zoom).toBeCloseTo(600 / (200 * 1.35));
+    const screenX = 900 / 2 + (0 - fit.x) * fit.zoom;
+    expect(screenX).toBeCloseTo(300);
   });
 
   it("flips the vertical offset, because screen y runs down and world y up", () => {
-    const f = fitBounds(-10, -10, 10, 10, 800, 800, { top: 200, right: 0, bottom: 0, left: 0 });
-    const sy = 800 / 2 - (0 - f.y) * f.zoom;
-    expect(sy).toBeCloseTo(200 + 600 / 2);
+    const fit = fitBounds(-10, -10, 10, 10, 800, 800, { top: 200, right: 0, bottom: 0, left: 0 });
+    const screenY = 800 / 2 - (0 - fit.y) * fit.zoom;
+    expect(screenY).toBeCloseTo(200 + 600 / 2);
   });
 
   it("clamps the free box to 64px rather than inverting it", () => {
-    const f = fitBounds(-10, -10, 10, 10, 200, 200, { top: 0, right: 300, bottom: 0, left: 0 });
-    expect(f.zoom).toBeGreaterThan(0);
-    expect(Number.isFinite(f.x)).toBe(true);
+    const fit = fitBounds(-10, -10, 10, 10, 200, 200, { top: 0, right: 300, bottom: 0, left: 0 });
+    expect(fit.zoom).toBeGreaterThan(0);
+    expect(Number.isFinite(fit.x)).toBe(true);
   });
 
   it("clamps zoom to the camera limits", () => {
