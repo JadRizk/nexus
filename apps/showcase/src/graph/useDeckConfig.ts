@@ -9,6 +9,6 @@ export function useDeckConfig() {
     (key, value) => setConfig((previous) => ({ ...previous, [key]: value })),
     [],
   );
-  // Fresh objects each render, as before: memoising would change when the canvas sees a new identity.
+  // Fresh objects each render, deliberately unmemoised: GraphCanvas reads their fields, so memoising buys nothing.
   return { config, setConfigValue, physics: toPhysics(config), optics: toOptics(config) };
 }

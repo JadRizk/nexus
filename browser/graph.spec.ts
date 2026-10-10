@@ -287,7 +287,10 @@ test.describe("graph canvas", () => {
     const title = page.locator(`[id="${await drawer.getAttribute("aria-labelledby")}"]`);
     const before = (await title.textContent()) ?? "";
 
-    await drawer.locator("button.nx-row").first().click();
+    await drawer
+      .getByRole("button", { name: /[A-Z]{3}$/ })
+      .first()
+      .click();
     await expect(title).not.toHaveText(before);
     await expect(isolate).toHaveAttribute("aria-pressed", "true");
     await expect.poll(() => statText(page, "NODES"), { timeout: 30_000 }).toContain("/");
