@@ -313,6 +313,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
       const dispose = () => {
         while (disposables.length > 0) {
           try {
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- the loop condition just checked disposables.length > 0, so pop() returns a function
             disposables.pop()!();
           } catch (error) {
             console.error(error);
@@ -435,8 +436,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
         for (let i = 0; i < nodeCount; i++) {
           const category = nodeCategories[nodeCategoryIds[i]];
           nodeRadii[i] =
-            (nodes[i].size ?? category.size) *
-            (1 + Math.min(1.4, Math.log2(1 + degree[i]) * 0.16));
+            (nodes[i].size ?? category.size) * (1 + Math.min(1.4, Math.log2(1 + degree[i]) * 0.16));
           nodeShapes[i] = category.shape;
           scratchColor.set(category.color);
           nodeColors[i * 3] = scratchColor.r;
@@ -792,6 +792,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
         disposables.push(() => labels.forEach((label) => label.remove()));
         const LABEL_HEIGHT = 11;
 
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- a fresh canvas with no other context mode always returns its 2d context
         const measureContext = document.createElement("canvas").getContext("2d")!;
         const labelPlacer = createLabelPlacer({
           poolSize: POOL,
@@ -1119,7 +1120,8 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
             .map((categoryId) => ({
               categoryId,
               // A self-loop is one connection but a row from each end.
-              rows: connections[i].filter((connection) => connection.categoryId === categoryId)
+              rows: connections[i]
+                .filter((connection) => connection.categoryId === categoryId)
                 .flatMap((connection) =>
                   connection.other === i
                     ? [
@@ -1739,6 +1741,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           for (let k = 0; k < POOL; k++) {
             const id = owner[k];
             if (id < 0) continue;
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- an owner >= 0 is always in screenPositions: the loop above clears the rest, and new owners come from its keys
             const placed = screenPositions.get(id)!;
             labels[k].style.transform = `translate3d(${placed[0] | 0}px,${placed[1] | 0}px,0)`;
             labels[k].style.opacity = String(placed[2]);

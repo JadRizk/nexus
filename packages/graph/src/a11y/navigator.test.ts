@@ -50,6 +50,7 @@ function run(actions: NavAction[], start = initialNavState(0), ctx = makeCtx()) 
     state = next;
     return stepEffects;
   });
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- every run() call passes at least one action, so effects is never empty
   return { state, effects, last: effects.at(-1)! };
 }
 
@@ -152,7 +153,9 @@ describe("following (Enter) and going back (Backspace)", () => {
       { type: "back" },
     ]);
     expect(state.current).toBe(0);
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- the run above has five actions, so these effects exist
     expect(effects.at(-2)!.announce).toBe("Back to hub");
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- the run above has five actions, so these effects exist
     expect(effects.at(-1)!.announce).toBe("Start of path");
   });
 

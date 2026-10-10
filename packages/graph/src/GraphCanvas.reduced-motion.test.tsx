@@ -179,9 +179,13 @@ function mount(query: FakeMediaQueryList | null) {
   if (!canvas) throw new Error("canvas did not mount");
   return {
     canvas,
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- boot builds every shader material, so each fragment shader has an entry
     edge: materials.get(EDGE_FS)!.uniforms,
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- boot builds every shader material, so each fragment shader has an entry
     node: materials.get(NODE_FS)!.uniforms,
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- boot builds every shader material, so each fragment shader has an entry
     fade: materials.get(FADE_FS)!.uniforms,
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- boot builds every shader material, so each fragment shader has an entry
     comp: materials.get(COMPOSITE_FS)!.uniforms,
   };
 }
@@ -249,6 +253,7 @@ describe("bounding spheres", () => {
     for (const mesh of meshes) {
       const geometry = mesh.geometry;
       if (geometry.boundingSphere === null) geometry.computeBoundingSphere();
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- the line above computes the bounding sphere when it was null
       expect(Number.isNaN(geometry.boundingSphere!.radius)).toBe(false);
     }
   });
@@ -305,6 +310,7 @@ describe("edge pipeline", () => {
     const { edges, pads } = mountGraph();
     expect(edges.map((mesh) => mesh.renderOrder).sort()).toEqual([0, 2]);
     expect(pads.map((mesh) => mesh.renderOrder)).toEqual([1]);
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- boot always builds this mesh; the scene would not render without it
     const node = meshes.find(
       (mesh) => (mesh.material as { fragmentShader?: string }).fragmentShader === NODE_FS,
     )!;
@@ -313,7 +319,9 @@ describe("edge pipeline", () => {
 
   it("composites the resting pass and adds the live one", () => {
     const { edges } = mountGraph();
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- the assertion that edges have render orders [0, 2] runs first in the test
     const resting = edges.find((mesh) => mesh.renderOrder === 0)!.material as ThreeModule.Material;
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- the assertion that edges have render orders [0, 2] runs first in the test
     const live = edges.find((mesh) => mesh.renderOrder === 2)!.material as ThreeModule.Material;
     expect(resting.blendDst).toBe(OneMinusSrcAlphaFactor);
     expect(live.blendDst).toBe(OneFactor);
@@ -368,6 +376,7 @@ describe("props from qrntn: drop mode, scoped links, drawnNodes, onFrame", () =>
   }
   /** The per-edge hide flags (iP2.y) the edge shader reads. */
   function hiddenFlags(): number[] {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- boot always builds this mesh; the scene would not render without it
     const edgeMesh = meshes.find(
       (mesh) => (mesh.material as { fragmentShader?: string }).fragmentShader === EDGE_FS,
     )!;
@@ -429,6 +438,7 @@ describe("props from qrntn: drop mode, scoped links, drawnNodes, onFrame", () =>
       onStats,
     });
     runFrames(40);
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- runFrames(40) above reports stats every frame, so onStats has been called
     const last = onStats.mock.calls.at(-1)![0];
     expect(last).toMatchObject({ nodes: 3, drawnNodes: 2 });
   });

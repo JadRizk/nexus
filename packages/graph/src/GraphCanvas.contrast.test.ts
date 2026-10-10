@@ -85,6 +85,7 @@ const SHIPPED_TEXT_HEX = literal(
 );
 
 // The tooltip panel's own background, from `tip.style.cssText`: rgba(r,g,b,a).
+// eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- literal() returns the rgba() text its own pattern captured, which this pattern always matches
 const [, r, g, b, a] = literal(
   /tip\.style\.cssText =[\s\S]*?background:(rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*[\d.]+\s*\))/,
   "tooltip background",

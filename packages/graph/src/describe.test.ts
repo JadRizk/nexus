@@ -209,6 +209,7 @@ describe("describeGraph", () => {
       words: number;
     }
     // The same callbacks a GraphCanvas<Doc> takes: no cast to GraphNode<unknown>.
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- every node in this test is built with data
     const describeNode = (node: GraphNode<Doc>) => `${node.label}, ${node.data!.words} words`;
     const nodes: GraphNode<Doc>[] = input.nodes.map((node, index) => ({
       ...node,
@@ -218,6 +219,7 @@ describe("describeGraph", () => {
       ...input,
       nodes,
       describeNode,
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- every node in this test is built with data
       rankConnections: (first, second) => first.other.data!.words - second.other.data!.words,
     });
     const beta = outline.groups[0].nodes[1];
