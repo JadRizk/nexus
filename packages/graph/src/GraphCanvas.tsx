@@ -1,8 +1,9 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import type { ReactElement, RefAttributes } from "react";
 import * as THREE from "three";
-import { createPhysics, computeDegree } from "./physics.js";
-import { mulberry32, seedFromIds } from "./random.js";
+import { createPhysics } from "./physics.js";
+import { mulberry32 } from "./random.js";
+import { prepareGraph } from "./prepare.js";
 import { glyphRadiusPx, project, unproject, ZOOM_MAX, ZOOM_MIN } from "./camera.js";
 import { createCameraRig } from "./camera-rig.js";
 import type { FitInset } from "./camera.js";
@@ -10,7 +11,6 @@ import { computeNeighbourhood, isolationSet, TIER_NEARBY } from "./neighbourhood
 import { pickNode } from "./picking.js";
 import { createLabelPlacer } from "./labels.js";
 import type { LabelView, PlacedLabel } from "./labels.js";
-import { validateGraph } from "./validate.js";
 import { buildConnections, defaultRank, visibleConnections } from "./a11y/adjacency.js";
 import { initialNavState, lastVisible, navigate } from "./a11y/navigator.js";
 import type { NavAction, NavContext, NavState } from "./a11y/navigator.js";
@@ -44,7 +44,7 @@ import {
   BLUR_FS,
   COMPOSITE_FS,
 } from "./shaders.js";
-import { STATE_LABEL, ORPHAN_STATE } from "./types.js";
+import { STATE_LABEL } from "./types.js";
 import type {
   GraphCanvasProps,
   GraphController,
@@ -339,62 +339,34 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
       ) {
         const {
           idToIndex,
-          eA: edgeEndA,
-          eB: edgeEndB,
-          edges: liveEdges,
+          edgeEndA,
+          edgeEndB,
+          liveEdges,
           dropped,
-        } = validateGraph(nodes, edges, nodeCategories, linkCategories, invalidEdges);
+          nodeCount,
+          edgeCount,
+          nodeCategoryIds,
+          denseIds,
+          edgeCategoryIds,
+          linkCategoryIds,
+          degree,
+          nodeStates,
+          layoutSeed,
+          physicsGraph,
+        } = prepareGraph({ nodes, edges, nodeCategories, linkCategories, invalidEdges, seed });
         idToIndexRef.current = idToIndex;
-        const nodeCount = nodes.length,
-          edgeCount = liveEdges.length;
         if (dropped.length > 0) {
           const message = `GraphCanvas: dropped ${dropped.length} edge(s) whose endpoint matches no node`;
           if (onWarningRef.current) onWarningRef.current(message, { dropped });
           else console.warn(message, dropped);
         }
 
-        const nodeCategoryIds = nodes.map((node) => node.categoryId);
-        const denseIds = nodes.map((node) => node.id);
-        const edgeCategoryIds = liveEdges.map((edge) => edge.categoryId);
-        const linkCategoryIds = Object.keys(linkCategories);
-        const degree = computeDegree(
-          Array.from({ length: edgeCount }, (_, e) => ({ a: edgeEndA[e]!, b: edgeEndB[e]! })),
-          nodeCount,
-        );
-        const nodeStates = new Uint8Array(nodeCount);
-        for (let i = 0; i < nodeCount; i++)
-          nodeStates[i] = degree[i] === 0 ? ORPHAN_STATE : (nodes[i]!.state ?? 1);
-
-        const layoutSeed =
-          seed === null ? undefined : (seed ?? seedFromIds(nodes.map((node) => node.id)));
         // A separate stream, so drawing shader seeds never moves a node.
         const visualRandom =
           layoutSeed === undefined ? Math.random : mulberry32(layoutSeed ^ 0x5bd1e995);
 
         const simulation = createPhysics(
-          {
-            nodes: nodes.map((node) => {
-              const category = nodeCategories[node.categoryId]!;
-              // Spread only when defined: under exactOptionalPropertyTypes `undefined` isn't absent.
-              const sectorAngle = node.sectorAngle ?? category.sectorAngle;
-              const radiusTarget = node.radiusTarget ?? category.radiusTarget;
-              return {
-                charge: category.charge,
-                mass: category.mass,
-                ...(sectorAngle === undefined ? {} : { sectorAngle }),
-                ...(radiusTarget === undefined ? {} : { radiusTarget }),
-              };
-            }),
-            edges: Array.from({ length: edgeCount }, (_, e) => {
-              const category = linkCategories[edgeCategoryIds[e]!]!;
-              return {
-                a: edgeEndA[e]!,
-                b: edgeEndB[e]!,
-                dist: category.dist,
-                strength: category.strength,
-              };
-            }),
-          },
+          physicsGraph,
           layoutSeed === undefined ? {} : { seed: layoutSeed },
         );
         // The params effect can't reach the solver on the render that creates it.
