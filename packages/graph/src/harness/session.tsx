@@ -192,8 +192,12 @@ class Session {
   }
 
   dispatch(target: EventTarget, event: Event) {
+    this.act(() => target.dispatchEvent(event));
+  }
+
+  act(action: () => unknown) {
     act(() => {
-      target.dispatchEvent(event);
+      action();
     });
   }
 
