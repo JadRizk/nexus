@@ -42,8 +42,8 @@ class MotionQuery extends EventTarget {
   matches = false;
   readonly media = "(prefers-reduced-motion: reduce)";
   onchange = null;
-  addListener() {}
-  removeListener() {}
+  addListener = () => undefined;
+  removeListener = () => undefined;
 }
 
 function pinRandom() {
@@ -64,11 +64,17 @@ function pinLayout(size: { width: number; height: number }) {
     return (this.textContent?.length ?? 0) * CHAR_WIDTH;
   });
   vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockImplementation(() => BOX_HEIGHT);
-  const measure = { font: "", measureText: (text: string) => ({ width: text.length * CHAR_WIDTH }) };
+  const measure = {
+    font: "",
+    measureText: (text: string) => ({ width: text.length * CHAR_WIDTH }),
+  };
   vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(
     measure as unknown as CanvasRenderingContext2D,
   );
-  Object.assign(HTMLElement.prototype, { setPointerCapture() {}, releasePointerCapture() {} });
+  Object.assign(HTMLElement.prototype, {
+    setPointerCapture: () => undefined,
+    releasePointerCapture: () => undefined,
+  });
 }
 
 /**
@@ -115,7 +121,7 @@ function spyOnListeners(log: (line: string) => void) {
  */
 export function pinEnvironment(log: (line: string) => void): Environment {
   const size = { width: 800, height: 600 };
-  const observers: Array<() => void> = [];
+  const observers: (() => void)[] = [];
   const motion = new MotionQuery();
   let now = 0;
   let pending: FrameRequestCallback | null = null;
@@ -137,7 +143,7 @@ export function pinEnvironment(log: (line: string) => void): Environment {
       constructor(callback: () => void) {
         observers.push(callback);
       }
-      observe() {}
+      observe = () => undefined;
       disconnect() {
         log("resizeObserver.disconnect");
       }

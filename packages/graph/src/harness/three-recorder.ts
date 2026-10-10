@@ -230,6 +230,6 @@ export function mockThree(actual: ThreeModule): ThreeModule {
   return {
     ...actual,
     WebGLRenderer: RecordingRenderer as unknown as ThreeModule["WebGLRenderer"],
-    WebGLRenderTarget: recordingTarget(actual),
+    WebGLRenderTarget: recordingTarget(actual) as unknown as ThreeModule["WebGLRenderTarget"],
   };
 }
