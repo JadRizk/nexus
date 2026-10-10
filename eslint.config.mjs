@@ -57,9 +57,9 @@ const noPrimitiveTokens = {
   ],
 };
 
-/** Not yet held to the code-style rules (docs/code-style.md): graph is still
- *  being merged from its fork, and .design-sync is tooling output. */
-const NOT_YET_STYLED = ["packages/graph/**", ".design-sync/**"];
+/** Not held to the code-style rules (docs/code-style.md): .design-sync is
+ *  tooling output. */
+const NOT_YET_STYLED = [".design-sync/**"];
 
 const TEST_FILES = ["**/*.test.{ts,tsx,js,jsx,mjs}", "**/*.spec.ts"];
 
