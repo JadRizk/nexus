@@ -107,30 +107,30 @@ export const GraphOutline = forwardRef<HTMLElement, GraphOutlineProps>(function 
             </Heading>
             <ul className="nx-graph-outline__nodes">
               {group.nodes.map((node) => {
-                const selected = node.id === selectedId;
+                const isSelected = node.id === selectedId;
                 return (
                   <li key={String(node.id)}>
                     <details
                       id={keyOf(node.id)}
                       className="nx-graph-outline__node"
-                      data-selected={selected || undefined}
-                      open={selected || undefined}
+                      data-selected={isSelected || undefined}
+                      open={isSelected || undefined}
                     >
                       <summary
-                        aria-label={selected ? `${node.description}, selected` : node.description}
+                        aria-label={isSelected ? `${node.description}, selected` : node.description}
                       >
                         <span className="nx-graph-outline__label">{node.label}</span>
                         <span className="nx-graph-outline__meta">
                           {node.connections.length}{" "}
                           {node.connections.length === 1 ? "connection" : "connections"}
-                          {selected ? " · selected" : ""}
+                          {isSelected ? " · selected" : ""}
                         </span>
                       </summary>
                       {/* A one-way action, not a toggle: selecting again changes
                         nothing, so the selected node gets a note in its place
                         rather than a pressed button that can't be released. */}
                       {onSelect &&
-                        (selected ? (
+                        (isSelected ? (
                           <p className="nx-graph-outline__selected">Selected in graph</p>
                         ) : (
                           <button

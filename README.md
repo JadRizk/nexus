@@ -234,7 +234,8 @@ deliberately broken palette and asserts it refuses to emit.
 
 Every claim below is asserted by a machine. `browser/a11y.spec.ts` runs
 axe-core over the real rendered page, once per route, once per component and
-once per overlay state, plus direct assertions for the things axe cannot see.
+once per overlay state, and `browser/a11y-claims.spec.ts` makes direct
+assertions for the things axe cannot see.
 
 ```bash
 npm run test:a11y

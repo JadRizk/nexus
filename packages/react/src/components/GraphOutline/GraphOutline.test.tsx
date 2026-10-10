@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { assert, describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createRef } from "react";
@@ -75,7 +75,8 @@ describe("GraphOutline", () => {
 
   it("opens and focuses the far node's entry when its name is activated", async () => {
     render(<GraphOutline data={data} />);
-    const source = screen.getByText("archive-1", { selector: "summary span" }).closest("details")!;
+    const source = screen.getByText("archive-1", { selector: "summary span" }).closest("details");
+    assert(source, "archive-1 has a <details> entry");
     expect(source.open).toBe(false);
     await userEvent.click(screen.getByRole("button", { name: "archive-1" }));
     expect(source.open).toBe(true);
@@ -86,19 +87,21 @@ describe("GraphOutline", () => {
     const onSelect = vi.fn();
     const { rerender } = render(<GraphOutline data={data} onSelect={onSelect} />);
     const buttons = screen.getAllByRole("button", { name: "Select in graph" });
-    await userEvent.click(buttons[1]!);
+    await userEvent.click(buttons[1]);
     expect(onSelect).toHaveBeenCalledWith("s1");
 
     rerender(<GraphOutline data={data} onSelect={onSelect} selectedId="s1" />);
     // Not a pressed toggle that can't be released: a note, and no button.
     const selected = screen.getByText("Selected in graph");
     expect(selected.tagName).toBe("P");
+    const entry = selected.closest("details");
+    assert(entry, "the note sits inside its node's entry");
     expect(screen.getAllByRole("button", { name: /in graph/ })).toHaveLength(1);
     for (const b of screen.getAllByRole("button")) expect(b).not.toHaveAttribute("aria-pressed");
-    expect(selected.closest("details")!.open).toBe(true);
+    expect(entry.open).toBe(true);
     // The button that was pressed is gone; focus went to its entry, not <body>.
-    expect(document.activeElement).toBe(selected.closest("details")!.querySelector("summary"));
-    expect(selected.closest("details")!.querySelector("summary")).toHaveAccessibleName(
+    expect(document.activeElement).toBe(entry.querySelector("summary"));
+    expect(entry.querySelector("summary")).toHaveAccessibleName(
       "archive-1, source, 1 connection, selected",
     );
   });
@@ -158,7 +161,7 @@ describe("GraphOutline", () => {
 
   it("does nothing when a connection points at a node the outline leaves out", async () => {
     // A filtered outline can still name a node it doesn't list.
-    const filtered: GraphOutlineData = { ...data, groups: [data.groups[0]!] };
+    const filtered: GraphOutlineData = { ...data, groups: data.groups.slice(0, 1) };
     render(<GraphOutline data={filtered} />);
     const before = document.activeElement;
     await userEvent.click(screen.getByRole("button", { name: "archive-1" }));

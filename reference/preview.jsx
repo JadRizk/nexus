@@ -598,24 +598,24 @@ var GraphOutline = forwardRef8(function GraphOutline2({
         },
         /* @__PURE__ */ React.createElement(Heading, { id: headingId, className: "nx-graph-outline__heading" }, group.label, " ", /* @__PURE__ */ React.createElement("span", { className: "nx-graph-outline__count" }, "(", group.nodes.length, ")")),
         /* @__PURE__ */ React.createElement("ul", { className: "nx-graph-outline__nodes" }, group.nodes.map((node) => {
-          const selected = node.id === selectedId;
+          const isSelected = node.id === selectedId;
           return /* @__PURE__ */ React.createElement("li", { key: String(node.id) }, /* @__PURE__ */ React.createElement(
             "details",
             {
               id: keyOf(node.id),
               className: "nx-graph-outline__node",
-              "data-selected": selected || void 0,
-              open: selected || void 0
+              "data-selected": isSelected || void 0,
+              open: isSelected || void 0
             },
             /* @__PURE__ */ React.createElement(
               "summary",
               {
-                "aria-label": selected ? `${node.description}, selected` : node.description
+                "aria-label": isSelected ? `${node.description}, selected` : node.description
               },
               /* @__PURE__ */ React.createElement("span", { className: "nx-graph-outline__label" }, node.label),
-              /* @__PURE__ */ React.createElement("span", { className: "nx-graph-outline__meta" }, node.connections.length, " ", node.connections.length === 1 ? "connection" : "connections", selected ? " \xB7 selected" : "")
+              /* @__PURE__ */ React.createElement("span", { className: "nx-graph-outline__meta" }, node.connections.length, " ", node.connections.length === 1 ? "connection" : "connections", isSelected ? " \xB7 selected" : "")
             ),
-            onSelect && (selected ? /* @__PURE__ */ React.createElement("p", { className: "nx-graph-outline__selected" }, "Selected in graph") : /* @__PURE__ */ React.createElement(
+            onSelect && (isSelected ? /* @__PURE__ */ React.createElement("p", { className: "nx-graph-outline__selected" }, "Selected in graph") : /* @__PURE__ */ React.createElement(
               "button",
               {
                 type: "button",

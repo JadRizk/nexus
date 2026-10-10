@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { assert, describe, expect, it } from "vitest";
 
 /* ============================================================================
    Where the decorative hairline may be used.
@@ -45,8 +45,8 @@ function usesOfDecorativeHairline(): string[] {
     if (!existsSync(file)) continue;
     const css = readFileSync(file, "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
     for (const [, selector, body] of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
-      if (body!.includes("--nx-border-default")) {
-        found.push(`${dir}/${selector!.trim().replace(/\s+/g, " ")}`);
+      if (body.includes("--nx-border-default")) {
+        found.push(`${dir}/${selector.trim().replace(/\s+/g, " ")}`);
       }
     }
   }
@@ -72,7 +72,9 @@ describe("the decorative hairline (--nx-border-default)", () => {
 
   it("gives the search field, the one boundary that identifies a control, the 3:1 token", () => {
     const css = readFileSync(join(components, "CommandPalette", "CommandPalette.css"), "utf8");
-    const field = css.match(/\.nx-palette__field\s*\{([^}]*)\}/)![1]!;
+    const rule = css.match(/\.nx-palette__field\s*\{([^}]*)\}/);
+    assert(rule, "CommandPalette.css has a .nx-palette__field rule");
+    const field = rule[1];
     expect(field).toContain("--nx-border-strong");
     expect(field).not.toContain("--nx-border-default");
   });

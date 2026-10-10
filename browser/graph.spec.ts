@@ -169,13 +169,14 @@ test.describe("graph canvas", () => {
     await page.keyboard.press("ArrowRight");
     await expect(spoken).toHaveText(/\. 1 of \d+, strongest/);
     const label = await target.getAttribute("aria-label");
+    if (label === null) throw new Error("the focus target has no aria-label");
     await page.keyboard.press("Enter");
-    await expect(target).not.toHaveAttribute("aria-label", label!);
+    await expect(target).not.toHaveAttribute("aria-label", label);
     // Following a connection is history without a selection; Back sees it.
     await expect(back).toBeEnabled();
     await page.keyboard.press("Backspace");
     await expect(spoken).toHaveText(/^Back to /);
-    await expect(target).toHaveAttribute("aria-label", label!);
+    await expect(target).toHaveAttribute("aria-label", label);
     await expect(back).toBeDisabled();
 
     await page.keyboard.press(" ");
@@ -316,7 +317,8 @@ async function ringContrast(page: Page, c: { x: number; y: number }): Promise<nu
       const cv = document.createElement("canvas");
       cv.width = img.width;
       cv.height = img.height;
-      const g = cv.getContext("2d")!;
+      const g = cv.getContext("2d");
+      if (!g) throw new Error("no 2D canvas context");
       g.drawImage(img, 0, 0);
       const scale = img.width / window.innerWidth;
       const lin = (v: number) => {
@@ -330,12 +332,12 @@ async function ringContrast(page: Page, c: { x: number; y: number }): Promise<nu
           const x = Math.round((cx + Math.cos(a) * r) * scale);
           const y = Math.round((cy + Math.sin(a) * r) * scale);
           const [R, G, B] = g.getImageData(x, y, 1, 1).data;
-          lum.push(0.2126 * lin(R!) + 0.7152 * lin(G!) + 0.0722 * lin(B!));
+          lum.push(0.2126 * lin(R) + 0.7152 * lin(G) + 0.0722 * lin(B));
         }
       }
       lum.sort((p, q) => p - q);
-      const ground = lum[Math.floor(lum.length * 0.5)]!;
-      const edge = lum[Math.floor(lum.length * 0.98)]!;
+      const ground = lum[Math.floor(lum.length * 0.5)];
+      const edge = lum[Math.floor(lum.length * 0.98)];
       return (edge + 0.05) / (ground + 0.05);
     },
     { b64: png.toString("base64"), cx: c.x, cy: c.y },
