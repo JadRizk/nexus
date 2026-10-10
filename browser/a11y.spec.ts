@@ -190,7 +190,13 @@ test.describe("claims axe cannot make", () => {
       await gotoPage(page, route, "hud-aa");
       const unlabelled = await page.evaluate(() =>
         [...document.querySelectorAll<HTMLElement>(".nx-btn, .nx-tab")]
-          .filter((el) => (el.textContent ?? "").trim() === "" && !el.querySelector("svg"))
+          .filter(
+            (el) =>
+              (el.textContent ?? "").trim() === "" &&
+              !el.querySelector(
+                ":is(svg, svg *)[fill='currentColor'], :is(svg, svg *)[stroke='currentColor']",
+              ),
+          )
           .map((el) => `${el.tagName.toLowerCase()}.${el.className}`),
       );
       expect(unlabelled, `${route}: controls with no visible text or icon`).toEqual([]);

@@ -234,7 +234,8 @@
   margin-top: var(--nx-space-6);
 }
 
-/* 400px of pitch, the gap, 560px of monitor and the page's side padding. */
+/* Two columns once there is room for at least 400px of pitch beside the
+   monitor, with the gap and the page's side padding. */
 @media (width >= 1040px) {
   .sc-home__hero {
     grid-template-columns: minmax(0, 520px) minmax(0, 560px);

@@ -119,6 +119,22 @@ test("a click on Sound or Jolt does not keep the room on once the pointer leaves
   await expect(monitor(page)).toHaveAttribute("data-room", "off");
 });
 
+test("a key pressed on a clicked button makes its focus count, as the keyboard's", async ({
+  page,
+}) => {
+  test.slow();
+  await gotoPage(page, "home");
+  const jolt = page.getByRole("button", { name: "Jolt" });
+  await jolt.click();
+  await settled(page);
+  // Pressed again from the keyboard, the clicked button is now keyboard
+  // focus: the room stays on when the pointer leaves.
+  await jolt.press("Space");
+  const box = (await monitor(page).boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height + 40);
+  await expect(monitor(page)).toHaveAttribute("data-room", "on");
+});
+
 test("under reduced motion the screen is a still and the faults and sound are withdrawn", async ({
   page,
 }) => {

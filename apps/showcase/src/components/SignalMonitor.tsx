@@ -295,6 +295,10 @@ function usePresence() {
     onPointerEnter: () => setIsHovered(true),
     onPointerLeave: () => setIsHovered(false),
     onFocus: (e: FocusEvent<HTMLDivElement>) => setIsFocused(e.target.matches(":focus-visible")),
+    // A key pressed on a button the pointer focused (Jolt, clicked, then
+    // pressed again with Space) turns that focus into the keyboard's, with no
+    // focus event to say so. Keys only reach the root from focus inside it.
+    onKeyDown: () => setIsFocused(true),
     onBlur: (e: FocusEvent<HTMLDivElement>) => {
       if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setIsFocused(false);
     },
