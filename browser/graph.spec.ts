@@ -221,7 +221,88 @@ test.describe("graph canvas", () => {
     await page.getByRole("button", { name: "View as graph" }).click();
     await expect(outline).toBeHidden();
   });
+
+  test("changing the corpus size clears the selection and updates NODES", async ({ page }) => {
+    await page.goto("/#/labs/graph");
+    await selectFromKeyboard(page);
+    await page.getByRole("tab", { name: "Solver" }).click();
+    await page.getByLabel("corpus size").fill("120");
+    await expect(page.getByRole("dialog")).toBeHidden();
+    await expect.poll(() => statText(page, "NODES"), { timeout: 30_000 }).toBe("120");
+  });
+
+  test("Reseed clears the selection", async ({ page }) => {
+    await page.goto("/#/labs/graph");
+    await selectFromKeyboard(page);
+    await page.getByRole("button", { name: "Reseed" }).click();
+    await expect(page.getByRole("dialog")).toBeHidden();
+  });
+
+  test("turning a legend category off hides its nodes", async ({ page }) => {
+    await page.goto("/#/labs/graph");
+    await expect.poll(() => statText(page, "NODES"), { timeout: 30_000 }).toBe("60");
+    const firstEntityClass = page.getByRole("checkbox").first();
+    // The checkbox is visually hidden; its label row is what takes the click.
+    await firstEntityClass.uncheck({ force: true });
+    await expect.poll(() => statText(page, "NODES"), { timeout: 30_000 }).toMatch(/^\d+\/60$/);
+    await firstEntityClass.check({ force: true });
+    await expect.poll(() => statText(page, "NODES"), { timeout: 30_000 }).toBe("60");
+  });
+
+  test("Halt stops the solver and Run resumes it", async ({ page }) => {
+    await openGraphFrozen(page);
+    expect(await statText(page, "SOLVER")).toBe("LOCKED");
+
+    await page.getByRole("button", { name: "Halt" }).click();
+    await page.getByRole("button", { name: "Reheat" }).click();
+    await page.clock.runFor(SETTLE_MS);
+    expect(await statText(page, "SOLVER")).toBe("COOLING");
+
+    await page.getByRole("button", { name: "Run" }).click();
+    await page.clock.runFor(SETTLE_MS);
+    expect(await statText(page, "SOLVER")).toBe("LOCKED");
+  });
+
+  test("Escape on the page clears the selection and the isolation", async ({ page }) => {
+    await page.goto("/#/labs/graph");
+    await selectFromKeyboard(page);
+    await page.getByRole("dialog").getByRole("button", { name: "Isolate" }).click();
+    await expect.poll(() => statText(page, "NODES"), { timeout: 30_000 }).toContain("/");
+
+    await page.evaluate(() => {
+      if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+    });
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toBeHidden();
+    await expect.poll(() => statText(page, "NODES"), { timeout: 30_000 }).toBe("60");
+  });
+
+  test("going to a neighbour while isolated moves the isolation to it", async ({ page }) => {
+    await page.goto("/#/labs/graph");
+    await selectFromKeyboard(page);
+    const drawer = page.getByRole("dialog");
+    const isolate = drawer.getByRole("button", { name: "Isolate" });
+    await isolate.click();
+    await expect(isolate).toHaveAttribute("aria-pressed", "true");
+    const title = page.locator(`[id="${await drawer.getAttribute("aria-labelledby")}"]`);
+    const before = (await title.textContent()) ?? "";
+
+    await drawer
+      .getByRole("button", { name: /[A-Z]{3}$/ })
+      .first()
+      .click();
+    await expect(title).not.toHaveText(before);
+    await expect(isolate).toHaveAttribute("aria-pressed", "true");
+    await expect.poll(() => statText(page, "NODES"), { timeout: 30_000 }).toContain("/");
+  });
 });
+
+/** Selects the node the graph's focus target starts on, as a keyboard user would. */
+async function selectFromKeyboard(page: Page) {
+  await page.locator('[aria-roledescription="graph"] [data-nx-graph-focus]').focus();
+  await page.keyboard.press(" ");
+  await expect(page.getByRole("dialog")).toBeVisible();
+}
 
 async function landmarkCentre(page: Page): Promise<{ x: number; y: number }> {
   const label = page.getByText(/\/\/ATLAS$/).first();

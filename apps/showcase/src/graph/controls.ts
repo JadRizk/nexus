@@ -1,5 +1,5 @@
 import { DEFAULT_OPTICS, DEFAULT_PHYSICS } from "@nexus-cyberdeck/graph";
-import type { GraphStats } from "@nexus-cyberdeck/graph";
+import type { GraphStats, OpticsConfig, PhysicsConfig } from "@nexus-cyberdeck/graph";
 
 export const DEFAULT_CONFIG = {
   repulsion: DEFAULT_PHYSICS.repulsion,
@@ -21,6 +21,27 @@ export const DEFAULT_CONFIG = {
 
 export type DeckConfig = typeof DEFAULT_CONFIG;
 export type SetDeckConfig = <K extends keyof DeckConfig>(key: K, value: DeckConfig[K]) => void;
+
+export const toPhysics = (config: DeckConfig): Partial<PhysicsConfig> => ({
+  repulsion: config.repulsion,
+  linkDistance: config.linkDistance,
+  cursorForce: config.cursorForce,
+  settle: config.settle,
+});
+
+export const toOptics = (config: DeckConfig): Partial<OpticsConfig> => ({
+  glow: config.glow,
+  trails: config.trails,
+  edgeOpacity: config.edgeOpacity,
+  edgeWidth: config.edgeWidth,
+  flowSpeed: config.flowSpeed,
+  scan: config.scan,
+  aberr: config.aberr,
+  curve: config.curve,
+  grain: config.grain,
+  bloom: config.bloom,
+  glitch: config.glitch,
+});
 
 export const DEFAULT_STATS: GraphStats = {
   fps: 0,
