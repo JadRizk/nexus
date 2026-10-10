@@ -1,104 +1,73 @@
-/* ============================================================================
-   NEIGHBOURHOOD
-
-   Moved out of GraphCanvas.tsx's `highlight(idx)`. Breadth-first walk from a
-   hovered/selected node over the incidence list, writing per-node depth and
-   per-edge tier. Three tiers result: incident edges at 1, edges inside the
-   neighbourhood at TIER_NEARBY, everything else at 0.
-
-   `outTier` is dense (Float32Array(m)) rather than the strided `eP2` lane the
-   caller ultimately writes into — GraphCanvas scatters it into
-   `eP2[e * 4 + A_TIER]` after the call. That costs one O(m) copy per hover
-   change, not per frame, and buys an interface that doesn't take a stride and
-   an offset.
-   ========================================================================== */
-
-/** How many hops out the focused neighbourhood reaches. Beyond this an edge is dimmed as unrelated. */
+/** Hops the focused neighbourhood reaches; edges beyond it dim as unrelated. */
 export const NEARBY_DEPTH = 2;
 
-/**
- * Weight given to an edge inside the focused neighbourhood but not touching
- * the focused node itself. Sits above a resting edge (the neighbourhood you
- * asked for reads as nearer) and well below an incident one.
- */
+/** Tier of an edge inside the neighbourhood but not incident: above a resting edge (0), below an incident one (1). */
 export const TIER_NEARBY = 0.45;
 
 export interface NeighbourhoodGraph {
-  /** Each node's connections. The navigator's ranked lists serve as they are: only `edge` and `other` are read. */
+  /** Only `edge` and `other` are read, so the navigator's ranked lists serve as they are. */
   inc: ReadonlyArray<ReadonlyArray<{ edge: number; other: number }>>;
   eA: Int32Array;
   eB: Int32Array;
-  /** 1 = hidden, 0 = visible. Hidden nodes are never visited and never earn a depth. */
+  /** 1 = hidden, 0 = visible. Hidden nodes never earn a depth. */
   hidden: Float32Array;
-  /**
-   * True for an edge that isn't drawn (a hidden link category, say). The walk
-   * never crosses one, so two nodes joined only by hidden edges don't read as
-   * neighbours. Omitted, every edge counts.
-   */
-  edgeHidden?: (e: number) => boolean;
+  /** The walk never crosses a hidden edge. Omitted, every edge counts. */
+  edgeHidden?: (edge: number) => boolean;
 }
 
 /**
  * @param outDepth length n. -1 = not reached.
- * @param outTier length m. 0 = unrelated, 1 = incident, TIER_NEARBY = nearby.
+ * @param outTier length m, dense; the caller scatters it once per hover. 0 = unrelated, 1 = incident, TIER_NEARBY = nearby.
  */
 export function computeNeighbourhood(
   graph: NeighbourhoodGraph,
-  idx: number,
+  index: number,
   outDepth: Float32Array,
   outTier: Float32Array,
 ): void {
   const { inc, eA, eB, hidden, edgeHidden } = graph;
-  const m = outTier.length;
+  const edgeCount = outTier.length;
 
   outDepth.fill(-1);
   outTier.fill(0);
-  if (idx < 0) return;
+  if (index < 0) return;
 
-  const q = [idx];
-  outDepth[idx] = 0;
-  for (let h = 0; h < q.length; h++) {
-    const v = q[h]!,
-      d = outDepth[v]!;
-    if (d >= 3) continue;
-    for (const it of inc[v]!) {
-      if (outDepth[it.other]! < -0.5 && hidden[it.other] === 0 && !edgeHidden?.(it.edge)) {
-        outDepth[it.other] = d + 1;
-        q.push(it.other);
+  const queue = [index];
+  outDepth[index] = 0;
+  for (let head = 0; head < queue.length; head++) {
+    const node = queue[head]!,
+      depth = outDepth[node]!;
+    if (depth >= 3) continue;
+    for (const connection of inc[node]!) {
+      if (
+        outDepth[connection.other]! < -0.5 &&
+        hidden[connection.other] === 0 &&
+        !edgeHidden?.(connection.edge)
+      ) {
+        outDepth[connection.other] = depth + 1;
+        queue.push(connection.other);
       }
     }
   }
-  for (const it of inc[idx]!) outTier[it.edge] = 1;
-  // The BFS above already walks outDepth to 3; this spends what it computes.
-  // Without it hover is a spotlight rather than a neighbourhood you can read.
-  //
-  // `<= NEARBY_DEPTH`, not `=== NEARBY_DEPTH`: an edge joining two *immediate*
-  // neighbours has depth 1 at both ends, and testing for equality dropped it
-  // to the unrelated tier — the single most interesting kind of link in a
-  // hovered neighbourhood, dimmed.
-  for (let e = 0; e < m; e++) {
+  for (const connection of inc[index]!) outTier[connection.edge] = 1;
+  // `<=`, not `===`: an edge between two immediate neighbours has depth 1 at both ends.
+  for (let e = 0; e < edgeCount; e++) {
     if (outTier[e] === 1) continue;
-    const da = outDepth[eA[e]!]!,
-      db = outDepth[eB[e]!]!;
-    if (da >= 0 && db >= 0 && Math.max(da, db) <= NEARBY_DEPTH) {
+    const depthA = outDepth[eA[e]!]!,
+      depthB = outDepth[eB[e]!]!;
+    if (depthA >= 0 && depthB >= 0 && Math.max(depthA, depthB) <= NEARBY_DEPTH) {
       outTier[e] = TIER_NEARBY;
     }
   }
 }
 
-/**
- * The nodes `isolateId` keeps on screen: the node itself and everything one
- * edge away, over any edge, whatever its category. The one rule both the
- * canvas and `describeGraph` use, so the outline lists what the canvas draws.
- *
- * @returns the kept node indices, or null when `iso` is -1 (nothing isolated).
- */
-export function isolationSet(iso: number, eA: Int32Array, eB: Int32Array): Set<number> | null {
-  if (iso < 0) return null;
-  const keep = new Set([iso]);
+/** The node and everything one edge away, as both the canvas and `describeGraph` show it; null when `isolated` is -1. */
+export function isolationSet(isolated: number, eA: Int32Array, eB: Int32Array): Set<number> | null {
+  if (isolated < 0) return null;
+  const keep = new Set([isolated]);
   for (let e = 0; e < eA.length; e++) {
-    if (eA[e] === iso) keep.add(eB[e]!);
-    if (eB[e] === iso) keep.add(eA[e]!);
+    if (eA[e] === isolated) keep.add(eB[e]!);
+    if (eB[e] === isolated) keep.add(eA[e]!);
   }
   return keep;
 }

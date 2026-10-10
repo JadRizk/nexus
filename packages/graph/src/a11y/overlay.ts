@@ -1,52 +1,22 @@
-/* ============================================================================
-   NAV OVERLAY — the DOM the navigator speaks and listens through
-
-   Three elements and nothing else:
-
-   - One focus target: a <button> that stands for the node the reader is on.
-     It is moved and relabelled as they travel, rather than one button per
-     node: the roving-tabindex pattern taken to its limit, as Data Navigator
-     (VIS 2023) does. One Tab stop into the graph, one out, and a DOM cost
-     that doesn't grow with the graph.
-   - One polite live region, for what the navigator says.
-   - A one-line key hint, shown while focus is inside the graph. Shortcuts
-     nobody can see go undiscovered (QUARTZ found exactly that), so the keys
-     are on screen; it is aria-hidden because "?" speaks the same thing.
-
-   Imperative on purpose: GraphCanvas positions the button every frame, and
-   pushing that through React state would re-render at animation-frame rate.
-   Every decision — what a key does, what to say — belongs to the navigator;
-   this file only translates keys into actions and effects into DOM.
-   ========================================================================== */
-
 import type { FitInset } from "../camera.js";
 import type { NavAction } from "./navigator.js";
 
 export interface NavOverlayOptions {
-  /** A layer inside the graph's root that assistive tech can see (not aria-hidden). */
+  /** Must not be aria-hidden. */
   container: HTMLElement;
-  /** A key the navigator handles was pressed. */
   onAction(action: NavAction): void;
-  /** Escape was pressed. The engine decides what it means right now (deselect, dismiss the tooltip, or leave). */
+  /** The engine decides what Escape means right now: deselect, dismiss the tooltip, or leave. */
   onEscape(): void;
-  /** Focus entered (true) or left (false) the graph. */
   onFocusChange(focused: boolean): void;
 }
 
 export interface NavOverlay {
-  /** Position the focus target over a node: centre and diameter in CSS px. */
+  /** Centre and diameter in CSS px. */
   place(x: number, y: number, diameter: number): void;
-  /** Name the focus target after the current node, and say whether it is selected. */
   setNode(label: string, selected: boolean): void;
-  /** Speak through the live region. */
   announce(text: string): void;
-  /** Show or hide the key hint, at the bottom of the free box. */
   setHints(visible: boolean, inset: FitInset): void;
-  /**
-   * Whether Tab can reach the focus target. Off while the graph's root holds
-   * focus after Escape, so the next Tab leaves the graph instead of landing
-   * straight back inside it.
-   */
+  /** Off while the root holds focus after Escape, so the next Tab leaves the graph. */
   setTabbable(tabbable: boolean): void;
   focus(): void;
   blur(): void;
@@ -57,9 +27,9 @@ export interface NavOverlay {
 export const KEY_HINT =
   "←→ connections · ↑↓ direction · Enter follow · ⌫ back · Space select · ? help";
 
-/** The key map (spec §6.5.1), minus Escape, which the engine resolves. */
-export function actionForKey(ev: Pick<KeyboardEvent, "key">): NavAction | null {
-  switch (ev.key) {
+/** Escape is left out: the engine resolves it. */
+export function actionForKey(event: Pick<KeyboardEvent, "key">): NavAction | null {
+  switch (event.key) {
     case "ArrowRight":
       return { type: "browse", step: 1 };
     case "ArrowLeft":
@@ -90,16 +60,14 @@ const VISUALLY_HIDDEN =
   "position:absolute;width:1px;height:1px;margin:-1px;padding:0;border:0;" +
   "overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;";
 
-export function createNavOverlay(opts: NavOverlayOptions): NavOverlay {
-  const { container, onAction, onEscape, onFocusChange } = opts;
+/** One roving button for the current node, not one per node; imperative because GraphCanvas moves it every frame. */
+export function createNavOverlay(options: NavOverlayOptions): NavOverlay {
+  const { container, onAction, onEscape, onFocusChange } = options;
 
   const button = document.createElement("button");
   button.type = "button";
   button.dataset["nxGraphFocus"] = "";
-  // Sized and moved over the node's glyph. Invisible itself: the focus ring is
-  // drawn in the canvas so it follows the CRT curve. The transparent outline
-  // is there for forced-colours mode, where the canvas ring may not survive
-  // and a transparent outline is painted in the system highlight colour.
+  // The canvas draws the focus ring; forced-colours mode paints the transparent outline instead.
   button.style.cssText =
     "position:absolute;left:0;top:0;width:24px;height:24px;margin:0;padding:0;" +
     "border:0;background:transparent;color:transparent;opacity:1;cursor:default;" +
@@ -116,8 +84,6 @@ export function createNavOverlay(opts: NavOverlayOptions): NavOverlay {
   const hints = document.createElement("div");
   hints.setAttribute("aria-hidden", "true");
   hints.textContent = KEY_HINT;
-  // Token variables with literal fallbacks: themed when @nexus-cyberdeck/tokens
-  // is on the page, still readable when it isn't. #8FA284 on #0A0C0B is 7.2:1.
   hints.style.cssText =
     "position:absolute;display:none;max-width:calc(100% - 24px);box-sizing:border-box;" +
     "padding:6px 10px;pointer-events:none;z-index:6;" +
@@ -127,52 +93,49 @@ export function createNavOverlay(opts: NavOverlayOptions): NavOverlay {
     "border:1px solid var(--nx-border-strong, #34402E);";
   container.appendChild(hints);
 
-  let px = NaN,
-    py = NaN,
-    pd = NaN;
-  // Identical consecutive announcements are ignored by most screen readers;
-  // a trailing zero-width space that flips on each call makes them distinct.
+  let placedX = NaN,
+    placedY = NaN,
+    placedDiameter = NaN;
+  // Screen readers skip a repeated announcement; a flipping zero-width space makes each distinct.
   let flip = false;
 
-  const onKeyDown = (ev: KeyboardEvent) => {
-    if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
-    if (ev.key === "Escape") {
-      ev.preventDefault();
+  const handleKeyDown = (event: KeyboardEvent) => {
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    if (event.key === "Escape") {
+      event.preventDefault();
       onEscape();
       return;
     }
-    const action = actionForKey(ev);
+    const action = actionForKey(event);
     if (!action) return;
-    // Covers Enter and Space too, which a <button> would otherwise turn into
-    // a click, and Backspace, which some browsers once mapped to history.
-    ev.preventDefault();
+    event.preventDefault();
     onAction(action);
   };
-  // A screen reader in browse mode doesn't send Enter or Space to the page:
-  // it activates the button with a click (VoiceOver's VO+Space, NVDA's and
-  // JAWS's Enter). The button is a toggle, so that click toggles, as Space
-  // does. Real Enter and Space keydowns are preventDefault-ed above, so they
-  // never become a click as well.
-  const onClick = () => onAction({ type: "toggleSelect" });
-  const onFocus = () => onFocusChange(true);
-  const onBlur = () => onFocusChange(false);
-  button.addEventListener("click", onClick);
-  button.addEventListener("keydown", onKeyDown);
-  button.addEventListener("focus", onFocus);
-  button.addEventListener("blur", onBlur);
+  // Screen readers in browse mode click instead of sending Enter or Space; real keydowns never click.
+  const handleClick = () => onAction({ type: "toggleSelect" });
+  const handleFocus = () => onFocusChange(true);
+  const handleBlur = () => onFocusChange(false);
+  button.addEventListener("click", handleClick);
+  button.addEventListener("keydown", handleKeyDown);
+  button.addEventListener("focus", handleFocus);
+  button.addEventListener("blur", handleBlur);
 
   return {
     place(x, y, diameter) {
-      // Most frames nothing moved; skip the style writes when so.
-      if (Math.abs(x - px) < 0.5 && Math.abs(y - py) < 0.5 && Math.abs(diameter - pd) < 0.5) return;
-      px = x;
-      py = y;
-      pd = diameter;
-      // At least 24px, the WCAG 2.5.8 target size, whatever the zoom.
-      const d = Math.max(24, diameter);
-      button.style.width = `${d.toFixed(1)}px`;
-      button.style.height = `${d.toFixed(1)}px`;
-      button.style.transform = `translate3d(${(x - d / 2).toFixed(1)}px,${(y - d / 2).toFixed(1)}px,0)`;
+      if (
+        Math.abs(x - placedX) < 0.5 &&
+        Math.abs(y - placedY) < 0.5 &&
+        Math.abs(diameter - placedDiameter) < 0.5
+      )
+        return;
+      placedX = x;
+      placedY = y;
+      placedDiameter = diameter;
+      // 24px is the WCAG 2.5.8 minimum target size.
+      const size = Math.max(24, diameter);
+      button.style.width = `${size.toFixed(1)}px`;
+      button.style.height = `${size.toFixed(1)}px`;
+      button.style.transform = `translate3d(${(x - size / 2).toFixed(1)}px,${(y - size / 2).toFixed(1)}px,0)`;
     },
     setNode(label, selected) {
       if (button.getAttribute("aria-label") !== label) button.setAttribute("aria-label", label);
@@ -202,10 +165,10 @@ export function createNavOverlay(opts: NavOverlayOptions): NavOverlay {
       return document.activeElement === button;
     },
     dispose() {
-      button.removeEventListener("click", onClick);
-      button.removeEventListener("keydown", onKeyDown);
-      button.removeEventListener("focus", onFocus);
-      button.removeEventListener("blur", onBlur);
+      button.removeEventListener("click", handleClick);
+      button.removeEventListener("keydown", handleKeyDown);
+      button.removeEventListener("focus", handleFocus);
+      button.removeEventListener("blur", handleBlur);
       button.remove();
       live.remove();
       hints.remove();

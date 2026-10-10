@@ -1,24 +1,3 @@
-/* ============================================================================
-   NAVIGATOR — the keyboard / screen-reader model, as a pure reducer
-
-   `navigate(state, action, ctx)` returns the next state and the effects the
-   DOM layer should carry out (announce, select, leave). No DOM, no timers, so
-   every key in the spec's key map (§6.5.1) is a unit test, and the key map
-   can change after testing with real screen-reader users without touching
-   rendering.
-
-   The model is QUARTZ's (ASSETS '26): one entry point that speaks a summary,
-   then travel along connections — browse a node's connections without moving
-   (← →), narrow them by direction (↑ ↓), follow one (Enter), and go back
-   (Backspace). Tabbing node by node in DOM order is what the study found
-   disorienting; a graph has no reading order to tab through.
-
-   History is shared with the mouse. Each entry is where the reader was and
-   whether it was selected then; following a connection, clicking another
-   node and clearing a selection all push one. `back` restores both, so a
-   consumer's Back button and the Backspace key are the same action.
-   ========================================================================== */
-
 import type { DirectionFilter, NavConnection } from "./adjacency.js";
 
 export interface HistoryEntry {
@@ -27,83 +6,62 @@ export interface HistoryEntry {
 }
 
 export interface NavState {
-  /** True once focus has entered the graph and the summary has been spoken. */
   entered: boolean;
-  /** The node the reader is on. */
   current: number;
-  /** Where the reader entered; Home returns here. Moves to the reader if a filter hides it. */
+  /** Home returns here. Moves to `current` if a filter hides it. */
   start: number;
   /** Index into `current`'s visible connections under `filter`, or -1 before browsing. */
   cursor: number;
   filter: DirectionFilter;
   history: HistoryEntry[];
-  /** The selected node, or -1. Mirrors the consumer's selectedId. */
+  /** -1 for none. Mirrors the consumer's selectedId. */
   selected: number;
 }
 
-/** Everything the reducer needs to know about the graph and how to word it. */
 export interface NavContext {
-  /** `i`'s connections that are visible and pass `filter`, ranked. */
-  connections(i: number, filter: DirectionFilter): NavConnection[];
-  /** All of `i`'s connections, visible or not, ranked. */
-  allConnections(i: number): NavConnection[];
-  isVisible(i: number): boolean;
-  /** The best visible node to land on when there is nowhere better: the top-ranked one, or -1 if none. */
+  /** Visible connections that pass `filter`, ranked. */
+  connections(node: number, filter: DirectionFilter): NavConnection[];
+  /** All connections, visible or not, ranked. */
+  allConnections(node: number): NavConnection[];
+  isVisible(node: number): boolean;
+  /** The top-ranked visible node, or -1 if none. */
   fallback(): number;
   text: {
     summary(): string;
-    node(i: number, selected: boolean): string;
-    connection(i: number, c: NavConnection, position: number, of: number): string;
-    filter(f: DirectionFilter, count: number): string;
-    detail(i: number, selected: boolean): string;
+    node(node: number, selected: boolean): string;
+    connection(node: number, connection: NavConnection, position: number, of: number): string;
+    filter(filter: DirectionFilter, count: number): string;
+    detail(node: number, selected: boolean): string;
     help: string;
   };
 }
 
 export type NavAction =
-  /** Focus entered the graph. */
   | { type: "enter" }
-  /** ← / →: move the cursor along the current node's connections. */
   | { type: "browse"; step: 1 | -1 }
-  /** ↑ / ↓: cycle the direction filter. */
   | { type: "filter"; step: 1 | -1 }
-  /** Enter: go to the node under the cursor. */
   | { type: "follow" }
-  /** Space: select or deselect the current node. */
   | { type: "toggleSelect" }
-  /** Backspace, or controller.back(). */
   | { type: "back" }
-  /** Home: back to where the reader entered. */
   | { type: "home" }
-  /** D: describe the current node in detail. */
   | { type: "describe" }
-  /** ?: speak the key map. */
   | { type: "help" }
-  /** Escape: deselect, else leave the graph. */
   | { type: "escape" }
-  /** The selection changed from outside the navigator (a click, or the consumer). */
+  /** The selection changed from outside the navigator. */
   | { type: "selected"; index: number }
-  /**
-   * Filters, isolation or a selection-scoped category changed what is
-   * visible. `edge` is the edge under the cursor before the change, so the
-   * cursor can stay on it in the list as it now reads.
-   */
+  /** `edge` is the edge under the cursor before the change, so the cursor can stay on it. */
   | { type: "visibility"; edge?: number }
-  /** controller.focusNode(): put the reader on a node, e.g. from a search box. */
   | { type: "focusNode"; index: number };
 
 export interface NavEffects {
-  /** Text for the live region. */
   announce?: string;
-  /** Ask the consumer to select this node, or clear the selection with -1. */
+  /** -1 clears the selection. */
   select?: number;
-  /** Focus should leave the graph. */
   leave?: boolean;
-  /** `current` changed; the camera may want to follow. */
   moved?: boolean;
 }
 
-const FILTERS: DirectionFilter[] = ["all", "out", "in"];
+const FILTERS = ["all", "out", "in"] as const satisfies readonly DirectionFilter[];
 
 export function initialNavState(start: number): NavState {
   return {
@@ -117,11 +75,13 @@ export function initialNavState(start: number): NavState {
   };
 }
 
-/** Moves to `node`, remembering where the reader was. Resets browsing. */
-function goTo(s: NavState, node: number): NavState {
+function goTo(state: NavState, node: number): NavState {
   return {
-    ...s,
-    history: [...s.history, { node: s.current, selected: s.selected === s.current }],
+    ...state,
+    history: [
+      ...state.history,
+      { node: state.current, selected: state.selected === state.current },
+    ],
     current: node,
     cursor: -1,
     filter: "all",
@@ -134,7 +94,6 @@ export function lastVisible(history: readonly HistoryEntry[], ctx: Pick<NavConte
   return -1;
 }
 
-/** The steps that act on the node the reader is on, so need one to be. */
 const NEEDS_NODE = new Set<NavAction["type"]>([
   "browse",
   "filter",
@@ -144,95 +103,113 @@ const NEEDS_NODE = new Set<NavAction["type"]>([
   "describe",
 ]);
 
-export function navigate(s: NavState, action: NavAction, ctx: NavContext): [NavState, NavEffects] {
-  // An empty graph, or one a filter has emptied, has no node to stand on.
-  // Those steps say what there is instead of reading a node that isn't there.
-  if (s.current < 0 && NEEDS_NODE.has(action.type)) return [s, { announce: ctx.text.summary() }];
-  const list = () => ctx.connections(s.current, s.filter);
+/** Pure reducer: the DOM layer carries out the returned effects. History is shared with mouse selection. */
+export function navigate(
+  state: NavState,
+  action: NavAction,
+  ctx: NavContext,
+): [NavState, NavEffects] {
+  // An empty or fully filtered graph has no node to stand on, so say what there is instead.
+  if (state.current < 0 && NEEDS_NODE.has(action.type))
+    return [state, { announce: ctx.text.summary() }];
+  const list = () => ctx.connections(state.current, state.filter);
 
   switch (action.type) {
     case "enter": {
-      // Land on the selection if there is one, else where the reader last
-      // was (if still visible), else the top-ranked node.
-      let at = s.selected >= 0 && ctx.isVisible(s.selected) ? s.selected : s.current;
-      if (at < 0 || !ctx.isVisible(at)) at = ctx.fallback();
-      if (at < 0) return [s, { announce: ctx.text.summary() }];
+      let landing =
+        state.selected >= 0 && ctx.isVisible(state.selected) ? state.selected : state.current;
+      if (landing < 0 || !ctx.isVisible(landing)) landing = ctx.fallback();
+      if (landing < 0) return [state, { announce: ctx.text.summary() }];
       const next = {
-        ...s,
+        ...state,
         entered: true,
-        current: at,
-        start: at,
+        current: landing,
+        start: landing,
         cursor: -1,
         filter: "all" as const,
       };
       return [
         next,
         {
-          announce: `${ctx.text.summary()} ${ctx.text.node(at, s.selected === at)}`,
-          moved: at !== s.current,
+          announce: `${ctx.text.summary()} ${ctx.text.node(landing, state.selected === landing)}`,
+          moved: landing !== state.current,
         },
       ];
     }
 
     case "browse": {
-      const l = list();
-      if (l.length === 0) return [s, { announce: ctx.text.filter(s.filter, 0) }];
-      const i =
-        s.cursor < 0
+      const connections = list();
+      if (connections.length === 0) return [state, { announce: ctx.text.filter(state.filter, 0) }];
+      const cursor =
+        state.cursor < 0
           ? action.step > 0
             ? 0
-            : l.length - 1
-          : (s.cursor + action.step + l.length) % l.length;
+            : connections.length - 1
+          : (state.cursor + action.step + connections.length) % connections.length;
       return [
-        { ...s, cursor: i },
-        { announce: ctx.text.connection(s.current, l[i]!, i + 1, l.length) },
+        { ...state, cursor },
+        {
+          announce: ctx.text.connection(
+            state.current,
+            connections[cursor]!,
+            cursor + 1,
+            connections.length,
+          ),
+        },
       ];
     }
 
     case "filter": {
-      const f =
-        FILTERS[(FILTERS.indexOf(s.filter) + action.step + FILTERS.length) % FILTERS.length]!;
-      const next = { ...s, filter: f, cursor: -1 };
-      return [next, { announce: ctx.text.filter(f, ctx.connections(s.current, f).length) }];
+      const filter =
+        FILTERS[(FILTERS.indexOf(state.filter) + action.step + FILTERS.length) % FILTERS.length]!;
+      const next = { ...state, filter, cursor: -1 };
+      return [
+        next,
+        { announce: ctx.text.filter(filter, ctx.connections(state.current, filter).length) },
+      ];
     }
 
     case "follow": {
-      const c = s.cursor >= 0 ? list()[s.cursor] : undefined;
-      if (!c) return [s, { announce: "Choose a connection first, with the left or right arrow" }];
-      const next = goTo(s, c.other);
-      return [next, { announce: ctx.text.node(c.other, s.selected === c.other), moved: true }];
+      const connection = state.cursor >= 0 ? list()[state.cursor] : undefined;
+      if (!connection)
+        return [state, { announce: "Choose a connection first, with the left or right arrow" }];
+      const next = goTo(state, connection.other);
+      return [
+        next,
+        {
+          announce: ctx.text.node(connection.other, state.selected === connection.other),
+          moved: true,
+        },
+      ];
     }
 
     case "toggleSelect": {
-      if (s.selected === s.current)
+      if (state.selected === state.current)
         return [
-          { ...s, selected: -1 },
+          { ...state, selected: -1 },
           { announce: "Deselected", select: -1 },
         ];
       return [
-        { ...s, selected: s.current },
-        { announce: "Selected", select: s.current },
+        { ...state, selected: state.current },
+        { announce: "Selected", select: state.current },
       ];
     }
 
     case "back": {
-      // Steps to places a filter has since hidden are skipped: going back
-      // never parks the reader on a node that isn't drawn.
-      const at = lastVisible(s.history, ctx);
-      const entry = s.history[at];
-      // Steps that are only hidden stay: lifting the filter brings them back.
-      if (!entry) return [s, { announce: "Start of path" }];
+      // Skip steps a filter has since hidden; with none visible, history is kept for when it lifts.
+      const historyIndex = lastVisible(state.history, ctx);
+      const entry = state.history[historyIndex];
+      if (!entry) return [state, { announce: "Start of path" }];
       const next: NavState = {
-        ...s,
-        history: s.history.slice(0, at),
+        ...state,
+        history: state.history.slice(0, historyIndex),
         current: entry.node,
         cursor: -1,
         filter: "all",
       };
-      const effects: NavEffects = { moved: entry.node !== s.current };
-      // Restore the selection the reader had there.
+      const effects: NavEffects = { moved: entry.node !== state.current };
       const wantSelected = entry.selected ? entry.node : -1;
-      if (wantSelected !== s.selected) {
+      if (wantSelected !== state.selected) {
         next.selected = wantSelected;
         effects.select = wantSelected;
       }
@@ -241,82 +218,107 @@ export function navigate(s: NavState, action: NavAction, ctx: NavContext): [NavS
     }
 
     case "home": {
-      if (s.current === s.start)
-        return [s, { announce: ctx.text.node(s.start, s.selected === s.start) }];
-      const next = goTo(s, s.start);
+      if (state.current === state.start)
+        return [state, { announce: ctx.text.node(state.start, state.selected === state.start) }];
+      const next = goTo(state, state.start);
       return [
         next,
-        { announce: `Start, ${ctx.text.node(s.start, s.selected === s.start)}`, moved: true },
+        {
+          announce: `Start, ${ctx.text.node(state.start, state.selected === state.start)}`,
+          moved: true,
+        },
       ];
     }
 
     case "describe":
-      return [s, { announce: ctx.text.detail(s.current, s.selected === s.current) }];
+      return [
+        state,
+        { announce: ctx.text.detail(state.current, state.selected === state.current) },
+      ];
 
     case "help":
-      return [s, { announce: ctx.text.help }];
+      return [state, { announce: ctx.text.help }];
 
     case "escape": {
-      if (s.selected >= 0)
+      if (state.selected >= 0)
         return [
-          { ...s, selected: -1 },
+          { ...state, selected: -1 },
           { announce: "Deselected", select: -1 },
         ];
-      return [{ ...s, entered: false, cursor: -1 }, { leave: true }];
+      return [{ ...state, entered: false, cursor: -1 }, { leave: true }];
     }
 
     case "selected": {
-      // Echoes of the navigator's own select effects come back through here
-      // as the consumer updates selectedId; they change nothing.
-      if (action.index === s.selected) return [s, {}];
-      const history = [...s.history, { node: s.current, selected: s.selected === s.current }];
-      if (action.index < 0) return [{ ...s, selected: -1, history }, {}];
+      // Echoes of the navigator's own select effects arrive here and change nothing.
+      if (action.index === state.selected) return [state, {}];
+      const history = [
+        ...state.history,
+        { node: state.current, selected: state.selected === state.current },
+      ];
+      if (action.index < 0) return [{ ...state, selected: -1, history }, {}];
       return [
-        { ...s, selected: action.index, current: action.index, cursor: -1, filter: "all", history },
-        { moved: action.index !== s.current },
+        {
+          ...state,
+          selected: action.index,
+          current: action.index,
+          cursor: -1,
+          filter: "all",
+          history,
+        },
+        { moved: action.index !== state.current },
       ];
     }
 
     case "focusNode": {
-      if (!ctx.isVisible(action.index)) return [s, {}];
-      const entered = { ...s, entered: true };
-      if (action.index === s.current)
-        return [entered, { announce: ctx.text.node(s.current, s.selected === s.current) }];
-      const next = { ...goTo(s, action.index), entered: true };
+      if (!ctx.isVisible(action.index)) return [state, {}];
+      const entered = { ...state, entered: true };
+      if (action.index === state.current)
+        return [
+          entered,
+          { announce: ctx.text.node(state.current, state.selected === state.current) },
+        ];
+      const next = { ...goTo(state, action.index), entered: true };
       return [
         next,
-        { announce: ctx.text.node(action.index, s.selected === action.index), moved: true },
+        { announce: ctx.text.node(action.index, state.selected === action.index), moved: true },
       ];
     }
 
     case "visibility": {
-      if (s.current >= 0 && ctx.isVisible(s.current)) {
-        // The cursor indexes a list that may have changed under it: keep it
-        // on the same edge if that is still listed, else start over.
+      if (state.current >= 0 && ctx.isVisible(state.current)) {
         const cursor =
           action.edge === undefined
             ? -1
-            : ctx.connections(s.current, s.filter).findIndex((c) => c.edge === action.edge);
-        return [{ ...s, cursor, start: ctx.isVisible(s.start) ? s.start : s.current }, {}];
+            : ctx
+                .connections(state.current, state.filter)
+                .findIndex((connection) => connection.edge === action.edge);
+        return [
+          { ...state, cursor, start: ctx.isVisible(state.start) ? state.start : state.current },
+          {},
+        ];
       }
-      // The node the reader was on is gone. Land on the nearest visible place
-      // they have been, then the selection, then the top-ranked node, and say
-      // so — focus never silently falls off the graph.
-      const fromHistory = [...s.history].reverse().find((h) => ctx.isVisible(h.node))?.node;
-      const to =
-        fromHistory ?? (s.selected >= 0 && ctx.isVisible(s.selected) ? s.selected : ctx.fallback());
-      if (to === undefined || to < 0) return [{ ...s, cursor: -1 }, {}];
+      // The current node is gone: land somewhere visible and say so, so focus never silently drops.
+      const fromHistory = [...state.history]
+        .reverse()
+        .find((entry) => ctx.isVisible(entry.node))?.node;
+      const target =
+        fromHistory ??
+        (state.selected >= 0 && ctx.isVisible(state.selected) ? state.selected : ctx.fallback());
+      if (target === undefined || target < 0) return [{ ...state, cursor: -1 }, {}];
       const next = {
-        ...s,
-        current: to,
-        start: ctx.isVisible(s.start) ? s.start : to,
+        ...state,
+        current: target,
+        start: ctx.isVisible(state.start) ? state.start : target,
         cursor: -1,
         filter: "all" as const,
       };
       return [
         next,
-        s.entered
-          ? { announce: `Moved to ${ctx.text.node(to, s.selected === to)}`, moved: true }
+        state.entered
+          ? {
+              announce: `Moved to ${ctx.text.node(target, state.selected === target)}`,
+              moved: true,
+            }
           : { moved: true },
       ];
     }

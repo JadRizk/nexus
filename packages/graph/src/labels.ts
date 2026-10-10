@@ -1,18 +1,3 @@
-/* ============================================================================
-   LABELS — placement (not rendering)
-
-   Moved out of GraphCanvas.tsx's `frame()` label block, plus the `labelWidth`
-   measurement cache. Decides which nodes earn a label this frame, at what
-   screen position, and at what opacity — a placement snapshot, nothing more.
-   The DOM pool (which of the reusable elements shows which label, so labels
-   don't flicker between DOM nodes as the placement changes) stays in
-   GraphCanvas: it mutates the DOM and nothing else, and consumes this
-   module's output rather than being part of the decision.
-
-   Anchored via project(), so a label sits at its node's *drawn* position and
-   its gap from the node is a constant number of pixels at any zoom.
-   ========================================================================== */
-
 import { glyphRadiusPx, project } from "./camera.js";
 import type { Viewport } from "./camera.js";
 import { TIER_ZOOM } from "./types.js";
@@ -21,24 +6,24 @@ const MONO = 'ui-monospace,"SF Mono",Menlo,Consolas,monospace';
 
 export type LabelMode = "off" | "all" | "key" | "auto";
 
-/** Score bumps that make the hovered/selected node's label always win the collision test, regardless of its earned score. */
+/** Make the hovered and selected labels always win the collision test. */
 const SCORE_HOVER_OVERRIDE = 1e4;
 const SCORE_SELECT_OVERRIDE = 2e4;
 
-/** Raw text measurement, injected: canvas `measureText` in production, a fixed-width stub in tests. Returns the unpadded pixel width of `text` set in `font` — the placer owns the cache and the padding math. */
+/** Unpadded pixel width of `text` in `font`; the placer owns caching and padding. */
 export type MeasureText = (text: string, font: string) => number;
 
 export interface LabelView {
   count: number;
-  /** length count*2, interleaved x,y. */
+  /** Interleaved x,y, world units. */
   pos: Float32Array;
-  /** length count. 1 = hidden, 0 = visible. */
+  /** 1 = hidden, 0 = visible. */
   hidden: Float32Array;
-  /** length count, per-node draw radius (world units). */
+  /** World units. */
   radii: Float32Array;
-  /** length count. computeNeighbourhood's per-node depth: >= 0 means "in the active neighbourhood", -1 means not. */
+  /** ≥ 0 inside the active neighbourhood, -1 outside. */
   depth: Float32Array;
-  /** length count, per-node category tier (0 = landmark .. 3). */
+  /** 0 = landmark .. 3. */
   tier: Float32Array;
   label: (i: number) => string;
   zoom: number;
@@ -62,141 +47,138 @@ export interface LabelPlacerOptions {
 }
 
 export interface LabelPlacer {
-  /** Clears `out`, decides this frame's placements, and writes them in. Returns the count placed. */
+  /** Clears and refills `out` with this frame's placements; returns the count placed. */
   place(view: LabelView, out: Map<number, PlacedLabel>): number;
 }
 
-export function createLabelPlacer(opts: LabelPlacerOptions): LabelPlacer {
-  const { poolSize, labelHeight: LAB_H, measure } = opts;
+export function createLabelPlacer(options: LabelPlacerOptions): LabelPlacer {
+  const { poolSize, labelHeight, measure } = options;
 
-  /* Placement runs every frame over every visible node, so its working set is
-     allocated once and refilled in place rather than rebuilt per frame — at
-     60fps on a few hundred nodes, fresh `[score, index]` and `[x, y, w]`
-     tuples would be tens of thousands of short-lived arrays a second, all of
-     it garbage the collector has to walk during the animation it is trying
-     not to interrupt. The node-sized buffers are reallocated only when the
-     node count changes, never per frame.
-
-     The boxes are Float64Array, not Float32Array: they hold screen
-     coordinates compared with strict `<`/`>` at collision boundaries, and
-     single-precision rounding is enough to flip a boundary case. */
-  let cap = -1;
-  let wCache = new Float32Array(0);
-  let candScore = new Float64Array(0);
-  let candOrder = new Int32Array(0);
+  let capacity = -1;
+  let widthCache = new Float32Array(0);
+  let candidateScore = new Float64Array(0);
+  let candidateOrder = new Int32Array(0);
+  // Float64 boxes: float32 rounding can flip a strict-< collision edge.
   const boxX = new Float64Array(poolSize),
     boxY = new Float64Array(poolSize),
     boxW = new Float64Array(poolSize);
 
-  // Reused output tuple for project() — see camera.ts on why it takes one.
   const PROJECTED: [number, number] = [0, 0];
 
-  function ensureCapacity(n: number) {
-    if (n === cap) return;
-    cap = n;
-    wCache = new Float32Array(n).fill(-1);
-    candScore = new Float64Array(n);
-    candOrder = new Int32Array(n);
+  function ensureCapacity(nodeCount: number) {
+    if (nodeCount === capacity) return;
+    capacity = nodeCount;
+    widthCache = new Float32Array(nodeCount).fill(-1);
+    candidateScore = new Float64Array(nodeCount);
+    candidateOrder = new Int32Array(nodeCount);
   }
 
-  // Measure once per node instead of guessing from character count — the
-  // collision test is only as good as the box it is given.
   function labelWidth(i: number, text: string, landmark: boolean): number {
-    if (wCache[i]! < 0) {
+    if (widthCache[i]! < 0) {
       const font = landmark ? `700 10.5px ${MONO}` : `500 9px ${MONO}`;
-      wCache[i] = measure(text, font) + text.length * (landmark ? 1.47 : 0.72) + 7;
+      widthCache[i] = measure(text, font) + text.length * (landmark ? 1.47 : 0.72) + 7;
     }
-    return wCache[i]!;
+    return widthCache[i]!;
   }
 
   function place(view: LabelView, out: Map<number, PlacedLabel>): number {
-    const { count: n, pos, hidden, radii, depth, tier, zoom, cx, cy, viewport } = view;
-    const { mode, selIdx, hoverIdx } = view;
-    ensureCapacity(n);
+    const { count, pos: positions, hidden, radii, depth, tier, zoom, cx, cy, viewport } = view;
+    const { mode, selIdx: selectedIndex, hoverIdx: hoverIndex } = view;
+    ensureCapacity(count);
 
     out.clear();
     if (mode === "off") return 0;
 
-    const W = viewport.width,
-      H = viewport.height;
-    const px = 1 / zoom;
-    const hw = (W / 2) * px * 1.15,
-      hh = (H / 2) * px * 1.15;
-    const focused = selIdx >= 0 || hoverIdx >= 0;
+    const width = viewport.width,
+      height = viewport.height;
+    const worldPerPixel = 1 / zoom;
+    const halfWidth = (width / 2) * worldPerPixel * 1.15,
+      halfHeight = (height / 2) * worldPerPixel * 1.15;
+    const focused = selectedIndex >= 0 || hoverIndex >= 0;
 
-    let candN = 0;
-    for (let i = 0; i < n; i++) {
+    let candidateCount = 0;
+    for (let i = 0; i < count; i++) {
       if (hidden[i] !== 0) continue;
-      const x = pos[i * 2]!,
-        y = pos[i * 2 + 1]!;
-      if (Math.abs(x - cx) > hw || Math.abs(y - cy) > hh) continue;
+      const x = positions[i * 2]!,
+        y = positions[i * 2 + 1]!;
+      if (Math.abs(x - cx) > halfWidth || Math.abs(y - cy) > halfHeight) continue;
 
-      const t = tier[i]!;
-      const isTarget = i === selIdx || i === hoverIdx;
-      const inFlow = depth[i]! >= 0; // inside the active neighbourhood
-      const landmark = t === 0;
+      const nodeTier = tier[i]!;
+      const isTarget = i === selectedIndex || i === hoverIndex;
+      const inFlow = depth[i]! >= 0;
+      const landmark = nodeTier === 0;
 
-      // Three ways to earn a name: you're the target, you're in the active
-      // flow, or your tier has come into range at this zoom.
       let earns: boolean;
       if (mode === "all") earns = true;
       else if (mode === "key") earns = landmark || isTarget || depth[i] === 1;
-      else earns = isTarget || inFlow || zoom >= TIER_ZOOM[t]!;
+      else earns = isTarget || inFlow || zoom >= TIER_ZOOM[nodeTier]!;
       if (!earns) continue;
 
-      // While something is focused, everything outside the flow steps back
-      // — except landmarks, which you need to keep your bearings.
+      // Landmarks stay while focused so the reader keeps their bearings.
       if (focused && !inFlow && !isTarget && !landmark) continue;
 
-      let sc = radii[i]! + (3 - t) * 9;
-      if (inFlow) sc += depth[i] === 1 ? 70 : 30;
-      if (i === hoverIdx) sc += SCORE_HOVER_OVERRIDE;
-      if (i === selIdx) sc += SCORE_SELECT_OVERRIDE;
-      candScore[i] = sc;
-      candOrder[candN++] = i;
+      let score = radii[i]! + (3 - nodeTier) * 9;
+      if (inFlow) score += depth[i] === 1 ? 70 : 30;
+      if (i === hoverIndex) score += SCORE_HOVER_OVERRIDE;
+      if (i === selectedIndex) score += SCORE_SELECT_OVERRIDE;
+      candidateScore[i] = score;
+      candidateOrder[candidateCount++] = i;
     }
-    // Sorts the live prefix in place — a subarray is a view on the same
-    // buffer, not a copy. Typed-array sort is stable, so equal scores keep
-    // ascending node index; that order is load-bearing and pinned by a test.
-    candOrder.subarray(0, candN).sort((a, b) => candScore[b]! - candScore[a]!);
+    // Stable sort: equal scores keep ascending node index, which a test pins.
+    candidateOrder
+      .subarray(0, candidateCount)
+      .sort((a, b) => candidateScore[b]! - candidateScore[a]!);
 
-    let boxN = 0;
-    for (let k = 0; k < candN && out.size < poolSize; k++) {
-      const i = candOrder[k]!;
-      const sp = project(pos[i * 2]!, pos[i * 2 + 1]!, zoom, cx, cy, viewport, PROJECTED);
-      const sx = sp[0],
-        sy = sp[1];
-      if (sx < -60 || sx > W + 60 || sy < -24 || sy > H + 24) continue;
+    let boxCount = 0;
+    for (let k = 0; k < candidateCount && out.size < poolSize; k++) {
+      const i = candidateOrder[k]!;
+      const screen = project(
+        positions[i * 2]!,
+        positions[i * 2 + 1]!,
+        zoom,
+        cx,
+        cy,
+        viewport,
+        PROJECTED,
+      );
+      const sx = screen[0],
+        sy = screen[1];
+      if (sx < -60 || sx > width + 60 || sy < -24 || sy > height + 24) continue;
       const landmark = tier[i]! === 0;
-      const bx = sx + glyphRadiusPx(radii[i]!, zoom) + 8;
-      const by = sy - LAB_H * 0.5;
-      const bw = labelWidth(i, view.label(i), landmark);
+      const boxLeft = sx + glyphRadiusPx(radii[i]!, zoom) + 8;
+      const boxTop = sy - labelHeight * 0.5;
+      const boxWidth = labelWidth(i, view.label(i), landmark);
       let hit = false;
-      for (let q = 0; q < boxN; q++) {
-        const qx = boxX[q]!,
-          qy = boxY[q]!,
-          qw = boxW[q]!;
-        if (bx < qx + qw && bx + bw > qx && by < qy + LAB_H && by + LAB_H > qy) {
+      for (let q = 0; q < boxCount; q++) {
+        const placedLeft = boxX[q]!,
+          placedTop = boxY[q]!,
+          placedWidth = boxW[q]!;
+        if (
+          boxLeft < placedLeft + placedWidth &&
+          boxLeft + boxWidth > placedLeft &&
+          boxTop < placedTop + labelHeight &&
+          boxTop + labelHeight > placedTop
+        ) {
           hit = true;
           break;
         }
       }
       if (hit) continue;
-      const op =
-        i === selIdx || i === hoverIdx
+      const opacity =
+        i === selectedIndex || i === hoverIndex
           ? 1
           : depth[i]! >= 0
             ? 0.92
             : focused
-              ? 0.28 // landmark, holding position
+              ? 0.28
               : landmark
                 ? 0.82
                 : 0.52;
-      boxX[boxN] = bx;
-      boxY[boxN] = by;
-      boxW[boxN] = bw;
-      boxN++;
-      out.set(i, [bx, by, op]);
+      boxX[boxCount] = boxLeft;
+      boxY[boxCount] = boxTop;
+      boxW[boxCount] = boxWidth;
+      boxCount++;
+      out.set(i, [boxLeft, boxTop, opacity]);
     }
     return out.size;
   }

@@ -56,32 +56,13 @@ import type {
   SelectSource,
 } from "./types.js";
 
-/* ============================================================================
-   GraphCanvas
-
-   Ported from the prototype's `boot()` function — the physics/shader setup,
-   render loop, interaction handlers, label pool and tooltip are structurally
-   unchanged. What changed is exactly what had to: every lookup that used to
-   read the module-global `NODE_TYPES`/`LINK_TYPES` tables now reads the
-   `nodeCategories`/`linkCategories` props instead, node/edge `id`s (now
-   arbitrary, caller-supplied) get resolved to dense internal indices once
-   per graph, and the imperative `nodeOn`/`linkOn`/`isolate`/`selected`
-   state the prototype's parent component owned directly are now controlled
-   props flowing in through refs, the same pattern the prototype already used
-   for `cfg`/`running`/`labelMode`.
-   ========================================================================== */
-
-// Deliberately not sourced from @nexus-cyberdeck/tokens — this package has no
-// dependency on the rest of Nexus, so its one self-contained failure state
-// can't assume `var(--nx-*)` custom properties exist.
+// Not from @nexus-cyberdeck/tokens: this package can't assume `--nx-*` properties exist.
 const FALLBACK_BG = "#08090A";
 const FALLBACK_FG = "#DFF5C7";
 const FALLBACK_CRITICAL = "#FF2E63";
 const MONO = 'ui-monospace,"SF Mono",Menlo,Consolas,monospace';
 
-// Exported so a consumer building its own controls has one real source for
-// "what does this slider reset to", instead of a second copy that drifts —
-// which is exactly what happened to the showcase when 2.0 retuned the edges.
+/** What `physics` is merged over. */
 export const DEFAULT_PHYSICS: Readonly<PhysicsConfig> = {
   repulsion: 900,
   linkDistance: 78,
@@ -92,9 +73,7 @@ export const DEFAULT_PHYSICS: Readonly<PhysicsConfig> = {
   radiusForce: 0,
   settle: 0,
 };
-// edgeOpacity, edgeWidth and aberr were retuned with the 2.0 edge shader:
-// edgeWidth is now a half-width the shader multiplies by EDGE_SPAN, so the
-// 1.x value of 2.4 would draw every edge about twice as heavy as intended.
+/** What `optics` is merged over. */
 export const DEFAULT_OPTICS: Readonly<OpticsConfig> = {
   glow: 0.8,
   trails: 0.16,
@@ -109,41 +88,21 @@ export const DEFAULT_OPTICS: Readonly<OpticsConfig> = {
   glitch: 0.5,
 };
 
-/**
- * How far short of a node's centre its edges stop, as a multiple of the node
- * radius. The same at both ends: the terminal pads sit here, and an edge whose
- * two pads landed at different distances would read meaning into which
- * endpoint the data happened to list first.
- */
+// Where edges stop short of a node's centre, in node radii; the same at both ends.
 const EDGE_END_TRIM = 1.15;
 
-/** Device-pixel-ratio ceiling for the CRT pass; see the note where it is applied. */
+// Four full-screen passes at dpr 2 cost a lot of fill the CRT grain hides anyway.
 const MAX_DPR = 1.6;
 
-/**
- * Gives a geometry a hand-set, unbounded sphere. These meshes are drawn with
- * `frustumCulled = false` because their vertices are positioned in the vertex
- * shader, so the attribute data says nothing about where they land on screen —
- * but three still reads `boundingSphere` while projecting the scene to
- * depth-sort, and computes it lazily from a 2-component `position` attribute
- * as NaN (logging an error each time). Draw order here comes from
- * `renderOrder`, with depth testing off, so the sphere only has to be valid.
- */
+// Vertices are placed in the shader, so three would compute a NaN bounding sphere from the attributes.
 const unbounded = (geometry: THREE.BufferGeometry): void => {
   geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), Infinity);
 };
 
-// Not @types/node: the package runs in browsers. Declared here so the check
-// below can spell `process.env.NODE_ENV` out literally.
+// Not @types/node: the package runs in browsers.
 declare const process: { env: { NODE_ENV?: string } };
 
-/**
- * Development builds only. Written as the literal `process.env.NODE_ENV`,
- * because that exact expression is what bundlers replace in a production
- * build; read through anything else (globalThis.process, say), it survives
- * into the bundle, finds no `process` in the browser, and reads as
- * development. Unbundled, where `process` doesn't exist at all, it is.
- */
+// The literal `process.env.NODE_ENV` is what bundlers replace; unbundled, `process` is missing.
 function isDevelopment(): boolean {
   try {
     return process.env.NODE_ENV !== "production";
@@ -156,12 +115,12 @@ const hex4 = (i: number): string =>
   (((i * 2654435761) >>> 0) % 65536).toString(16).toUpperCase().padStart(4, "0");
 
 interface InternalController {
-  params?: (p: Partial<PhysicsConfig>) => void;
+  params?: (physics: Partial<PhysicsConfig>) => void;
   refilterInternal?: () => void;
   applySelectionInternal?: (index: number) => void;
   fit?: () => void;
   focus?: (index: number) => void;
-  reheat?: (v: number) => void;
+  reheat?: (energy: number) => void;
   reseed?: () => void;
   /** Re-runs the whole-graph fit, but only while the auto-fit still owns the camera. */
   reframe?: () => void;
@@ -171,18 +130,7 @@ interface InternalController {
   focusNode?: (index: number) => void;
 }
 
-// Generic over the node `data` type at the boundary only: the cast at the end
-// of this declaration gives callers `GraphCanvasProps<T>`, `onSelect` with a
-// `GraphNodeSnapshot<T>`, and a `ref` typed `GraphController<T>`, so the
-// payload comes back typed. forwardRef's own type is not generic, hence the
-// cast — the same pattern as @nexus-cyberdeck/react's CommandPalette. The body
-// works in `unknown` because it never reads `data`; describe() copies the
-// reference from `nodes[i]` onto the snapshot and nothing else touches it, so
-// whatever `T` the caller's nodes carry is what comes back. `T` defaults to
-// `unknown`, which is what every caller that never names it already had. The
-// cast's `displayName?` is not set here; it keeps the member the old
-// ForwardRefExoticComponent type declared, so code that reads or assigns
-// `GraphCanvas.displayName` still compiles.
+// forwardRef isn't generic, so the cast at the end types `data` for callers.
 export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
   function GraphCanvas(props, ref) {
     const {
@@ -220,16 +168,17 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
 
     const mountRef = useRef<HTMLDivElement>(null);
     const labelRef = useRef<HTMLDivElement>(null);
-    const navRef = useRef<HTMLDivElement>(null);
+    const navigationRef = useRef<HTMLDivElement>(null);
     const rootRef = useRef<HTMLDivElement>(null);
     const api = useRef<InternalController>({});
     const [fatal, setFatal] = useState<string | null>(null);
 
-    const physicsCfg: PhysicsConfig = { ...DEFAULT_PHYSICS, ...physicsProp };
-    const opticsCfg: OpticsConfig = { ...DEFAULT_OPTICS, ...opticsProp };
+    const physicsConfig: PhysicsConfig = { ...DEFAULT_PHYSICS, ...physicsProp };
+    const opticsConfig: OpticsConfig = { ...DEFAULT_OPTICS, ...opticsProp };
 
-    const opticsRef = useRef(opticsCfg);
-    opticsRef.current = opticsCfg;
+    // Ref mirrors, not useEffectEvent: that needs React 19 and this package supports 18.3.
+    const opticsRef = useRef(opticsConfig);
+    opticsRef.current = opticsConfig;
     const runRef = useRef(running);
     runRef.current = running;
     const labelModeRef = useRef(labelMode);
@@ -244,9 +193,6 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
     isolateRef.current = isolateId;
     const followSelectionRef = useRef(followSelection);
     followSelectionRef.current = followSelection;
-    // Four plain numbers, so the re-frame effect below depends on values a
-    // consumer doesn't have to memoize, and framing never branches on a
-    // missing side.
     const insetTop = fitInset?.top ?? 0,
       insetRight = fitInset?.right ?? 0,
       insetBottom = fitInset?.bottom ?? 0,
@@ -259,11 +205,6 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
       left: insetLeft,
     };
 
-    // onSelect/onStats/onFatal are read inside the mount effect's boot(), which
-    // only re-runs when the graph data changes (see the comment on that effect's
-    // dependency array below) — so they have to come from refs kept current in
-    // their own effect, not from the closure, or a handler that closes over
-    // state sees the first render's callback forever.
     const onSelectRef = useRef(onSelect);
     const onStatsRef = useRef(onStats);
     const onFatalRef = useRef(onFatal);
@@ -280,15 +221,11 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
       onNavigateRef.current = onNavigate;
       describeNodeRef.current = describeNode;
     }, [onSelect, onStats, onFatal, onFrame, onWarning, onNavigate, describeNode]);
-    // Read when the scene is built: a ranking is structure, so a new one
-    // takes effect on the next rebuild, not mid-navigation.
     const rankConnectionsRef = useRef(rankConnections);
     rankConnectionsRef.current = rankConnections;
     const keyHintsRef = useRef(keyHints);
     keyHintsRef.current = keyHints;
 
-    // A named group is what a screen reader announces on the way in; an
-    // unnamed one fails WCAG 4.1.2. Warn once per mount, in development.
     const hasName = Boolean(ariaLabel);
     useEffect(() => {
       if (keyboardNavigation && !hasName && isDevelopment())
@@ -302,13 +239,13 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
       () => ({
         fit: () => api.current.fit?.(),
         focus: (id) => {
-          const idx = idToIndexRef.current.get(id);
-          if (idx !== undefined) api.current.focus?.(idx);
+          const index = idToIndexRef.current.get(id);
+          if (index !== undefined) api.current.focus?.(index);
         },
-        reheat: (v = 1.0) => api.current.reheat?.(v),
+        reheat: (energy = 1.0) => api.current.reheat?.(energy),
         focusNode: (id) => {
-          const idx = idToIndexRef.current.get(id);
-          if (idx !== undefined) api.current.focusNode?.(idx);
+          const index = idToIndexRef.current.get(id);
+          if (index !== undefined) api.current.focusNode?.(index);
         },
         back: () => api.current.back?.(),
         get canGoBack() {
@@ -316,52 +253,39 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
         },
         reseed: () => api.current.reseed?.(),
         getNode: (id) => {
-          const idx = idToIndexRef.current.get(id);
-          return idx !== undefined ? (api.current.getNodeByIndex?.(idx) ?? null) : null;
+          const index = idToIndexRef.current.get(id);
+          return index !== undefined ? (api.current.getNodeByIndex?.(index) ?? null) : null;
         },
       }),
       [],
     );
 
-    // Populated fresh by the mount effect below; read by the imperative handle
-    // above between mounts, so it has to live outside the effect's closure.
     const idToIndexRef = useRef<Map<unknown, number>>(new Map());
 
-    // Forwards every field of PhysicsConfig, not a subset: gravity and damping
-    // are documented props too, and omitting them here left them permanently
-    // pinned to the solver's own defaults. Depends on the fields rather than on
-    // physicsCfg, which is a fresh object every render. On first mount this is
-    // still a no-op — api.current.params does not exist until the mount effect
-    // below has run — so boot() applies the initial config itself.
+    // Depends on the fields: physicsConfig is a new object every render.
     useEffect(() => {
       api.current.params?.({
-        repulsion: physicsCfg.repulsion,
-        linkDistance: physicsCfg.linkDistance,
-        gravity: physicsCfg.gravity,
-        damping: physicsCfg.damping,
-        cursorForce: physicsCfg.cursorForce,
-        sectorForce: physicsCfg.sectorForce,
-        radiusForce: physicsCfg.radiusForce,
-        settle: physicsCfg.settle,
+        repulsion: physicsConfig.repulsion,
+        linkDistance: physicsConfig.linkDistance,
+        gravity: physicsConfig.gravity,
+        damping: physicsConfig.damping,
+        cursorForce: physicsConfig.cursorForce,
+        sectorForce: physicsConfig.sectorForce,
+        radiusForce: physicsConfig.radiusForce,
+        settle: physicsConfig.settle,
       });
     }, [
-      physicsCfg.repulsion,
-      physicsCfg.linkDistance,
-      physicsCfg.gravity,
-      physicsCfg.damping,
-      physicsCfg.cursorForce,
-      physicsCfg.sectorForce,
-      physicsCfg.radiusForce,
-      physicsCfg.settle,
+      physicsConfig.repulsion,
+      physicsConfig.linkDistance,
+      physicsConfig.gravity,
+      physicsConfig.damping,
+      physicsConfig.cursorForce,
+      physicsConfig.sectorForce,
+      physicsConfig.radiusForce,
+      physicsConfig.settle,
     ]);
 
-    // Compared by content, not by identity. `hiddenNodeCategories={["tag"]}`
-    // written inline — the obvious way to write it — is a new array on every
-    // render, and an identity comparison would refilter and fire the glitch
-    // kick on every single one, including renders that have nothing to do with
-    // the graph. The refs above are refreshed every render regardless, so the
-    // refilter that does run always reads the current arrays. Absent and empty
-    // mean the same thing, so they hash the same.
+    // By content: an inline `["tag"]` is a new array every render.
     const hiddenNodeKey = JSON.stringify(hiddenNodeCategories ?? []);
     const hiddenLinkKey = JSON.stringify(hiddenLinkCategories ?? []);
     const scopedLinkKey = JSON.stringify(selectionScopedLinkCategories ?? []);
@@ -369,48 +293,39 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
       api.current.refilterInternal?.();
     }, [hiddenNodeKey, hiddenLinkKey, scopedLinkKey, isolateId]);
 
-    // A dock collapsing or a drawer sliding in changes the free box. reframe
-    // is a no-op once the reader has taken the camera by hand, so this can't
-    // pull a deliberate pan back to centre.
     useEffect(() => {
       api.current.reframe?.();
     }, [insetTop, insetRight, insetBottom, insetLeft]);
 
     useEffect(() => {
-      const idx = selectedId === null ? -1 : (idToIndexRef.current.get(selectedId) ?? -1);
-      api.current.applySelectionInternal?.(idx);
+      const index = selectedId === null ? -1 : (idToIndexRef.current.get(selectedId) ?? -1);
+      api.current.applySelectionInternal?.(index);
     }, [selectedId]);
 
     useEffect(() => {
       const mount = mountRef.current,
-        lab = labelRef.current,
-        navLayer = navRef.current,
+        labelLayer = labelRef.current,
+        navigationLayer = navigationRef.current,
         root = rootRef.current;
-      if (!mount || !lab) return;
-      // Everything boot() creates registers its teardown here the moment it
-      // exists, so a throw part-way through setup — after the renderer, its
-      // canvas, the label pool and the ResizeObserver are live — releases what
-      // was already built instead of leaving it alive until GC. A completed
-      // boot hands the same list to the effect's cleanup; drained in reverse
-      // so later resources (the frame loop, listeners) go before the renderer
-      // they draw through.
+      if (!mount || !labelLayer) return;
+      // Registered as each resource is built, so a throw mid-boot releases what exists; drained in reverse.
       const disposables: Array<() => void> = [];
       const dispose = () => {
         while (disposables.length > 0) {
           try {
             disposables.pop()!();
-          } catch (e) {
-            console.error(e);
+          } catch (error) {
+            console.error(error);
           }
         }
         api.current = {};
       };
       try {
-        boot(mount, lab, navLayer, root);
-      } catch (err) {
+        boot(mount, labelLayer, navigationLayer, root);
+      } catch (error) {
         dispose();
-        const message = String((err as Error)?.message ?? err);
-        console.error(err);
+        const message = String((error as Error)?.message ?? error);
+        console.error(error);
         setFatal(message);
         onFatalRef.current?.(message);
       }
@@ -419,94 +334,78 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
       function boot(
         mountEl: HTMLDivElement,
         labelEl: HTMLDivElement,
-        navEl: HTMLDivElement | null,
+        navigationEl: HTMLDivElement | null,
         rootEl: HTMLDivElement | null,
       ) {
-        // Validated before anything that needs tearing down exists — see
-        // validate.ts for why this has to come first. From here on `liveEdges`
-        // is the edge list: under invalidEdges="drop" it can be shorter than
-        // the prop, and every per-edge array is sized and indexed from it.
         const {
           idToIndex,
-          eA,
-          eB,
+          eA: edgeEndA,
+          eB: edgeEndB,
           edges: liveEdges,
           dropped,
         } = validateGraph(nodes, edges, nodeCategories, linkCategories, invalidEdges);
         idToIndexRef.current = idToIndex;
-        const n = nodes.length,
-          m = liveEdges.length;
+        const nodeCount = nodes.length,
+          edgeCount = liveEdges.length;
         if (dropped.length > 0) {
           const message = `GraphCanvas: dropped ${dropped.length} edge(s) whose endpoint matches no node`;
           if (onWarningRef.current) onWarningRef.current(message, { dropped });
           else console.warn(message, dropped);
         }
 
-        const nCategoryId = nodes.map((node) => node.categoryId);
+        const nodeCategoryIds = nodes.map((node) => node.categoryId);
         const denseIds = nodes.map((node) => node.id);
-        const eCategoryId = liveEdges.map((edge) => edge.categoryId);
+        const edgeCategoryIds = liveEdges.map((edge) => edge.categoryId);
         const linkCategoryIds = Object.keys(linkCategories);
         const degree = computeDegree(
-          Array.from({ length: m }, (_, e) => ({ a: eA[e]!, b: eB[e]! })),
-          n,
+          Array.from({ length: edgeCount }, (_, e) => ({ a: edgeEndA[e]!, b: edgeEndB[e]! })),
+          nodeCount,
         );
-        // A node with no edges is always ORPHAN, regardless of its declared
-        // state — derived from graph structure the engine already has, not
-        // something the caller needs to remember to set by hand.
-        const nState = new Uint8Array(n);
-        for (let i = 0; i < n; i++)
-          nState[i] = degree[i] === 0 ? ORPHAN_STATE : (nodes[i]!.state ?? 1);
+        const nodeStates = new Uint8Array(nodeCount);
+        for (let i = 0; i < nodeCount; i++)
+          nodeStates[i] = degree[i] === 0 ? ORPHAN_STATE : (nodes[i]!.state ?? 1);
 
-        // Undefined means unseeded (Math.random); see GraphCanvasProps.seed.
         const layoutSeed =
           seed === null ? undefined : (seed ?? seedFromIds(nodes.map((node) => node.id)));
-        // The shader seeds come from their own stream (the layout seed run
-        // through a fixed salt), so how many of them get drawn never moves a
-        // node.
+        // A separate stream, so drawing shader seeds never moves a node.
         const visualRandom =
           layoutSeed === undefined ? Math.random : mulberry32(layoutSeed ^ 0x5bd1e995);
 
-        const sim = createPhysics(
+        const simulation = createPhysics(
           {
             nodes: nodes.map((node) => {
-              const cat = nodeCategories[node.categoryId]!;
-              // A node's own value wins over its category's. Spread in only
-              // when defined: physics reads "key absent" as "no target", and
-              // under exactOptionalPropertyTypes an explicit undefined is not
-              // the same thing.
-              const sectorAngle = node.sectorAngle ?? cat.sectorAngle;
-              const radiusTarget = node.radiusTarget ?? cat.radiusTarget;
+              const category = nodeCategories[node.categoryId]!;
+              // Spread only when defined: under exactOptionalPropertyTypes `undefined` isn't absent.
+              const sectorAngle = node.sectorAngle ?? category.sectorAngle;
+              const radiusTarget = node.radiusTarget ?? category.radiusTarget;
               return {
-                charge: cat.charge,
-                mass: cat.mass,
+                charge: category.charge,
+                mass: category.mass,
                 ...(sectorAngle === undefined ? {} : { sectorAngle }),
                 ...(radiusTarget === undefined ? {} : { radiusTarget }),
               };
             }),
-            edges: Array.from({ length: m }, (_, e) => {
-              const cat = linkCategories[eCategoryId[e]!]!;
-              return { a: eA[e]!, b: eB[e]!, dist: cat.dist, strength: cat.strength };
+            edges: Array.from({ length: edgeCount }, (_, e) => {
+              const category = linkCategories[edgeCategoryIds[e]!]!;
+              return {
+                a: edgeEndA[e]!,
+                b: edgeEndB[e]!,
+                dist: category.dist,
+                strength: category.strength,
+              };
             }),
           },
           layoutSeed === undefined ? {} : { seed: layoutSeed },
         );
-        // The params effect above cannot reach the solver on the render that
-        // creates it, so the initial `physics` prop has to be applied here or it
-        // never lands. Numerically inert when the prop is absent: physicsCfg is
-        // DEFAULT_PHYSICS, which matches the solver's own starting params, and
-        // setParams' alpha floor of 0.28 is below the alpha of 1 a fresh solver
-        // already has.
-        sim.setParams(physicsCfg);
-        const pos = sim.pos;
+        // The params effect can't reach the solver on the render that creates it.
+        simulation.setParams(physicsConfig);
+        const positions = simulation.pos;
 
         const renderer = new THREE.WebGLRenderer({
           antialias: true,
           alpha: false,
           powerPreference: "high-performance",
         });
-        // Four full-screen passes at dpr 2 is a lot of fill for little gain;
-        // the CRT grille and grain hide the difference anyway. resize() re-reads
-        // devicePixelRatio and re-applies this cap on every observed resize.
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, MAX_DPR));
         renderer.setClearColor(new THREE.Color(FALLBACK_BG), 1);
         renderer.autoClear = false;
@@ -515,10 +414,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           "display:block;touch-action:none;width:100%;height:100%";
         disposables.push(() => {
           renderer.dispose();
-          // dispose() alone leaves the GL context alive until the canvas is
-          // collected; under StrictMode, HMR or a list of graphs that is
-          // enough to hit the browser's context cap. Losing it explicitly
-          // gives it back now.
+          // Frees the context now; under StrictMode or HMR waiting for GC hits the browser's context cap.
           renderer.forceContextLoss();
           renderer.domElement.remove();
         });
@@ -527,127 +423,113 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
         const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, -10, 10);
         camera.position.z = 5;
 
-        const nRadius = new Float32Array(n),
-          nShape = new Float32Array(n);
-        const nColor = new Float32Array(n * 3),
-          nSeed = new Float32Array(n);
-        const nDepth = new Float32Array(n).fill(-1);
-        const nSel = new Float32Array(n),
-          nHide = new Float32Array(n);
-        const nTier = new Float32Array(n); // per-node category tier, for the label placer
-        const tc = new THREE.Color();
-        for (let i = 0; i < n; i++) {
-          const cat = nodeCategories[nCategoryId[i]!]!;
-          nRadius[i] =
-            (nodes[i]!.size ?? cat.size) * (1 + Math.min(1.4, Math.log2(1 + degree[i]!) * 0.16));
-          nShape[i] = cat.shape;
-          tc.set(cat.color);
-          nColor[i * 3] = tc.r;
-          nColor[i * 3 + 1] = tc.g;
-          nColor[i * 3 + 2] = tc.b;
-          nSeed[i] = visualRandom();
-          nTier[i] = cat.tier;
+        const nodeRadii = new Float32Array(nodeCount),
+          nodeShapes = new Float32Array(nodeCount);
+        const nodeColors = new Float32Array(nodeCount * 3),
+          nodeSeeds = new Float32Array(nodeCount);
+        const nodeDepths = new Float32Array(nodeCount).fill(-1);
+        const nodeMarks = new Float32Array(nodeCount),
+          nodeHidden = new Float32Array(nodeCount);
+        const nodeTiers = new Float32Array(nodeCount);
+        const scratchColor = new THREE.Color();
+        for (let i = 0; i < nodeCount; i++) {
+          const category = nodeCategories[nodeCategoryIds[i]!]!;
+          nodeRadii[i] =
+            (nodes[i]!.size ?? category.size) *
+            (1 + Math.min(1.4, Math.log2(1 + degree[i]!) * 0.16));
+          nodeShapes[i] = category.shape;
+          scratchColor.set(category.color);
+          nodeColors[i * 3] = scratchColor.r;
+          nodeColors[i * 3 + 1] = scratchColor.g;
+          nodeColors[i * 3 + 2] = scratchColor.b;
+          nodeSeeds[i] = visualRandom();
+          nodeTiers[i] = category.tier;
         }
-        const eAPos = new Float32Array(m * 2),
-          eBPos = new Float32Array(m * 2);
-        const eColor = new Float32Array(m * 3);
-        // Sized from the layout shaders.ts declares, so the two are one statement.
-        const eP0 = new Float32Array(m * EDGE_ATTRS.iP0); // width, curve, dash, signed gain
-        const eP1 = new Float32Array(m * EDGE_ATTRS.iP1); // flow, seed, radA, radB
-        const eP2 = new Float32Array(m * EDGE_ATTRS.iP2); // tier, hide, jit, fray
+        const edgeAPositions = new Float32Array(edgeCount * 2),
+          edgeBPositions = new Float32Array(edgeCount * 2);
+        const edgeColors = new Float32Array(edgeCount * 3);
+        const edgeParams0 = new Float32Array(edgeCount * EDGE_ATTRS.iP0); // width, curve, dash, signed gain
+        const edgeParams1 = new Float32Array(edgeCount * EDGE_ATTRS.iP1); // flow, seed, radA, radB
+        const edgeParams2 = new Float32Array(edgeCount * EDGE_ATTRS.iP2); // tier, hide, jit, fray
         const A_TIER = 0,
           A_HIDE = 1,
           A_JIT = 2,
           A_FRAY = 3;
-        for (let e = 0; e < m; e++) {
-          const cat = linkCategories[eCategoryId[e]!]!;
-          tc.set(cat.color);
-          eColor[e * 3] = tc.r;
-          eColor[e * 3 + 1] = tc.g;
-          eColor[e * 3 + 2] = tc.b;
-          eP0[e * 4] = cat.width;
-          // Routing shares `curve`'s float, so it costs no attribute. The
-          // encoding lives in shaders.ts beside the dispatch that reads it;
-          // writing the float by hand is how an earlier version drew every
-          // odd-indexed arc as an etched trace. The alternating sign keeps
-          // adjacent arcs from overlapping.
-          eP0[e * 4 + 1] = encodeRouting(
-            cat.routing,
-            (cat.curve ?? DEFAULT_ARC_BOW) * (e % 2 === 0 ? 1 : -1),
+        for (let e = 0; e < edgeCount; e++) {
+          const category = linkCategories[edgeCategoryIds[e]!]!;
+          scratchColor.set(category.color);
+          edgeColors[e * 3] = scratchColor.r;
+          edgeColors[e * 3 + 1] = scratchColor.g;
+          edgeColors[e * 3 + 2] = scratchColor.b;
+          edgeParams0[e * 4] = category.width;
+          // Alternating sign keeps adjacent arcs from overlapping.
+          edgeParams0[e * 4 + 1] = encodeRouting(
+            category.routing,
+            (category.curve ?? DEFAULT_ARC_BOW) * (e % 2 === 0 ? 1 : -1),
           );
-          eP0[e * 4 + 2] = cat.dash ?? 0;
-          eP0[e * 4 + 3] = encodeGain(cat.gain ?? 1, cat.directed ?? true);
-          eP1[e * 4] = cat.flow ?? 0;
-          eP1[e * 4 + 1] = visualRandom();
-          eP1[e * 4 + 2] = nRadius[eA[e]!]! * EDGE_END_TRIM;
-          eP1[e * 4 + 3] = nRadius[eB[e]!]! * EDGE_END_TRIM;
-          eP2[e * 4 + A_JIT] = cat.jit ?? 0;
+          edgeParams0[e * 4 + 2] = category.dash ?? 0;
+          edgeParams0[e * 4 + 3] = encodeGain(category.gain ?? 1, category.directed ?? true);
+          edgeParams1[e * 4] = category.flow ?? 0;
+          edgeParams1[e * 4 + 1] = visualRandom();
+          edgeParams1[e * 4 + 2] = nodeRadii[edgeEndA[e]!]! * EDGE_END_TRIM;
+          edgeParams1[e * 4 + 3] = nodeRadii[edgeEndB[e]!]! * EDGE_END_TRIM;
+          edgeParams2[e * 4 + A_JIT] = category.jit ?? 0;
           const absent = liveEdges[e]!.absentEnd;
-          eP2[e * 4 + A_FRAY] = absent === "b" ? 1 : absent === "a" ? 2 : 0;
+          edgeParams2[e * 4 + A_FRAY] = absent === "b" ? 1 : absent === "a" ? 2 : 0;
         }
-        const dyn = (arr: Float32Array, size: number) => {
-          const a = new THREE.InstancedBufferAttribute(arr, size);
-          a.setUsage(THREE.DynamicDrawUsage);
-          return a;
+        const dynamicAttribute = (values: Float32Array, size: number) => {
+          const attribute = new THREE.InstancedBufferAttribute(values, size);
+          attribute.setUsage(THREE.DynamicDrawUsage);
+          return attribute;
         };
-        const stat = (arr: Float32Array, size: number) =>
-          new THREE.InstancedBufferAttribute(arr, size);
+        const staticAttribute = (values: Float32Array, size: number) =>
+          new THREE.InstancedBufferAttribute(values, size);
 
-        const SEG = 24;
-        const ev = new Float32Array((SEG + 1) * 4);
-        const ei: number[] = [];
-        for (let s = 0; s <= SEG; s++) {
-          const t = s / SEG;
-          ev[s * 4] = t;
-          ev[s * 4 + 1] = -1;
-          ev[s * 4 + 2] = t;
-          ev[s * 4 + 3] = 1;
+        const RIBBON_SEGMENTS = 24;
+        const ribbonVertices = new Float32Array((RIBBON_SEGMENTS + 1) * 4);
+        const ribbonIndices: number[] = [];
+        for (let s = 0; s <= RIBBON_SEGMENTS; s++) {
+          const t = s / RIBBON_SEGMENTS;
+          ribbonVertices[s * 4] = t;
+          ribbonVertices[s * 4 + 1] = -1;
+          ribbonVertices[s * 4 + 2] = t;
+          ribbonVertices[s * 4 + 3] = 1;
         }
-        for (let s = 0; s < SEG; s++) {
-          const b = s * 2;
-          ei.push(b, b + 1, b + 2, b + 2, b + 1, b + 3);
+        for (let s = 0; s < RIBBON_SEGMENTS; s++) {
+          const base = s * 2;
+          ribbonIndices.push(base, base + 1, base + 2, base + 2, base + 1, base + 3);
         }
-        const edgeGeo = new THREE.InstancedBufferGeometry();
-        edgeGeo.setAttribute("position", new THREE.BufferAttribute(ev, 2));
-        edgeGeo.setIndex(ei);
-        // One set of instance attributes, shared by the ribbon and the pads.
-        const aEA = dyn(eAPos, 2),
-          aEB = dyn(eBPos, 2),
-          aEP2 = dyn(eP2, EDGE_ATTRS.iP2);
-        const aEP0 = stat(eP0, EDGE_ATTRS.iP0),
-          aEP1 = stat(eP1, EDGE_ATTRS.iP1),
-          aEColor = stat(eColor, 3);
-        edgeGeo.setAttribute("iA", aEA);
-        edgeGeo.setAttribute("iB", aEB);
-        edgeGeo.setAttribute("iColor", aEColor);
-        edgeGeo.setAttribute("iP0", aEP0);
-        edgeGeo.setAttribute("iP1", aEP1);
-        edgeGeo.setAttribute("iP2", aEP2);
-        edgeGeo.instanceCount = m;
-        unbounded(edgeGeo);
+        const edgeGeometry = new THREE.InstancedBufferGeometry();
+        edgeGeometry.setAttribute("position", new THREE.BufferAttribute(ribbonVertices, 2));
+        edgeGeometry.setIndex(ribbonIndices);
+        const edgeAAttribute = dynamicAttribute(edgeAPositions, 2),
+          edgeBAttribute = dynamicAttribute(edgeBPositions, 2),
+          edgeParams2Attribute = dynamicAttribute(edgeParams2, EDGE_ATTRS.iP2);
+        const edgeParams0Attribute = staticAttribute(edgeParams0, EDGE_ATTRS.iP0),
+          edgeParams1Attribute = staticAttribute(edgeParams1, EDGE_ATTRS.iP1),
+          edgeColorAttribute = staticAttribute(edgeColors, 3);
+        edgeGeometry.setAttribute("iA", edgeAAttribute);
+        edgeGeometry.setAttribute("iB", edgeBAttribute);
+        edgeGeometry.setAttribute("iColor", edgeColorAttribute);
+        edgeGeometry.setAttribute("iP0", edgeParams0Attribute);
+        edgeGeometry.setAttribute("iP1", edgeParams1Attribute);
+        edgeGeometry.setAttribute("iP2", edgeParams2Attribute);
+        edgeGeometry.instanceCount = edgeCount;
+        unbounded(edgeGeometry);
         const edgeUniforms = (pass: number) => ({
           uPx: { value: 1 },
-          uWidth: { value: opticsCfg.edgeWidth },
+          uWidth: { value: opticsConfig.edgeWidth },
           uTime: { value: 0 },
-          uOpacity: { value: opticsCfg.edgeOpacity },
-          uFlowSpeed: { value: opticsCfg.flowSpeed },
+          uOpacity: { value: opticsConfig.edgeOpacity },
+          uFlowSpeed: { value: opticsConfig.flowSpeed },
           uFocus: { value: 0 },
           uSignal: { value: 1 },
           uPass: { value: pass },
           uReduced: { value: 0 },
         });
-        // Two draws of the same instances, two blend modes. The RESTING layer
-        // composites (premultiplied), so two crossing edges stay as dark as one
-        // instead of summing toward white exactly where the picture is busiest.
-        // The LIVE layer (edges touching the hovered or selected node) stays
-        // additive, so it still blooms like phosphor. `uPass` makes each
-        // program discard the other's instances, which is simpler than keeping
-        // two partitioned instance ranges in step as hover moves.
-        //
-        // DoubleSide: the ribbon's winding flips with the bow's direction, and
-        // a RawShaderMaterial culls back faces by default, so without it a
-        // share of every curved edge set silently disappears.
-        const edgeMat = new THREE.RawShaderMaterial({
+        // Resting edges composite so crossings don't sum to white; live edges stay additive to bloom.
+        // DoubleSide: the ribbon's winding flips with the bow's direction.
+        const edgeMaterial = new THREE.RawShaderMaterial({
           vertexShader: EDGE_VS,
           fragmentShader: EDGE_FS,
           side: THREE.DoubleSide,
@@ -661,11 +543,11 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           blendDst: THREE.OneMinusSrcAlphaFactor,
           uniforms: edgeUniforms(0),
         });
-        const edgeMesh = new THREE.Mesh(edgeGeo, edgeMat);
+        const edgeMesh = new THREE.Mesh(edgeGeometry, edgeMaterial);
         edgeMesh.frustumCulled = false;
         edgeMesh.renderOrder = 0;
         scene.add(edgeMesh);
-        const edgeLiveMat = new THREE.RawShaderMaterial({
+        const edgeLiveMaterial = new THREE.RawShaderMaterial({
           vertexShader: EDGE_VS,
           fragmentShader: EDGE_FS,
           side: THREE.DoubleSide,
@@ -678,17 +560,14 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           blendDst: THREE.OneFactor,
           uniforms: edgeUniforms(1),
         });
-        const edgeLiveMesh = new THREE.Mesh(edgeGeo, edgeLiveMat);
+        const edgeLiveMesh = new THREE.Mesh(edgeGeometry, edgeLiveMaterial);
         edgeLiveMesh.frustumCulled = false;
         edgeLiveMesh.renderOrder = 2;
         scene.add(edgeLiveMesh);
 
-        // Terminal pads: two quads per edge, sharing the ribbon's instance
-        // buffers. A trace lands on a pad and never touches the glyph, and the
-        // pads' shapes carry direction (see PAD_VS).
-        const padGeo = new THREE.InstancedBufferGeometry();
-        const pv = new Float32Array(8 * 3);
-        const pIdx: number[] = [];
+        const padGeometry = new THREE.InstancedBufferGeometry();
+        const padVertices = new Float32Array(8 * 3);
+        const padIndices: number[] = [];
         const corners = [
           [-1, -1],
           [1, -1],
@@ -698,23 +577,23 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
         for (let end = 0; end < 2; end++) {
           const base = end * 4;
           for (let c = 0; c < 4; c++) {
-            pv[(base + c) * 3] = corners[c]![0];
-            pv[(base + c) * 3 + 1] = corners[c]![1];
-            pv[(base + c) * 3 + 2] = end;
+            padVertices[(base + c) * 3] = corners[c]![0];
+            padVertices[(base + c) * 3 + 1] = corners[c]![1];
+            padVertices[(base + c) * 3 + 2] = end;
           }
-          pIdx.push(base, base + 1, base + 2, base + 2, base + 1, base + 3);
+          padIndices.push(base, base + 1, base + 2, base + 2, base + 1, base + 3);
         }
-        padGeo.setAttribute("aPad", new THREE.BufferAttribute(pv, 3));
-        padGeo.setIndex(pIdx);
-        padGeo.setAttribute("iA", aEA);
-        padGeo.setAttribute("iB", aEB);
-        padGeo.setAttribute("iColor", aEColor);
-        padGeo.setAttribute("iP0", aEP0);
-        padGeo.setAttribute("iP1", aEP1);
-        padGeo.setAttribute("iP2", aEP2);
-        padGeo.instanceCount = m;
-        unbounded(padGeo);
-        const padMat = new THREE.RawShaderMaterial({
+        padGeometry.setAttribute("aPad", new THREE.BufferAttribute(padVertices, 3));
+        padGeometry.setIndex(padIndices);
+        padGeometry.setAttribute("iA", edgeAAttribute);
+        padGeometry.setAttribute("iB", edgeBAttribute);
+        padGeometry.setAttribute("iColor", edgeColorAttribute);
+        padGeometry.setAttribute("iP0", edgeParams0Attribute);
+        padGeometry.setAttribute("iP1", edgeParams1Attribute);
+        padGeometry.setAttribute("iP2", edgeParams2Attribute);
+        padGeometry.instanceCount = edgeCount;
+        unbounded(padGeometry);
+        const padMaterial = new THREE.RawShaderMaterial({
           vertexShader: PAD_VS,
           fragmentShader: PAD_FS,
           side: THREE.DoubleSide,
@@ -728,52 +607,50 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           blendDst: THREE.OneMinusSrcAlphaFactor,
           uniforms: {
             uPx: { value: 1 },
-            uWidth: { value: opticsCfg.edgeWidth },
-            uOpacity: { value: opticsCfg.edgeOpacity },
+            uWidth: { value: opticsConfig.edgeWidth },
+            uOpacity: { value: opticsConfig.edgeOpacity },
             uFocus: { value: 0 },
           },
         });
-        const padMesh = new THREE.Mesh(padGeo, padMat);
+        const padMesh = new THREE.Mesh(padGeometry, padMaterial);
         padMesh.frustumCulled = false;
         padMesh.renderOrder = 1;
         scene.add(padMesh); // fade -10 < edges 0 < pads 1 < live edges 2 < nodes 3
 
-        const nodeGeo = new THREE.InstancedBufferGeometry();
-        nodeGeo.setAttribute(
+        const nodeGeometry = new THREE.InstancedBufferGeometry();
+        nodeGeometry.setAttribute(
           "position",
           new THREE.BufferAttribute(new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), 2),
         );
-        nodeGeo.setIndex([0, 1, 2, 2, 1, 3]);
-        // The JS logic keeps its readable per-node arrays; syncNodes() mirrors
-        // them into the packed GPU buffers so only the upload path changed.
-        const nN0 = new Float32Array(n * 4),
-          nN1 = new Float32Array(n * 4);
-        for (let i = 0; i < n; i++) {
-          nN0[i * 4] = nRadius[i]!;
-          nN0[i * 4 + 1] = nShape[i]!;
-          nN0[i * 4 + 2] = nSeed[i]!;
-          nN1[i * 4] = nState[i]!;
+        nodeGeometry.setIndex([0, 1, 2, 2, 1, 3]);
+        const nodeParams0 = new Float32Array(nodeCount * 4),
+          nodeParams1 = new Float32Array(nodeCount * 4);
+        for (let i = 0; i < nodeCount; i++) {
+          nodeParams0[i * 4] = nodeRadii[i]!;
+          nodeParams0[i * 4 + 1] = nodeShapes[i]!;
+          nodeParams0[i * 4 + 2] = nodeSeeds[i]!;
+          nodeParams1[i * 4] = nodeStates[i]!;
         }
-        const aPos = dyn(pos, 2),
-          aN0 = dyn(nN0, 4),
-          aN1 = dyn(nN1, 4);
+        const positionAttribute = dynamicAttribute(positions, 2),
+          nodeParams0Attribute = dynamicAttribute(nodeParams0, 4),
+          nodeParams1Attribute = dynamicAttribute(nodeParams1, 4);
         function syncNodes() {
-          for (let i = 0; i < n; i++) {
-            nN0[i * 4 + 3] = nDepth[i]!;
-            nN1[i * 4 + 1] = nSel[i]!;
-            nN1[i * 4 + 2] = nHide[i]!;
+          for (let i = 0; i < nodeCount; i++) {
+            nodeParams0[i * 4 + 3] = nodeDepths[i]!;
+            nodeParams1[i * 4 + 1] = nodeMarks[i]!;
+            nodeParams1[i * 4 + 2] = nodeHidden[i]!;
           }
-          aN0.needsUpdate = true;
-          aN1.needsUpdate = true;
+          nodeParams0Attribute.needsUpdate = true;
+          nodeParams1Attribute.needsUpdate = true;
         }
         syncNodes();
-        nodeGeo.setAttribute("iPos", aPos);
-        nodeGeo.setAttribute("iColor", stat(nColor, 3));
-        nodeGeo.setAttribute("iN0", aN0);
-        nodeGeo.setAttribute("iN1", aN1);
-        nodeGeo.instanceCount = n;
-        unbounded(nodeGeo);
-        const nodeMat = new THREE.RawShaderMaterial({
+        nodeGeometry.setAttribute("iPos", positionAttribute);
+        nodeGeometry.setAttribute("iColor", staticAttribute(nodeColors, 3));
+        nodeGeometry.setAttribute("iN0", nodeParams0Attribute);
+        nodeGeometry.setAttribute("iN1", nodeParams1Attribute);
+        nodeGeometry.instanceCount = nodeCount;
+        unbounded(nodeGeometry);
+        const nodeMaterial = new THREE.RawShaderMaterial({
           vertexShader: NODE_VS,
           fragmentShader: NODE_FS,
           transparent: true,
@@ -787,61 +664,63 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
             uTime: { value: 0 },
             uPx: { value: 1 },
             uHlStart: { value: -999 },
-            uGlow: { value: opticsCfg.glow },
+            uGlow: { value: opticsConfig.glow },
             uFocus: { value: 0 },
             uReduced: { value: 0 },
           },
         });
-        const nodeMesh = new THREE.Mesh(nodeGeo, nodeMat);
+        const nodeMesh = new THREE.Mesh(nodeGeometry, nodeMaterial);
         nodeMesh.frustumCulled = false;
         nodeMesh.renderOrder = 3;
         scene.add(nodeMesh);
 
-        const vc = new THREE.Color(FALLBACK_BG);
-        const fadeGeo = new THREE.BufferGeometry();
-        fadeGeo.setAttribute(
+        const backgroundColor = new THREE.Color(FALLBACK_BG);
+        const fadeGeometry = new THREE.BufferGeometry();
+        fadeGeometry.setAttribute(
           "position",
           new THREE.BufferAttribute(new Float32Array([-1, -1, 3, -1, -1, 3]), 2),
         );
-        unbounded(fadeGeo);
-        const fadeMat = new THREE.RawShaderMaterial({
+        unbounded(fadeGeometry);
+        const fadeMaterial = new THREE.RawShaderMaterial({
           vertexShader: FADE_VS,
           fragmentShader: FADE_FS,
           transparent: true,
           depthTest: false,
           depthWrite: false,
           uniforms: {
-            uColor: { value: new THREE.Vector3(vc.r, vc.g, vc.b) },
+            uColor: {
+              value: new THREE.Vector3(backgroundColor.r, backgroundColor.g, backgroundColor.b),
+            },
             uAlpha: { value: 1 },
             uReduced: { value: 0 },
           },
         });
-        const fadeMesh = new THREE.Mesh(fadeGeo, fadeMat);
+        const fadeMesh = new THREE.Mesh(fadeGeometry, fadeMaterial);
         fadeMesh.frustumCulled = false;
         fadeMesh.renderOrder = -10;
         scene.add(fadeMesh);
 
-        const rtOpts = {
+        const renderTargetOptions = {
           minFilter: THREE.LinearFilter,
           magFilter: THREE.LinearFilter,
           format: THREE.RGBAFormat,
           depthBuffer: false,
           stencilBuffer: false,
         };
-        const sceneRT = new THREE.WebGLRenderTarget(2, 2, rtOpts);
-        const bloomA = new THREE.WebGLRenderTarget(2, 2, rtOpts);
-        const bloomB = new THREE.WebGLRenderTarget(2, 2, rtOpts);
+        const sceneTarget = new THREE.WebGLRenderTarget(2, 2, renderTargetOptions);
+        const bloomA = new THREE.WebGLRenderTarget(2, 2, renderTargetOptions);
+        const bloomB = new THREE.WebGLRenderTarget(2, 2, renderTargetOptions);
 
-        const fsGeo = new THREE.BufferGeometry();
-        fsGeo.setAttribute(
+        const screenGeometry = new THREE.BufferGeometry();
+        screenGeometry.setAttribute(
           "position",
           new THREE.BufferAttribute(new Float32Array([-1, -1, 3, -1, -1, 3]), 2),
         );
-        fsGeo.setAttribute(
+        screenGeometry.setAttribute(
           "uv",
           new THREE.BufferAttribute(new Float32Array([0, 0, 2, 0, 0, 2]), 2),
         );
-        const blurMat = new THREE.RawShaderMaterial({
+        const blurMaterial = new THREE.RawShaderMaterial({
           vertexShader: POST_VS,
           fragmentShader: BLUR_FS,
           depthTest: false,
@@ -853,7 +732,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
             uThresh: { value: 0.34 },
           },
         });
-        const compMat = new THREE.RawShaderMaterial({
+        const compositeMaterial = new THREE.RawShaderMaterial({
           vertexShader: POST_VS,
           fragmentShader: COMPOSITE_FS,
           depthTest: false,
@@ -863,71 +742,69 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
             uBloom: { value: null },
             uRes: { value: new THREE.Vector2(1, 1) },
             uTime: { value: 0 },
-            uScan: { value: opticsCfg.scan },
-            uAberr: { value: opticsCfg.aberr },
-            uCurve: { value: opticsCfg.curve },
-            uGrain: { value: opticsCfg.grain },
-            uBloomAmt: { value: opticsCfg.bloom },
+            uScan: { value: opticsConfig.scan },
+            uAberr: { value: opticsConfig.aberr },
+            uCurve: { value: opticsConfig.curve },
+            uGrain: { value: opticsConfig.grain },
+            uBloomAmt: { value: opticsConfig.bloom },
             uGlitch: { value: 0 },
             uReduced: { value: 0 },
           },
         });
-        unbounded(fsGeo);
-        const fsQuad = new THREE.Mesh(fsGeo, compMat);
-        fsQuad.frustumCulled = false;
+        unbounded(screenGeometry);
+        const screenQuad = new THREE.Mesh(screenGeometry, compositeMaterial);
+        screenQuad.frustumCulled = false;
         const postScene = new THREE.Scene();
-        postScene.add(fsQuad);
-        const postCam = new THREE.Camera();
-        disposables.push(() => [sceneRT, bloomA, bloomB].forEach((rt) => rt.dispose()));
+        postScene.add(screenQuad);
+        const postCamera = new THREE.Camera();
+        disposables.push(() => [sceneTarget, bloomA, bloomB].forEach((target) => target.dispose()));
         disposables.push(() =>
-          [nodeMat, edgeMat, edgeLiveMat, padMat, fadeMat, blurMat, compMat].forEach((mm) =>
-            mm.dispose(),
+          [
+            nodeMaterial,
+            edgeMaterial,
+            edgeLiveMaterial,
+            padMaterial,
+            fadeMaterial,
+            blurMaterial,
+            compositeMaterial,
+          ].forEach((material) => material.dispose()),
+        );
+        disposables.push(() =>
+          [nodeGeometry, edgeGeometry, padGeometry, fadeGeometry, screenGeometry].forEach(
+            (geometry) => geometry.dispose(),
           ),
         );
-        disposables.push(() =>
-          [nodeGeo, edgeGeo, padGeo, fadeGeo, fsGeo].forEach((g) => g.dispose()),
-        );
 
-        /* --------------------------------------------------------- label pool */
         const POOL = 60;
         const labels: HTMLDivElement[] = [],
           owner = new Int32Array(POOL).fill(-1);
         for (let i = 0; i < POOL; i++) {
-          const el = document.createElement("div");
-          el.style.cssText =
+          const label = document.createElement("div");
+          label.style.cssText =
             "position:absolute;left:0;top:0;pointer-events:none;white-space:nowrap;" +
             `font:600 9.5px/1 ${MONO};letter-spacing:.09em;text-transform:uppercase;` +
             "text-shadow:1px 0 rgba(255,46,99,.4),-1px 0 rgba(23,226,229,.4),0 0 7px rgba(0,0,0,.98);" +
             "transform:translate3d(-9999px,-9999px,0);will-change:transform;opacity:0;transition:opacity .1s";
-          // The pool is a rotating subset of node names driven straight by
-          // layout math, not by anything a screen reader should announce —
-          // aria-hidden keeps this decorative, same as the tooltip below.
-          el.setAttribute("aria-hidden", "true");
-          labelEl.appendChild(el);
-          labels.push(el);
+          label.setAttribute("aria-hidden", "true");
+          labelEl.appendChild(label);
+          labels.push(label);
         }
-        disposables.push(() => labels.forEach((l) => l.remove()));
-        const LAB_H = 11;
+        disposables.push(() => labels.forEach((label) => label.remove()));
+        const LABEL_HEIGHT = 11;
 
-        // Raw text measurement only — the placer owns the per-node width
-        // cache and the padding math (labels.ts).
-        const meas = document.createElement("canvas").getContext("2d")!;
+        const measureContext = document.createElement("canvas").getContext("2d")!;
         const labelPlacer = createLabelPlacer({
           poolSize: POOL,
-          labelHeight: LAB_H,
+          labelHeight: LABEL_HEIGHT,
           measure: (text, font) => {
-            meas.font = font;
-            return meas.measureText(text).width;
+            measureContext.font = font;
+            return measureContext.measureText(text).width;
           },
         });
 
-        // Imperative tooltip. Driving this through React state re-rendered the
-        // whole tree on every pointermove — 60 reconciles a second while hovering.
-        // Its chrome colours (border, secondary text) are hardcoded defaults,
-        // same status as FALLBACK_BG above — this package has no theme system
-        // of its own, only per-category colours the caller already supplies.
-        const tip = document.createElement("div");
-        tip.style.cssText =
+        // Imperative: React state here re-rendered the tree on every pointermove.
+        const tooltip = document.createElement("div");
+        tooltip.style.cssText =
           "position:absolute;left:0;top:0;pointer-events:none;white-space:nowrap;max-width:270px;" +
           "overflow:hidden;text-overflow:ellipsis;background:rgba(8,10,9,.95);border:1px solid #1B2318;" +
           "border-left-width:2px;padding:4px 7px;font:600 9px/1.4 " +
@@ -935,34 +812,28 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           ";letter-spacing:.11em;" +
           "text-transform:uppercase;opacity:0;transition:opacity .1s;" +
           "transform:translate3d(-9999px,-9999px,0);will-change:transform;z-index:5";
-        tip.setAttribute("aria-hidden", "true");
-        labelEl.appendChild(tip);
-        disposables.push(() => tip.remove());
+        tooltip.setAttribute("aria-hidden", "true");
+        labelEl.appendChild(tooltip);
+        disposables.push(() => tooltip.remove());
 
-        let W = 1,
-          H = 1,
-          px = 1;
-        const bufSize = new THREE.Vector2();
-        // Camera ownership and easing live in camera-rig.ts. computeBounds is
-        // a hoisted declaration further down; W and H are kept current by
-        // resize().
+        let viewWidth = 1,
+          viewHeight = 1,
+          pixelSize = 1;
+        const bufferSize = new THREE.Vector2();
         const rig = createCameraRig({
           bounds: (indices) => computeBounds(indices),
-          position: (i) => [pos[i * 2]!, pos[i * 2 + 1]!],
-          viewport: () => ({ width: W, height: H }),
+          position: (i) => [positions[i * 2]!, positions[i * 2 + 1]!],
+          viewport: () => ({ width: viewWidth, height: viewHeight }),
           inset: () => fitInsetRef.current,
         });
-        const viewport: Viewport = { width: 1, height: 1, curve: opticsCfg.curve };
-        // The label placer's view of the scene. Mutated per frame rather than
-        // rebuilt: the typed arrays are the same long-lived buffers the
-        // renderer already writes, and only the camera and focus fields move.
+        const viewport: Viewport = { width: 1, height: 1, curve: opticsConfig.curve };
         const labelView: LabelView = {
-          count: n,
-          pos,
-          hidden: nHide,
-          radii: nRadius,
-          depth: nDepth,
-          tier: nTier,
+          count: nodeCount,
+          pos: positions,
+          hidden: nodeHidden,
+          radii: nodeRadii,
+          depth: nodeDepths,
+          tier: nodeTiers,
           label: (i) => nodes[i]!.label,
           zoom: 1,
           cx: 0,
@@ -973,106 +844,83 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           hoverIdx: -1,
         };
         function resize() {
-          W = mountEl.clientWidth || 1;
-          H = mountEl.clientHeight || 1;
-          viewport.width = W;
-          viewport.height = H;
-          // Re-read rather than trusting the value boot() sampled: devicePixelRatio
-          // changes when the window is dragged to a display with a different
-          // density, or when the page is zoomed, and a ResizeObserver callback is
-          // exactly when that shows up. Sampling once at mount left the canvas
-          // rendering at the old density until something remounted it.
+          viewWidth = mountEl.clientWidth || 1;
+          viewHeight = mountEl.clientHeight || 1;
+          viewport.width = viewWidth;
+          viewport.height = viewHeight;
+          // devicePixelRatio changes with zoom or a move to another display.
           renderer.setPixelRatio(Math.min(window.devicePixelRatio, MAX_DPR));
-          // updateStyle must stay on: with it off three sets canvas.width = W*dpr
-          // but no CSS size, so the element lays out at W*dpr and every DOM
-          // overlay is in a coordinate space half the size of the canvas.
-          renderer.setSize(W, H);
-          camera.left = -W / 2;
-          camera.right = W / 2;
-          camera.top = H / 2;
-          camera.bottom = -H / 2;
+          // updateStyle must stay on, or the canvas lays out at viewWidth*dpr and overlays misalign.
+          renderer.setSize(viewWidth, viewHeight);
+          camera.left = -viewWidth / 2;
+          camera.right = viewWidth / 2;
+          camera.top = viewHeight / 2;
+          camera.bottom = -viewHeight / 2;
           camera.updateProjectionMatrix();
-          renderer.getDrawingBufferSize(bufSize);
-          const bw = Math.max(2, bufSize.x | 0),
-            bh = Math.max(2, bufSize.y | 0);
-          sceneRT.setSize(bw, bh);
-          const sw = Math.max(2, (bw / 3) | 0),
-            sh = Math.max(2, (bh / 3) | 0);
-          bloomA.setSize(sw, sh);
-          bloomB.setSize(sw, sh);
-          compMat.uniforms.uRes!.value.set(bw, bh);
-          blurMat.uniforms.uTexel!.value.set(1 / sw, 1 / sh);
-          renderer.setRenderTarget(sceneRT);
+          renderer.getDrawingBufferSize(bufferSize);
+          const bufferWidth = Math.max(2, bufferSize.x | 0),
+            bufferHeight = Math.max(2, bufferSize.y | 0);
+          sceneTarget.setSize(bufferWidth, bufferHeight);
+          const bloomWidth = Math.max(2, (bufferWidth / 3) | 0),
+            bloomHeight = Math.max(2, (bufferHeight / 3) | 0);
+          bloomA.setSize(bloomWidth, bloomHeight);
+          bloomB.setSize(bloomWidth, bloomHeight);
+          compositeMaterial.uniforms.uRes!.value.set(bufferWidth, bufferHeight);
+          blurMaterial.uniforms.uTexel!.value.set(1 / bloomWidth, 1 / bloomHeight);
+          renderer.setRenderTarget(sceneTarget);
           renderer.clear();
           renderer.setRenderTarget(null);
         }
         resize();
-        const ro = new ResizeObserver(resize);
-        ro.observe(mountEl);
-        disposables.push(() => ro.disconnect());
+        const resizeObserver = new ResizeObserver(resize);
+        resizeObserver.observe(mountEl);
+        disposables.push(() => resizeObserver.disconnect());
         const toWorld = (sx: number, sy: number) => {
           viewport.curve = opticsRef.current.curve;
           return unproject(sx, sy, rig.live.zoom, rig.live.x, rig.live.y, viewport);
         };
 
-        // Every node's connections, ranked as the keyboard reads them. The one
-        // adjacency structure: the neighbourhood walk, the tooltip, selection
-        // framing and getNode() read it too, so "who is connected to whom"
-        // has a single answer.
         const nodeLabels = nodes.map((node) => node.label);
-        // A consumer's ranking sees nodes and edges, not dense indices.
         const userRank = rankConnectionsRef.current;
-        const toPublic = (c: NavConnection) => ({
-          other: nodes[c.other]!,
-          edge: liveEdges[c.edge]!,
-          categoryId: c.categoryId,
-          direction: c.direction,
-          strength: c.strength,
+        const toPublic = (connection: NavConnection) => ({
+          other: nodes[connection.other]!,
+          edge: liveEdges[connection.edge]!,
+          categoryId: connection.categoryId,
+          direction: connection.direction,
+          strength: connection.strength,
         });
         const connections = buildConnections(
-          n,
-          eA,
-          eB,
-          eCategoryId,
+          nodeCount,
+          edgeEndA,
+          edgeEndB,
+          edgeCategoryIds,
           linkCategories,
           userRank
             ? (a, b) => userRank(toPublic(a), toPublic(b))
             : defaultRank(nodeLabels, linkCategoryIds),
         );
-        // Hidden edges (a hidden link category, or a selection-scoped one off
-        // the selection) carry no neighbourhood, as they carry no keyboard
-        // connection: pointer and keyboard readers see the same one.
         const neighbourhoodGraph = {
           inc: connections,
-          eA,
-          eB,
-          hidden: nHide,
-          edgeHidden: (e: number) => eP2[e * 4 + A_HIDE] !== 0,
+          eA: edgeEndA,
+          eB: edgeEndB,
+          hidden: nodeHidden,
+          edgeHidden: (e: number) => edgeParams2[e * 4 + A_HIDE] !== 0,
         };
-        // Scratch for computeNeighbourhood's dense per-edge tier output,
-        // scattered into eP2 by highlight().
-        const eTierBuf = new Float32Array(m);
+        const edgeTiers = new Float32Array(edgeCount);
 
-        let selIdx = -1,
-          hoverIdx = -1,
+        let selectedIndex = -1,
+          hoveredIndex = -1,
           clock = 0,
           glitchUntil = -1,
-          drawnLinks = m,
-          drawnNodes = n,
-          // Bumped by every refilter(), so anything cached on visibility knows to rebuild.
+          drawnLinks = edgeCount,
+          drawnNodes = nodeCount,
           visibilityEpoch = 0;
 
-        const kick = (d: number) => {
-          glitchUntil = clock + d;
+        const kick = (seconds: number) => {
+          glitchUntil = clock + seconds;
         };
 
-        // prefers-reduced-motion. Read once here and tracked live, so flipping
-        // the OS setting while the canvas is up takes effect on the next frame
-        // without a remount. Guarded: jsdom and SSR have no matchMedia, and
-        // Safari before 14 has a MediaQueryList with addListener only. The flag
-        // reaches the GPU as `uReduced` (see shaders.ts for what it gates) and
-        // is mirrored onto the canvas as data-nx-reduced-motion so the state is
-        // observable from outside — the uniforms themselves are not.
+        // Guarded: jsdom and SSR lack matchMedia, Safari < 14 has addListener only.
         const motionQuery =
           typeof window.matchMedia === "function"
             ? window.matchMedia("(prefers-reduced-motion: reduce)")
@@ -1081,56 +929,64 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
         const applyReduced = () => {
           renderer.domElement.dataset.nxReducedMotion = String(reduced);
         };
-        const onMotionChange = (ev: MediaQueryListEvent) => {
-          reduced = ev.matches;
+        const handleMotionChange = (event: MediaQueryListEvent) => {
+          reduced = event.matches;
           applyReduced();
         };
         if (motionQuery) {
           if (typeof motionQuery.addEventListener === "function")
-            motionQuery.addEventListener("change", onMotionChange);
-          else motionQuery.addListener(onMotionChange);
+            motionQuery.addEventListener("change", handleMotionChange);
+          else motionQuery.addListener(handleMotionChange);
         }
         applyReduced();
         disposables.push(() => {
           if (!motionQuery) return;
           if (typeof motionQuery.removeEventListener === "function")
-            motionQuery.removeEventListener("change", onMotionChange);
-          else motionQuery.removeListener(onMotionChange);
+            motionQuery.removeEventListener("change", handleMotionChange);
+          else motionQuery.removeListener(handleMotionChange);
         });
 
-        if (!reduced) kick(0.8); // glitch flourish riding along with the intro pull-back
+        if (!reduced) kick(0.8);
 
         function refilter() {
           const hiddenNode = new Set(hiddenNodeRef.current ?? []);
           const hiddenLink = new Set(hiddenLinkRef.current ?? []);
           const scopedLink = new Set(scopedLinkRef.current ?? []);
-          const isoId = isolateRef.current;
-          const iso = isoId === null || isoId === undefined ? -1 : (idToIndex.get(isoId) ?? -1);
-          const allow = isolationSet(iso, eA, eB);
+          const isolatedId = isolateRef.current;
+          const isolatedIndex =
+            isolatedId === null || isolatedId === undefined
+              ? -1
+              : (idToIndex.get(isolatedId) ?? -1);
+          const allow = isolationSet(isolatedIndex, edgeEndA, edgeEndB);
           let shownNodes = 0;
-          for (let i = 0; i < n; i++) {
-            nHide[i] = hiddenNode.has(nCategoryId[i]!) || (allow !== null && !allow.has(i)) ? 1 : 0;
-            if (!nHide[i]) shownNodes++;
+          for (let i = 0; i < nodeCount; i++) {
+            nodeHidden[i] =
+              hiddenNode.has(nodeCategoryIds[i]!) || (allow !== null && !allow.has(i)) ? 1 : 0;
+            if (!nodeHidden[i]) shownNodes++;
           }
           drawnNodes = shownNodes;
           let shown = 0;
-          for (let e = 0; e < m; e++) {
-            const cat = eCategoryId[e]!;
-            // A selection-scoped category only shows on edges touching the
-            // selected node, and nowhere when nothing is selected.
-            const scopedOut = scopedLink.has(cat) && eA[e] !== selIdx && eB[e] !== selIdx;
-            const vis = !hiddenLink.has(cat) && !scopedOut && !nHide[eA[e]!] && !nHide[eB[e]!];
-            eP2[e * 4 + A_HIDE] = vis ? 0 : 1;
-            if (vis) shown++;
+          for (let e = 0; e < edgeCount; e++) {
+            const categoryId = edgeCategoryIds[e]!;
+            const scopedOut =
+              scopedLink.has(categoryId) &&
+              edgeEndA[e] !== selectedIndex &&
+              edgeEndB[e] !== selectedIndex;
+            const isShown =
+              !hiddenLink.has(categoryId) &&
+              !scopedOut &&
+              !nodeHidden[edgeEndA[e]!] &&
+              !nodeHidden[edgeEndB[e]!];
+            edgeParams2[e * 4 + A_HIDE] = isShown ? 0 : 1;
+            if (isShown) shown++;
           }
           drawnLinks = shown;
           visibilityEpoch++;
           syncNodes();
-          aEP2.needsUpdate = true;
+          edgeParams2Attribute.needsUpdate = true;
         }
         refilter();
 
-        /** Bounds of the visible nodes among `indices` (all nodes when omitted), or null if none are visible. */
         function computeBounds(
           indices?: readonly number[],
         ): [number, number, number, number] | null {
@@ -1138,216 +994,174 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
             y0 = Infinity,
             x1 = -Infinity,
             y1 = -Infinity,
-            any = false;
-          const count = indices ? indices.length : n;
+            hasAny = false;
+          const count = indices ? indices.length : nodeCount;
           for (let k = 0; k < count; k++) {
             const i = indices ? indices[k]! : k;
-            if (nHide[i]) continue;
-            any = true;
-            const x = pos[i * 2]!,
-              y = pos[i * 2 + 1]!;
+            if (nodeHidden[i]) continue;
+            hasAny = true;
+            const x = positions[i * 2]!,
+              y = positions[i * 2 + 1]!;
             if (x < x0) x0 = x;
             if (x > x1) x1 = x;
             if (y < y0) y0 = y;
             if (y > y1) y1 = y;
           }
-          return any ? [x0, y0, x1, y1] : null;
+          return hasAny ? [x0, y0, x1, y1] : null;
         }
-        // Selecting drives the camera (when followSelection is on), but not
-        // for the initial selectedId at boot: that would fight the intro sweep
-        // with a frame computed off the pre-physics scatter.
+        // Off during boot: framing the pre-physics scatter would fight the intro sweep.
         let cameraFollowSelection = false;
 
-        function highlight(idx: number) {
-          computeNeighbourhood(neighbourhoodGraph, idx, nDepth, eTierBuf);
-          // Three tiers reach the edge shader: incident (1), inside the
-          // two-hop neighbourhood (TIER_NEARBY), and everything else (0).
-          for (let e = 0; e < m; e++) eP2[e * 4 + A_TIER] = eTierBuf[e]!;
-          if (idx >= 0) {
-            nodeMat.uniforms.uHlStart!.value = clock;
+        function highlight(index: number) {
+          computeNeighbourhood(neighbourhoodGraph, index, nodeDepths, edgeTiers);
+          for (let e = 0; e < edgeCount; e++) edgeParams2[e * 4 + A_TIER] = edgeTiers[e]!;
+          if (index >= 0) {
+            nodeMaterial.uniforms.uHlStart!.value = clock;
           }
           syncNodes();
-          aEP2.needsUpdate = true;
-          const f = idx >= 0 ? 1 : 0;
-          nodeMat.uniforms.uFocus!.value = f;
-          edgeMat.uniforms.uFocus!.value = f;
-          edgeLiveMat.uniforms.uFocus!.value = f;
-          padMat.uniforms.uFocus!.value = f;
+          edgeParams2Attribute.needsUpdate = true;
+          const focus = index >= 0 ? 1 : 0;
+          nodeMaterial.uniforms.uFocus!.value = focus;
+          edgeMaterial.uniforms.uFocus!.value = focus;
+          edgeLiveMaterial.uniforms.uFocus!.value = focus;
+          padMaterial.uniforms.uFocus!.value = focus;
         }
-        // The hovered node's tooltip, or -1. Escape dismisses it (WCAG 1.4.13)
-        // and it stays dismissed until the pointer moves to another node.
-        let tipIdx = -1,
-          tipSuppressed = -1;
-        const TIP_OUT: [number, number] = [0, 0];
-        function showTip(idx: number) {
-          if (idx < 0 || idx === selIdx || idx === tipSuppressed) {
-            tip.style.opacity = "0";
-            tip.dataset.k = "";
-            tipIdx = -1;
+        let tooltipIndex = -1,
+          suppressedTooltip = -1;
+        const TOOLTIP_OUT: [number, number] = [0, 0];
+        function showTooltip(index: number) {
+          if (index < 0 || index === selectedIndex || index === suppressedTooltip) {
+            tooltip.style.opacity = "0";
+            tooltip.dataset.k = "";
+            tooltipIndex = -1;
             return;
           }
-          tipIdx = idx;
-          const cat = nodeCategories[nCategoryId[idx]!]!;
-          if (tip.dataset.k !== String(idx)) {
-            tip.dataset.k = String(idx);
-            tip.textContent = "";
-            const a = document.createElement("span");
-            a.style.color = cat.color;
-            a.textContent = nodes[idx]!.label;
-            const b = document.createElement("span");
-            // The old #3D4C39 measured 2.17:1 against the tooltip ground — see
-            // GraphCanvas.contrast.test.ts. This tooltip's ground is
-            // rgba(8,10,9,.95) composited over whatever the canvas is drawing
-            // underneath it, so the worst case is a bright node colour behind
-            // a translucent panel, not the flat dark background: over a node
-            // as bright as #9EFF3D this literal measures 4.5184:1, clearing
-            // the 4.5 AA floor. Kept as a hardcoded literal rather than a
-            // token name on purpose — this package has no dependency on the
-            // tokens layer (FALLBACK_BG/FALLBACK_FG above are the same story),
-            // so naming a token here would go stale silently if that token's
-            // value ever moved again.
-            b.style.color = "#6F8465";
-            b.textContent = " · " + cat.code + " · " + degree[idx];
-            tip.appendChild(a);
-            tip.appendChild(b);
-            tip.style.borderLeftColor = cat.color;
+          tooltipIndex = index;
+          const category = nodeCategories[nodeCategoryIds[index]!]!;
+          if (tooltip.dataset.k !== String(index)) {
+            tooltip.dataset.k = String(index);
+            tooltip.textContent = "";
+            const name = document.createElement("span");
+            name.style.color = category.color;
+            name.textContent = nodes[index]!.label;
+            const meta = document.createElement("span");
+            // 4.5:1 over the brightest node colour behind the translucent ground.
+            meta.style.color = "#6F8465";
+            meta.textContent = " · " + category.code + " · " + degree[index];
+            tooltip.appendChild(name);
+            tooltip.appendChild(meta);
+            tooltip.style.borderLeftColor = category.color;
           }
-          // Anchored beside the node, not the pointer, so it never covers the
-          // glyph being read, and on the side fewer of its edges leave from,
-          // so it covers as little of them as it can. Flips when it would run
-          // into the consumer's chrome or off the canvas.
-          const p = project(
-            pos[idx * 2]!,
-            pos[idx * 2 + 1]!,
+          // Beside the node, on the side fewer of its edges leave from.
+          const anchor = project(
+            positions[index * 2]!,
+            positions[index * 2 + 1]!,
             rig.live.zoom,
             rig.live.x,
             rig.live.y,
             viewport,
-            TIP_OUT,
+            TOOLTIP_OUT,
           );
-          const r = glyphRadiusPx(nRadius[idx]!, rig.live.zoom);
-          const w = tip.offsetWidth,
-            h = tip.offsetHeight;
+          const radius = glyphRadiusPx(nodeRadii[index]!, rig.live.zoom);
+          const width = tooltip.offsetWidth,
+            height = tooltip.offsetHeight;
           let toRight = 0,
             toLeft = 0;
-          for (const it of connections[idx]!) {
-            if (pos[it.other * 2]! >= pos[idx * 2]!) toRight++;
+          for (const connection of connections[index]!) {
+            if (positions[connection.other * 2]! >= positions[index * 2]!) toRight++;
             else toLeft++;
           }
-          const ins = fitInsetRef.current;
-          const rightX = p[0] + r + 12,
-            leftX = p[0] - r - 12 - w;
+          const inset = fitInsetRef.current;
+          const rightX = anchor[0] + radius + 12,
+            leftX = anchor[0] - radius - 12 - width;
           let x = toRight <= toLeft ? rightX : leftX;
-          if (x === rightX && x + w > W - ins.right) x = leftX;
-          else if (x === leftX && x < ins.left) x = rightX;
+          if (x === rightX && x + width > viewWidth - inset.right) x = leftX;
+          else if (x === leftX && x < inset.left) x = rightX;
           const y = Math.min(
-            Math.max(p[1] - h / 2, ins.top + 4),
-            Math.max(ins.top + 4, H - ins.bottom - h - 4),
+            Math.max(anchor[1] - height / 2, inset.top + 4),
+            Math.max(inset.top + 4, viewHeight - inset.bottom - height - 4),
           );
-          tip.style.transform = "translate3d(" + (x | 0) + "px," + (y | 0) + "px,0)";
-          tip.style.opacity = "1";
+          tooltip.style.transform = "translate3d(" + (x | 0) + "px," + (y | 0) + "px,0)";
+          tooltip.style.opacity = "1";
         }
 
-        // Node marks for the shader: 1 hovered (or the far end of the
-        // connection being browsed), 2 selected, +4 holding keyboard focus.
+        // Shader marks: 1 hovered or browsed, 2 selected, +4 keyboard focus.
         function marks() {
-          nSel.fill(0);
-          if (hoverIdx >= 0) nSel[hoverIdx] = 1;
-          const c = cursorConnection();
-          if (c) nSel[c.other] = Math.max(nSel[c.other]!, 1);
-          if (selIdx >= 0) nSel[selIdx] = 2;
-          const f = focusedNode();
-          if (f >= 0) nSel[f] = nSel[f]! + 4;
+          nodeMarks.fill(0);
+          if (hoveredIndex >= 0) nodeMarks[hoveredIndex] = 1;
+          const browsed = cursorConnection();
+          if (browsed) nodeMarks[browsed.other] = Math.max(nodeMarks[browsed.other]!, 1);
+          if (selectedIndex >= 0) nodeMarks[selectedIndex] = 2;
+          const focused = focusedNode();
+          if (focused >= 0) nodeMarks[focused] = nodeMarks[focused]! + 4;
           syncNodes();
         }
-        function applySelection(idx: number) {
-          selIdx = idx;
-          // A selection from outside the navigator (a click, or the consumer)
-          // is a move the reader can go back from. Echoes of the navigator's
-          // own select effects arrive here too, and change nothing.
-          if (nav) dispatch({ type: "selected", index: idx });
-          // A selection-scoped category shows or hides edges on the node the
-          // reader may be browsing, so the edge set (and the neighbourhood
-          // walked over it) has to be rebuilt.
+        function applySelection(index: number) {
+          selectedIndex = index;
+          if (navigation) dispatch({ type: "selected", index });
           const scoped = Boolean(scopedLinkRef.current?.length);
           if (scoped) refilterKeepingCursor();
-          if (idx >= 0) kick(0.22);
+          if (index >= 0) kick(0.22);
           refresh(scoped);
-          if (idx >= 0 && idx === hoverIdx) showTip(-1);
+          if (index >= 0 && index === hoveredIndex) showTooltip(-1);
           if (cameraFollowSelection && followSelectionRef.current) {
-            // The selected node plus its direct neighbours — the local
-            // neighbourhood a selection reveals, not the deeper cone
-            // highlight() dims and undims.
-            if (idx >= 0)
+            if (index >= 0)
               rig.frameAround(
-                idx,
-                connections[idx]!.map((it) => it.other),
+                index,
+                connections[index]!.map((connection) => connection.other),
               );
             else rig.release();
           }
         }
         const describe = (i: number): GraphNodeSnapshot => {
-          // Iterates every declared link category in a fixed order (not
-          // discovery order), then drops the empty ones — so the same
-          // category always appears in the same position across different
-          // nodes' adjacency lists, matching the original's `LINK_KEYS.map()`.
+          // Declared category order, so a category sits in the same place for every node.
           const groups = linkCategoryIds
             .map((categoryId) => ({
               categoryId,
-              // From the ranked connections, re-sorted by label, then edge
-              // order with the `a` end first: the order rows had when they
-              // were built straight from the edge list. A self-loop is one
-              // connection but, as before, a row from each end.
-              rows: connections[i]!.filter((c) => c.categoryId === categoryId)
-                .flatMap((c) =>
-                  c.other === i
+              // A self-loop is one connection but a row from each end.
+              rows: connections[i]!.filter((connection) => connection.categoryId === categoryId)
+                .flatMap((connection) =>
+                  connection.other === i
                     ? [
-                        { c, out: true },
-                        { c, out: false },
+                        { connection, out: true },
+                        { connection, out: false },
                       ]
-                    : [{ c, out: c.out }],
+                    : [{ connection, out: connection.out }],
                 )
                 .sort(
-                  (x, y) =>
-                    nodeLabels[x.c.other]!.localeCompare(nodeLabels[y.c.other]!) ||
-                    x.c.edge - y.c.edge ||
-                    Number(y.out) - Number(x.out),
+                  (first, second) =>
+                    nodeLabels[first.connection.other]!.localeCompare(
+                      nodeLabels[second.connection.other]!,
+                    ) ||
+                    first.connection.edge - second.connection.edge ||
+                    Number(second.out) - Number(first.out),
                 )
-                .map(({ c, out }) => ({
-                  id: nodes[c.other]!.id,
-                  label: nodes[c.other]!.label,
-                  categoryId: nCategoryId[c.other]!,
+                .map(({ connection, out }) => ({
+                  id: nodes[connection.other]!.id,
+                  label: nodes[connection.other]!.label,
+                  categoryId: nodeCategoryIds[connection.other]!,
                   out,
                 })),
             }))
-            .filter((g) => g.rows.length > 0);
+            .filter((group) => group.rows.length > 0);
           return {
             id: nodes[i]!.id,
-            categoryId: nCategoryId[i]!,
+            categoryId: nodeCategoryIds[i]!,
             label: nodes[i]!.label,
             hex: hex4(i),
-            state: STATE_LABEL[nState[i]!]!,
+            state: STATE_LABEL[nodeStates[i]!]!,
             degree: degree[i]!,
             groups,
-            // Passed through by reference, never read or copied: the consumer
-            // gets back the exact object it put on the node.
             data: nodes[i]!.data,
           };
         };
 
-        /* ------------------------------------------------- navigation core
-         The keyboard/screen-reader model (a11y/navigator.ts) runs here from
-         the start, because its history also backs controller.back() for
-         mouse readers. The DOM it speaks through arrives with the focus
-         layer (phase 7); until then its announcements go nowhere.          */
-        const categoryLabel = (i: number) => nodeCategories[nCategoryId[i]!]!.label;
-        const isVisible = (i: number) => i >= 0 && i < n && nHide[i] === 0;
-        const isEdgeVisible = (e: number) => eP2[e * 4 + A_HIDE] === 0;
-        // The node a reader lands on when there's nowhere better: the most
-        // connected visible node, ties broken by label.
+        const categoryLabel = (i: number) => nodeCategories[nodeCategoryIds[i]!]!.label;
+        const isVisible = (i: number) => i >= 0 && i < nodeCount && nodeHidden[i] === 0;
+        const isEdgeVisible = (e: number) => edgeParams2[e * 4 + A_HIDE] === 0;
         const fallback = () => {
           let best = -1;
-          for (let i = 0; i < n; i++) {
+          for (let i = 0; i < nodeCount; i++) {
             if (!isVisible(i)) continue;
             if (
               best < 0 ||
@@ -1358,16 +1172,15 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           }
           return best;
         };
-        // What the reader can reach from `i`: the count spoken on landing has
-        // to match the list browsing it reads ("1 of 2"), not the graph's.
+        // The count spoken on landing must match the list browsing reads.
         const reachable = (i: number) =>
           visibleConnections(connections[i]!, isVisible, isEdgeVisible, "all");
-        const describeCtx = (i: number, selected: boolean) => ({
+        const describeContext = (i: number, selected: boolean) => ({
           categoryLabel: categoryLabel(i),
           connections: reachable(i).length,
           selected,
         });
-        const navContext: NavContext = {
+        const navigationContext: NavContext = {
           connections: (i, filter) =>
             visibleConnections(connections[i]!, isVisible, isEdgeVisible, filter),
           allConnections: (i) => connections[i]!,
@@ -1376,537 +1189,532 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           text: {
             summary: () => {
               let shownNodes = 0;
-              for (let i = 0; i < n; i++) if (isVisible(i)) shownNodes++;
+              for (let i = 0; i < nodeCount; i++) if (isVisible(i)) shownNodes++;
               const kinds = new Set<string>();
-              for (let e = 0; e < m; e++) if (isEdgeVisible(e)) kinds.add(eCategoryId[e]!);
+              for (let e = 0; e < edgeCount; e++)
+                if (isEdgeVisible(e)) kinds.add(edgeCategoryIds[e]!);
               return summaryText(shownNodes, drawnLinks, kinds.size);
             },
             node: (i, selected) =>
               describeNodeRef.current
-                ? describeNodeRef.current(nodes[i]!, describeCtx(i, selected))
-                : defaultNodeText(nodeLabels[i]!, describeCtx(i, selected)),
-            connection: (_i, c, position, of) =>
+                ? describeNodeRef.current(nodes[i]!, describeContext(i, selected))
+                : defaultNodeText(nodeLabels[i]!, describeContext(i, selected)),
+            connection: (_i, connection, position, of) =>
               connectionText(
-                linkCategories[c.categoryId]!,
-                c,
-                nodeLabels[c.other]!,
-                categoryLabel(c.other),
+                linkCategories[connection.categoryId]!,
+                connection,
+                nodeLabels[connection.other]!,
+                categoryLabel(connection.other),
                 position,
                 of,
               ),
             filter: filterText,
             detail: (i, selected) => {
               const counts = new Map<string, number>();
-              for (const c of reachable(i)) {
-                const rel = relationText(linkCategories[c.categoryId]!, c.direction);
-                counts.set(rel, (counts.get(rel) ?? 0) + 1);
+              for (const connection of reachable(i)) {
+                const relation = relationText(
+                  linkCategories[connection.categoryId]!,
+                  connection.direction,
+                );
+                counts.set(relation, (counts.get(relation) ?? 0) + 1);
               }
-              return detailText(nodeLabels[i]!, describeCtx(i, selected), [...counts]);
+              return detailText(nodeLabels[i]!, describeContext(i, selected), [...counts]);
             },
             help: HELP_TEXT,
           },
         };
-        let nav: NavState | null = null;
+        let navigation: NavState | null = null;
         let overlay: NavOverlay | null = null;
 
-        /** The node holding keyboard focus, or -1 while focus is elsewhere. */
         function focusedNode(): number {
-          return overlay?.focused && nav?.entered ? nav.current : -1;
+          return overlay?.focused && navigation?.entered ? navigation.current : -1;
         }
-        /** The connection under the browse cursor, while browsing with focus inside. */
         function cursorConnection(): NavConnection | undefined {
-          if (!nav || focusedNode() < 0 || nav.cursor < 0) return undefined;
-          return navContext.connections(nav.current, nav.filter)[nav.cursor];
+          if (!navigation || focusedNode() < 0 || navigation.cursor < 0) return undefined;
+          return navigationContext.connections(navigation.current, navigation.filter)[
+            navigation.cursor
+          ];
         }
-        /**
-         * Redraws whatever depends on attention. The neighbourhood follows
-         * keyboard focus first, then the selection, then the pointer: the
-         * reader's attention is wherever they are actively working. While
-         * browsing, the connection Enter would follow stays incident-bright
-         * and the node's other edges step down a tier, so it stands out
-         * without anything changing width.
-         */
-        let hlTarget = -2,
-          hlCursorEdge = -1;
-        // What the focus target's name was last built from. The name depends
-        // on the node, its selection, what is visible and the consumer's
-        // describeNode, never on the pointer: rebuilding it on every hover
-        // change called describeNode for nothing.
+        // Attention follows keyboard focus, then the selection, then the pointer.
+        let highlightTarget = -2,
+          highlightCursorEdge = -1;
+        // The focus target's name never depends on the pointer, so hover doesn't rebuild it.
         let labelKey = "",
-          labelFn: typeof describeNodeRef.current | null = null;
+          labelDescriber: typeof describeNodeRef.current | null = null;
         function refresh(force = false) {
-          const f = focusedNode();
-          const target = f >= 0 ? f : selIdx >= 0 ? selIdx : hoverIdx;
-          const c = f >= 0 ? cursorConnection() : undefined;
-          const cursorEdge = c ? c.edge : -1;
-          // Only re-walk the neighbourhood when what it's centred on changes:
-          // highlight() restarts the node ripple, and re-running it on every
-          // hover over a selected graph would replay the selection's ripple.
-          if (force || target !== hlTarget || cursorEdge !== hlCursorEdge) {
+          const focused = focusedNode();
+          const target = focused >= 0 ? focused : selectedIndex >= 0 ? selectedIndex : hoveredIndex;
+          const browsed = focused >= 0 ? cursorConnection() : undefined;
+          const cursorEdge = browsed ? browsed.edge : -1;
+          // highlight() restarts the ripple, so only when its centre changes.
+          if (force || target !== highlightTarget || cursorEdge !== highlightCursorEdge) {
             highlight(target);
-            if (c) {
-              for (const it of connections[f]!)
-                eP2[it.edge * 4 + A_TIER] = it.edge === c.edge ? 1 : TIER_NEARBY;
-              aEP2.needsUpdate = true;
+            if (browsed) {
+              for (const connection of connections[focused]!)
+                edgeParams2[connection.edge * 4 + A_TIER] =
+                  connection.edge === browsed.edge ? 1 : TIER_NEARBY;
+              edgeParams2Attribute.needsUpdate = true;
             }
-            hlTarget = target;
-            hlCursorEdge = cursorEdge;
+            highlightTarget = target;
+            highlightCursorEdge = cursorEdge;
           }
           marks();
-          if (overlay && nav) {
-            const sel = nav.current >= 0 && nav.selected === nav.current;
-            const key = `${nav.current}|${sel}|${visibilityEpoch}`;
-            if (key !== labelKey || describeNodeRef.current !== labelFn) {
+          if (overlay && navigation) {
+            const isSelected =
+              navigation.current >= 0 && navigation.selected === navigation.current;
+            const key = `${navigation.current}|${isSelected}|${visibilityEpoch}`;
+            if (key !== labelKey || describeNodeRef.current !== labelDescriber) {
               labelKey = key;
-              labelFn = describeNodeRef.current;
-              // With no node to stand on (an empty graph, or everything
-              // filtered out), the focus target is named for the graph instead.
+              labelDescriber = describeNodeRef.current;
               overlay.setNode(
-                nav.current >= 0
-                  ? navContext.text.node(nav.current, sel)
-                  : navContext.text.summary(),
-                sel,
+                navigation.current >= 0
+                  ? navigationContext.text.node(navigation.current, isSelected)
+                  : navigationContext.text.summary(),
+                isSelected,
               );
             }
             overlay.setHints(overlay.focused && keyHintsRef.current, fitInsetRef.current);
           }
         }
-        /** `via` is what onSelect reports for any selection this step makes. */
         function dispatch(action: NavAction, via: SelectSource = "keyboard") {
-          if (!nav) return;
-          const [next, fx] = navigate(nav, action, navContext);
-          nav = next;
-          // "Moved to …" after a filter change is only news to a reader who
-          // is in the graph; spoken while they work elsewhere, it is noise.
-          if (fx.announce && (action.type !== "visibility" || overlay?.focused))
-            overlay?.announce(fx.announce);
-          if (fx.select !== undefined) {
-            onSelectRef.current?.(fx.select >= 0 ? describe(fx.select) : null, via);
+          if (!navigation) return;
+          const [next, effects] = navigate(navigation, action, navigationContext);
+          navigation = next;
+          // A filter change is only news to a reader inside the graph.
+          if (effects.announce && (action.type !== "visibility" || overlay?.focused))
+            overlay?.announce(effects.announce);
+          if (effects.select !== undefined) {
+            onSelectRef.current?.(effects.select >= 0 ? describe(effects.select) : null, via);
           }
-          if (fx.leave && rootEl) {
-            // Out to the graph as a whole. The focus target is the root's own
-            // first tabbable child, so it leaves the tab order until focus
-            // moves on; otherwise the next Tab would land straight back in.
+          if (effects.leave && rootEl) {
+            // Untabbable until focus moves on, or the next Tab lands straight back in.
             overlay?.setTabbable(false);
             overlay?.blur();
             rootEl.focus({ preventScroll: true });
-          } else if (fx.leave) overlay?.blur();
-          // Keyboard travel keeps the node in view; a click or the consumer
-          // moving the selection is the selection camera's business.
-          if (fx.moved && overlay?.focused && nav.current >= 0) rig.reveal(nav.current);
+          } else if (effects.leave) overlay?.blur();
+          if (effects.moved && overlay?.focused && navigation.current >= 0)
+            rig.reveal(navigation.current);
           if (action.type !== "selected" && action.type !== "visibility")
             onNavigateRef.current?.({
               action: action.type,
-              node: nav.entered && nav.current >= 0 ? describe(nav.current) : null,
-              announcement: fx.announce ?? "",
+              node:
+                navigation.entered && navigation.current >= 0 ? describe(navigation.current) : null,
+              announcement: effects.announce ?? "",
             });
           refresh();
         }
-        // Escape steps out in stages: drop the selection, then the tooltip,
-        // then leave the graph.
-        function onEscape() {
-          if (nav && nav.selected >= 0) return dispatch({ type: "escape" });
-          if (tipIdx >= 0) {
-            tipSuppressed = tipIdx;
-            showTip(-1);
+        function handleEscape() {
+          if (navigation && navigation.selected >= 0) return dispatch({ type: "escape" });
+          if (tooltipIndex >= 0) {
+            suppressedTooltip = tooltipIndex;
+            showTooltip(-1);
             return;
           }
           dispatch({ type: "escape" });
         }
-        if (navEl) {
+        if (navigationEl) {
           overlay = createNavOverlay({
-            container: navEl,
+            container: navigationEl,
             onAction: dispatch,
-            onEscape,
+            onEscape: handleEscape,
             onFocusChange: (focused) => {
-              if (focused && nav && !nav.entered) dispatch({ type: "enter" });
+              if (focused && navigation && !navigation.entered) dispatch({ type: "enter" });
               else refresh();
             },
           });
-          const o = overlay;
-          disposables.push(() => o.dispose());
+          const navOverlay = overlay;
+          disposables.push(() => navOverlay.dispose());
           if (rootEl) {
-            const onRootBlur = () => o.setTabbable(true);
-            rootEl.addEventListener("blur", onRootBlur);
-            disposables.push(() => rootEl.removeEventListener("blur", onRootBlur));
+            const handleRootBlur = () => navOverlay.setTabbable(true);
+            rootEl.addEventListener("blur", handleRootBlur);
+            disposables.push(() => rootEl.removeEventListener("blur", handleRootBlur));
           }
         }
-        // For a pointer reader too: Escape dismisses a hover tooltip without
-        // having to move the pointer off the node (WCAG 1.4.13).
-        const onWindowKey = (ev: KeyboardEvent) => {
-          if (ev.key !== "Escape" || tipIdx < 0 || overlay?.focused) return;
-          tipSuppressed = tipIdx;
-          showTip(-1);
-          // Handled: a page-level Escape ("close everything") can tell that
-          // this one only dismissed the tooltip, and leave the rest alone.
-          ev.preventDefault();
+        const handleWindowKey = (event: KeyboardEvent) => {
+          if (event.key !== "Escape" || tooltipIndex < 0 || overlay?.focused) return;
+          suppressedTooltip = tooltipIndex;
+          showTooltip(-1);
+          // Lets a page-level Escape see that only the tooltip closed.
+          event.preventDefault();
         };
-        window.addEventListener("keydown", onWindowKey);
-        disposables.push(() => window.removeEventListener("keydown", onWindowKey));
-        api.current.focusNode = (i) => {
-          if (!overlay || !nav) return;
-          dispatch({ type: "focusNode", index: i });
+        window.addEventListener("keydown", handleWindowKey);
+        disposables.push(() => window.removeEventListener("keydown", handleWindowKey));
+        api.current.focusNode = (index) => {
+          if (!overlay || !navigation) return;
+          dispatch({ type: "focusNode", index });
           overlay.focus();
-          if (nav.current >= 0) rig.reveal(nav.current);
+          if (navigation.current >= 0) rig.reveal(navigation.current);
         };
         api.current.back = () => dispatch({ type: "back" }, "controller");
-        // Matches what back() does: steps to places since hidden don't count.
-        api.current.canGoBack = () => (nav ? lastVisible(nav.history, navContext) >= 0 : false);
-        /** refilter(), then tell the navigator, keeping its cursor on the same edge. */
+        api.current.canGoBack = () =>
+          navigation ? lastVisible(navigation.history, navigationContext) >= 0 : false;
         function refilterKeepingCursor() {
-          // Read from the navigator, not cursorConnection(): the cursor
-          // outlives a Tab out of the graph, and so should its edge.
+          // Not cursorConnection(): the cursor outlives a Tab out of the graph.
           const edge =
-            nav && nav.cursor >= 0
-              ? navContext.connections(nav.current, nav.filter)[nav.cursor]?.edge
+            navigation && navigation.cursor >= 0
+              ? navigationContext.connections(navigation.current, navigation.filter)[
+                  navigation.cursor
+                ]?.edge
               : undefined;
           refilter();
           dispatch(edge === undefined ? { type: "visibility" } : { type: "visibility", edge });
         }
 
-        api.current.params = (p) => sim.setParams(p);
+        api.current.params = (physics) => simulation.setParams(physics);
         api.current.refilterInternal = () => {
           refilterKeepingCursor();
           refresh(true);
           kick(0.14);
         };
-        api.current.applySelectionInternal = (i) => applySelection(i);
-        api.current.reheat = (v) => {
-          sim.reheat(v);
+        api.current.applySelectionInternal = (index) => applySelection(index);
+        api.current.reheat = (energy) => {
+          simulation.reheat(energy);
           kick(0.3);
         };
-        // A fresh arrangement of the same graph, without rebuilding the scene.
-        // It scrambles the layout as much as a mount does, so the camera goes
-        // back to tracking it. The intro sweep only replays if the camera never
-        // left the auto-fit: a reader who has panned or zoomed gets a re-fit in
-        // place, not a full-screen zoom they didn't ask for.
         api.current.reseed = () => {
-          sim.reseed();
-          aPos.needsUpdate = true;
+          simulation.reseed();
+          positionAttribute.needsUpdate = true;
           dirty = true;
           rig.reseed(reduced);
           kick(0.3);
         };
-        api.current.getNodeByIndex = (i) => (i >= 0 && i < n ? describe(i) : null);
+        api.current.getNodeByIndex = (index) =>
+          index >= 0 && index < nodeCount ? describe(index) : null;
         api.current.fit = () => rig.fit();
         api.current.reframe = () => rig.reframe();
-        api.current.focus = (i) => {
-          if (i >= 0 && i < n) rig.focus(i);
+        api.current.focus = (index) => {
+          if (index >= 0 && index < nodeCount) rig.focus(index);
         };
-        // hiddenNodeCategories/hiddenLinkCategories/isolateId are already
-        // reflected by the unconditional refilter() call above (the refs it
-        // reads are kept current every render, including the first). Initial
-        // selectedId still needs applying explicitly: unlike the original,
-        // where `selected` always started null in the same component,
-        // selectedId is a prop a consumer can pass non-null from first mount.
         applySelection(
           selectedId === null || selectedId === undefined ? -1 : (idToIndex.get(selectedId) ?? -1),
         );
         cameraFollowSelection = true;
-        // Started after the initial selection, so a selection the consumer
-        // mounts with is where the reader begins, not a move to go back from.
-        nav = { ...initialNavState(selIdx >= 0 ? selIdx : fallback()), selected: selIdx };
-        // Name the focus target now, not on the first interaction: an unnamed
-        // button is the first thing a screen reader would meet tabbing in.
+        // After the initial selection, so it isn't a step back() can undo.
+        navigation = {
+          ...initialNavState(selectedIndex >= 0 ? selectedIndex : fallback()),
+          selected: selectedIndex,
+        };
         refresh(true);
 
-        // Seed the camera on the measured bounds of the (still spiral-seeded)
-        // layout, then let the auto-fit track them as physics spreads it out.
-        // The sweep starts zoomed in and eases out to that frame; under reduced
-        // motion the camera simply starts there.
         rig.intro(reduced);
 
-        /* A press only becomes a gesture once the pointer travels DRAG_SLOP_PX.
-         Until then it is a click: it selects (or clears), and nothing else
-         happens. Pinning a node on pointerdown used to reheat the whole
-         layout on every click, shuffling the picture a reader was trying to
-         learn, and a press on empty space used to take the camera off the
-         auto-fit before anyone had panned anything.                          */
         const DRAG_SLOP_PX = 3;
-        let drag = -1,
+        let draggedIndex = -1,
           panning = false,
           moved = false,
-          pressIdx = -1,
+          pressedIndex = -1,
           pressed = false,
           pressX = 0,
           pressY = 0,
-          lastP = { x: 0, y: 0 };
+          lastPointer = { x: 0, y: 0 };
         const el = renderer.domElement;
-        const onMove = (ev: PointerEvent) => {
-          const rc = el.getBoundingClientRect();
-          const sx = ev.clientX - rc.left,
-            sy = ev.clientY - rc.top,
-            w = toWorld(sx, sy);
-          sim.cursor(w.x, w.y, true);
-          if (pressed && drag < 0 && !panning) {
+        const handlePointerMove = (event: PointerEvent) => {
+          const rect = el.getBoundingClientRect();
+          const sx = event.clientX - rect.left,
+            sy = event.clientY - rect.top,
+            world = toWorld(sx, sy);
+          simulation.cursor(world.x, world.y, true);
+          if (pressed && draggedIndex < 0 && !panning) {
             if (Math.hypot(sx - pressX, sy - pressY) > DRAG_SLOP_PX) {
-              if (pressIdx >= 0) {
-                drag = pressIdx;
+              if (pressedIndex >= 0) {
+                draggedIndex = pressedIndex;
               } else {
-                // Only panning moves the view. A node drag doesn't, and ending
-                // the auto-fit on one would freeze the intro's tracking while
-                // the rest of the unsettled layout keeps rearranging around it.
+                // Only panning ends the auto-fit; a node drag would freeze the intro's tracking.
                 rig.takeOver();
                 panning = true;
-                lastP = { x: pressX, y: pressY };
+                lastPointer = { x: pressX, y: pressY };
               }
             }
           }
-          if (drag >= 0) {
-            sim.pin(drag, w.x, w.y);
+          if (draggedIndex >= 0) {
+            simulation.pin(draggedIndex, world.x, world.y);
             moved = true;
             return;
           }
           if (panning) {
-            rig.panBy(-(sx - lastP.x) / rig.live.zoom, (sy - lastP.y) / rig.live.zoom);
-            lastP = { x: sx, y: sy };
+            rig.panBy(-(sx - lastPointer.x) / rig.live.zoom, (sy - lastPointer.y) / rig.live.zoom);
+            lastPointer = { x: sx, y: sy };
             moved = true;
             return;
           }
-          const idx = pickNode(w.x, w.y, n, pos, nRadius, nHide, rig.live.zoom);
-          if (idx !== hoverIdx) {
-            hoverIdx = idx;
-            tipSuppressed = -1;
+          const index = pickNode(
+            world.x,
+            world.y,
+            nodeCount,
+            positions,
+            nodeRadii,
+            nodeHidden,
+            rig.live.zoom,
+          );
+          if (index !== hoveredIndex) {
+            hoveredIndex = index;
+            suppressedTooltip = -1;
             refresh();
-            el.style.cursor = idx >= 0 ? "crosshair" : "grab";
+            el.style.cursor = index >= 0 ? "crosshair" : "grab";
           }
-          showTip(idx);
+          showTooltip(index);
         };
-        const onDown = (ev: PointerEvent) => {
-          // A click puts focus on the root without leaving it, so the root's
-          // blur won't come; Tab from here should go into the graph again.
+        const handlePointerDown = (event: PointerEvent) => {
+          // A click focuses the root without a blur, so restore the Tab path here.
           overlay?.setTabbable(true);
           try {
-            el.setPointerCapture(ev.pointerId);
+            el.setPointerCapture(event.pointerId);
           } catch {
-            /* noop */
+            // The pointer can already be gone.
           }
-          const rc = el.getBoundingClientRect();
-          const w = toWorld(ev.clientX - rc.left, ev.clientY - rc.top);
+          const rect = el.getBoundingClientRect();
+          const world = toWorld(event.clientX - rect.left, event.clientY - rect.top);
           moved = false;
           pressed = true;
-          pressIdx = pickNode(w.x, w.y, n, pos, nRadius, nHide, rig.live.zoom);
-          pressX = ev.clientX - rc.left;
-          pressY = ev.clientY - rc.top;
+          pressedIndex = pickNode(
+            world.x,
+            world.y,
+            nodeCount,
+            positions,
+            nodeRadii,
+            nodeHidden,
+            rig.live.zoom,
+          );
+          pressX = event.clientX - rect.left;
+          pressY = event.clientY - rect.top;
           el.style.cursor = "grabbing";
         };
-        const onUp = () => {
-          if (drag >= 0) sim.pin(-1, 0, 0);
-          drag = -1;
+        const handlePointerUp = () => {
+          if (draggedIndex >= 0) simulation.pin(-1, 0, 0);
+          draggedIndex = -1;
           panning = false;
           pressed = false;
-          el.style.cursor = hoverIdx >= 0 ? "crosshair" : "grab";
+          el.style.cursor = hoveredIndex >= 0 ? "crosshair" : "grab";
         };
-        const onClick = (ev: MouseEvent) => {
+        const handleClick = (event: MouseEvent) => {
           if (moved) return;
-          const rc = el.getBoundingClientRect();
-          const w = toWorld(ev.clientX - rc.left, ev.clientY - rc.top);
-          const idx = pickNode(w.x, w.y, n, pos, nRadius, nHide, rig.live.zoom);
-          const next = idx >= 0 && idx !== selIdx ? idx : -1;
+          const rect = el.getBoundingClientRect();
+          const world = toWorld(event.clientX - rect.left, event.clientY - rect.top);
+          const index = pickNode(
+            world.x,
+            world.y,
+            nodeCount,
+            positions,
+            nodeRadii,
+            nodeHidden,
+            rig.live.zoom,
+          );
+          const next = index >= 0 && index !== selectedIndex ? index : -1;
           onSelectRef.current?.(next >= 0 ? describe(next) : null, "pointer");
         };
-        const onWheel = (ev: WheelEvent) => {
-          ev.preventDefault();
+        const handleWheel = (event: WheelEvent) => {
+          event.preventDefault();
           rig.takeOver();
-          const camT = rig.target;
-          const rc = el.getBoundingClientRect();
-          const sx = ev.clientX - rc.left,
-            sy = ev.clientY - rc.top;
-          // Anchor against the TARGET camera, not the smoothed one. Solving
-          // against a lagging camera makes fast scrolls compound their error.
+          const targetCamera = rig.target;
+          const rect = el.getBoundingClientRect();
+          const sx = event.clientX - rect.left,
+            sy = event.clientY - rect.top;
+          // Anchor on the target camera: the smoothed one lags and compounds fast scrolls.
           viewport.curve = opticsRef.current.curve;
-          const b = unproject(sx, sy, camT.zoom, camT.x, camT.y, viewport);
-          camT.zoom = Math.min(
-            ZOOM_MAX,
-            Math.max(ZOOM_MIN, camT.zoom * Math.exp(-ev.deltaY * 0.0015)),
+          const before = unproject(
+            sx,
+            sy,
+            targetCamera.zoom,
+            targetCamera.x,
+            targetCamera.y,
+            viewport,
           );
-          const a = unproject(sx, sy, camT.zoom, camT.x, camT.y, viewport);
-          camT.x += b.x - a.x;
-          camT.y += b.y - a.y;
+          targetCamera.zoom = Math.min(
+            ZOOM_MAX,
+            Math.max(ZOOM_MIN, targetCamera.zoom * Math.exp(-event.deltaY * 0.0015)),
+          );
+          const after = unproject(
+            sx,
+            sy,
+            targetCamera.zoom,
+            targetCamera.x,
+            targetCamera.y,
+            viewport,
+          );
+          targetCamera.x += before.x - after.x;
+          targetCamera.y += before.y - after.y;
         };
-        const onLeave = () => {
-          sim.cursor(0, 0, false);
-          hoverIdx = -1;
-          tipSuppressed = -1;
+        const handlePointerLeave = () => {
+          simulation.cursor(0, 0, false);
+          hoveredIndex = -1;
+          suppressedTooltip = -1;
           refresh();
-          showTip(-1);
+          showTooltip(-1);
         };
-        el.addEventListener("pointermove", onMove);
-        el.addEventListener("pointerdown", onDown);
-        window.addEventListener("pointerup", onUp);
-        el.addEventListener("click", onClick);
-        el.addEventListener("pointerleave", onLeave);
-        el.addEventListener("wheel", onWheel, { passive: false });
+        el.addEventListener("pointermove", handlePointerMove);
+        el.addEventListener("pointerdown", handlePointerDown);
+        window.addEventListener("pointerup", handlePointerUp);
+        el.addEventListener("click", handleClick);
+        el.addEventListener("pointerleave", handlePointerLeave);
+        el.addEventListener("wheel", handleWheel, { passive: false });
         el.style.cursor = "grab";
         disposables.push(() => {
-          el.removeEventListener("pointermove", onMove);
-          el.removeEventListener("pointerdown", onDown);
-          window.removeEventListener("pointerup", onUp);
-          el.removeEventListener("click", onClick);
-          el.removeEventListener("pointerleave", onLeave);
-          el.removeEventListener("wheel", onWheel);
+          el.removeEventListener("pointermove", handlePointerMove);
+          el.removeEventListener("pointerdown", handlePointerDown);
+          window.removeEventListener("pointerup", handlePointerUp);
+          el.removeEventListener("click", handleClick);
+          el.removeEventListener("pointerleave", handlePointerLeave);
+          el.removeEventListener("wheel", handleWheel);
         });
 
-        let raf = 0,
+        let frameRequest = 0,
           last = performance.now(),
-          accum = 0,
+          accumulator = 0,
           dirty = true;
-        let fA = 0,
-          fN = 0,
-          fT = 0;
+        let fpsSum = 0,
+          fpsFrames = 0,
+          fpsElapsed = 0;
 
-        const screenPos = new Map<number, PlacedLabel>();
-        // Handed to onFrame every frame and mutated in place, like the arrays
-        // inside it: the frame loop allocates nothing for a consumer to collect.
+        const screenPositions = new Map<number, PlacedLabel>();
         const frameGeometry: FrameGeometry = {
           ids: denseIds,
-          positions: pos,
-          hidden: nHide,
-          radii: nRadius,
+          positions,
+          hidden: nodeHidden,
+          radii: nodeRadii,
           camera: { x: 0, y: 0, zoom: 1 },
           viewport,
         };
         const FOCUS_OUT: [number, number] = [0, 0];
 
         function frame(now: number) {
-          raf = requestAnimationFrame(frame);
+          frameRequest = requestAnimationFrame(frame);
           const dt = Math.min(0.05, (now - last) / 1000);
           last = now;
           clock += dt;
-          const t0 = performance.now();
-          const c = opticsRef.current;
-          viewport.curve = c.curve;
+          const frameStart = performance.now();
+          const optics = opticsRef.current;
+          viewport.curve = optics.curve;
 
           let didStep = false;
-          if (runRef.current || drag >= 0) {
-            accum += dt;
-            let s = 0;
-            while (accum >= 1 / 60 && s < 3) {
-              if (sim.step()) didStep = true;
-              accum -= 1 / 60;
-              s++;
+          if (runRef.current || draggedIndex >= 0) {
+            accumulator += dt;
+            let steps = 0;
+            while (accumulator >= 1 / 60 && steps < 3) {
+              if (simulation.step()) didStep = true;
+              accumulator -= 1 / 60;
+              steps++;
             }
             if (didStep) {
-              aPos.needsUpdate = true;
+              positionAttribute.needsUpdate = true;
               dirty = true;
             }
-          } else accum = 0;
+          } else accumulator = 0;
 
-          rig.tick({ dt, stepped: didStep, settled: sim.isSettled(), reduced });
+          rig.tick({ dt, stepped: didStep, settled: simulation.isSettled(), reduced });
           camera.position.x = rig.live.x;
           camera.position.y = rig.live.y;
-          const camZoom = rig.live.zoom;
+          const zoom = rig.live.zoom;
           if (onFrameRef.current) {
             frameGeometry.camera.x = rig.live.x;
             frameGeometry.camera.y = rig.live.y;
-            frameGeometry.camera.zoom = camZoom;
+            frameGeometry.camera.zoom = zoom;
             onFrameRef.current(frameGeometry);
           }
-          camera.zoom = camZoom;
+          camera.zoom = zoom;
           camera.updateProjectionMatrix();
-          px = 1 / camZoom;
+          pixelSize = 1 / zoom;
 
           if (dirty) {
-            for (let e = 0; e < m; e++) {
-              const a = eA[e]!,
-                b = eB[e]!;
-              eAPos[e * 2] = pos[a * 2]!;
-              eAPos[e * 2 + 1] = pos[a * 2 + 1]!;
-              eBPos[e * 2] = pos[b * 2]!;
-              eBPos[e * 2 + 1] = pos[b * 2 + 1]!;
+            for (let e = 0; e < edgeCount; e++) {
+              const a = edgeEndA[e]!,
+                b = edgeEndB[e]!;
+              edgeAPositions[e * 2] = positions[a * 2]!;
+              edgeAPositions[e * 2 + 1] = positions[a * 2 + 1]!;
+              edgeBPositions[e * 2] = positions[b * 2]!;
+              edgeBPositions[e * 2 + 1] = positions[b * 2 + 1]!;
             }
-            aEA.needsUpdate = true;
-            aEB.needsUpdate = true;
+            edgeAAttribute.needsUpdate = true;
+            edgeBAttribute.needsUpdate = true;
             dirty = didStep;
           }
 
-          nodeMat.uniforms.uTime!.value = clock;
-          nodeMat.uniforms.uPx!.value = px;
-          nodeMat.uniforms.uGlow!.value = c.glow;
+          nodeMaterial.uniforms.uTime!.value = clock;
+          nodeMaterial.uniforms.uPx!.value = pixelSize;
+          nodeMaterial.uniforms.uGlow!.value = optics.glow;
           const uReduced = reduced ? 1 : 0;
-          for (const mm of [edgeMat, edgeLiveMat]) {
-            mm.uniforms.uTime!.value = clock;
-            mm.uniforms.uPx!.value = px;
-            mm.uniforms.uWidth!.value = c.edgeWidth;
-            mm.uniforms.uOpacity!.value = c.edgeOpacity;
-            mm.uniforms.uFlowSpeed!.value = c.flowSpeed;
-            mm.uniforms.uReduced!.value = uReduced;
+          for (const material of [edgeMaterial, edgeLiveMaterial]) {
+            material.uniforms.uTime!.value = clock;
+            material.uniforms.uPx!.value = pixelSize;
+            material.uniforms.uWidth!.value = optics.edgeWidth;
+            material.uniforms.uOpacity!.value = optics.edgeOpacity;
+            material.uniforms.uFlowSpeed!.value = optics.flowSpeed;
+            material.uniforms.uReduced!.value = uReduced;
           }
-          padMat.uniforms.uPx!.value = px;
-          padMat.uniforms.uWidth!.value = c.edgeWidth;
-          padMat.uniforms.uOpacity!.value = c.edgeOpacity;
-          fadeMat.uniforms.uAlpha!.value = 1 - c.trails * 0.94;
-          nodeMat.uniforms.uReduced!.value = uReduced;
-          fadeMat.uniforms.uReduced!.value = uReduced;
-          compMat.uniforms.uReduced!.value = uReduced;
+          padMaterial.uniforms.uPx!.value = pixelSize;
+          padMaterial.uniforms.uWidth!.value = optics.edgeWidth;
+          padMaterial.uniforms.uOpacity!.value = optics.edgeOpacity;
+          fadeMaterial.uniforms.uAlpha!.value = 1 - optics.trails * 0.94;
+          nodeMaterial.uniforms.uReduced!.value = uReduced;
+          fadeMaterial.uniforms.uReduced!.value = uReduced;
+          compositeMaterial.uniforms.uReduced!.value = uReduced;
 
-          // The composite shader already gates the bands on uReduced; not
-          // scheduling bursts at all just keeps the uniform at zero instead of
-          // handing the GPU a value it is going to multiply away.
-          if (!reduced && c.glitch > 0 && clock > glitchUntil && Math.random() < 0.0022 * c.glitch)
+          if (
+            !reduced &&
+            optics.glitch > 0 &&
+            clock > glitchUntil &&
+            Math.random() < 0.0022 * optics.glitch
+          )
             kick(0.1 + Math.random() * 0.22);
-          const gActive = !reduced && clock < glitchUntil ? c.glitch : 0;
+          const glitchAmount = !reduced && clock < glitchUntil ? optics.glitch : 0;
 
-          renderer.setRenderTarget(sceneRT);
+          renderer.setRenderTarget(sceneTarget);
           renderer.render(scene, camera);
 
-          blurMat.uniforms.uTex!.value = sceneRT.texture;
-          blurMat.uniforms.uDir!.value.set(1, 0);
-          blurMat.uniforms.uThresh!.value = 0.34;
-          fsQuad.material = blurMat;
+          blurMaterial.uniforms.uTex!.value = sceneTarget.texture;
+          blurMaterial.uniforms.uDir!.value.set(1, 0);
+          blurMaterial.uniforms.uThresh!.value = 0.34;
+          screenQuad.material = blurMaterial;
           renderer.setRenderTarget(bloomA);
           renderer.clear();
-          renderer.render(postScene, postCam);
-          blurMat.uniforms.uTex!.value = bloomA.texture;
-          blurMat.uniforms.uDir!.value.set(0, 1);
-          blurMat.uniforms.uThresh!.value = 0.0;
+          renderer.render(postScene, postCamera);
+          blurMaterial.uniforms.uTex!.value = bloomA.texture;
+          blurMaterial.uniforms.uDir!.value.set(0, 1);
+          blurMaterial.uniforms.uThresh!.value = 0.0;
           renderer.setRenderTarget(bloomB);
           renderer.clear();
-          renderer.render(postScene, postCam);
+          renderer.render(postScene, postCamera);
 
-          compMat.uniforms.uScene!.value = sceneRT.texture;
-          compMat.uniforms.uBloom!.value = bloomB.texture;
-          compMat.uniforms.uTime!.value = clock;
-          compMat.uniforms.uScan!.value = c.scan;
-          compMat.uniforms.uAberr!.value = c.aberr;
-          compMat.uniforms.uCurve!.value = c.curve;
-          compMat.uniforms.uGrain!.value = c.grain;
-          compMat.uniforms.uBloomAmt!.value = c.bloom;
-          compMat.uniforms.uGlitch!.value = gActive;
-          fsQuad.material = compMat;
+          compositeMaterial.uniforms.uScene!.value = sceneTarget.texture;
+          compositeMaterial.uniforms.uBloom!.value = bloomB.texture;
+          compositeMaterial.uniforms.uTime!.value = clock;
+          compositeMaterial.uniforms.uScan!.value = optics.scan;
+          compositeMaterial.uniforms.uAberr!.value = optics.aberr;
+          compositeMaterial.uniforms.uCurve!.value = optics.curve;
+          compositeMaterial.uniforms.uGrain!.value = optics.grain;
+          compositeMaterial.uniforms.uBloomAmt!.value = optics.bloom;
+          compositeMaterial.uniforms.uGlitch!.value = glitchAmount;
+          screenQuad.material = compositeMaterial;
           renderer.setRenderTarget(null);
           renderer.clear();
-          renderer.render(postScene, postCam);
+          renderer.render(postScene, postCamera);
 
-          /* ------------------------------------------------- label placement
-           Which nodes earn a label, where, and how bright is decided in
-           labels.ts. What follows only hands those placements to the DOM
-           pool, keeping each label on the element it already owns.         */
-          labelView.zoom = camZoom;
+          labelView.zoom = zoom;
           labelView.cx = camera.position.x;
           labelView.cy = camera.position.y;
           labelView.mode = labelModeRef.current;
-          labelView.selIdx = selIdx;
-          const kf = focusedNode();
-          labelView.hoverIdx = kf >= 0 ? kf : hoverIdx;
-          labelPlacer.place(labelView, screenPos);
-          // Keep the focus target over the node the reader is on, so a screen
-          // reader's focus box and the canvas ring land in the same place.
-          if (overlay && nav && nav.current >= 0) {
-            const c = nav.current;
-            const fp = project(
-              pos[c * 2]!,
-              pos[c * 2 + 1]!,
-              camZoom,
+          labelView.selIdx = selectedIndex;
+          const keyboardFocus = focusedNode();
+          labelView.hoverIdx = keyboardFocus >= 0 ? keyboardFocus : hoveredIndex;
+          labelPlacer.place(labelView, screenPositions);
+          if (overlay && navigation && navigation.current >= 0) {
+            const current = navigation.current;
+            const focusPoint = project(
+              positions[current * 2]!,
+              positions[current * 2 + 1]!,
+              zoom,
               rig.live.x,
               rig.live.y,
               viewport,
               FOCUS_OUT,
             );
-            overlay.place(fp[0], fp[1], glyphRadiusPx(nRadius[c]!, camZoom) * 2);
+            overlay.place(
+              focusPoint[0],
+              focusPoint[1],
+              glyphRadiusPx(nodeRadii[current]!, zoom) * 2,
+            );
           }
           for (let k = 0; k < POOL; k++) {
-            if (owner[k]! >= 0 && !screenPos.has(owner[k]!)) {
+            if (owner[k]! >= 0 && !screenPositions.has(owner[k]!)) {
               owner[k] = -1;
               labels[k]!.style.opacity = "0";
             }
@@ -1914,76 +1722,61 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           const held = new Set<number>();
           for (let k = 0; k < POOL; k++) if (owner[k]! >= 0) held.add(owner[k]!);
           let free = 0;
-          for (const id of screenPos.keys()) {
+          for (const id of screenPositions.keys()) {
             if (held.has(id)) continue;
             while (free < POOL && owner[free]! >= 0) free++;
             if (free >= POOL) break;
             owner[free] = id;
-            const cat3 = nodeCategories[nCategoryId[id]!]!;
-            const L3 = labels[free]!;
-            L3.textContent = nodes[id]!.label;
-            L3.style.color = cat3.color;
-            // Landmarks read heavier so the eye can find structure without
-            // parsing every name on screen.
-            L3.style.fontSize = cat3.tier === 0 ? "10.5px" : "9px";
-            L3.style.fontWeight = cat3.tier === 0 ? "700" : "500";
-            L3.style.letterSpacing = cat3.tier === 0 ? ".16em" : ".08em";
+            const category = nodeCategories[nodeCategoryIds[id]!]!;
+            const poolLabel = labels[free]!;
+            poolLabel.textContent = nodes[id]!.label;
+            poolLabel.style.color = category.color;
+            poolLabel.style.fontSize = category.tier === 0 ? "10.5px" : "9px";
+            poolLabel.style.fontWeight = category.tier === 0 ? "700" : "500";
+            poolLabel.style.letterSpacing = category.tier === 0 ? ".16em" : ".08em";
             held.add(id);
           }
           for (let k = 0; k < POOL; k++) {
             const id = owner[k]!;
             if (id < 0) continue;
-            const p = screenPos.get(id)!;
-            labels[k]!.style.transform = `translate3d(${p[0] | 0}px,${p[1] | 0}px,0)`;
-            labels[k]!.style.opacity = String(p[2]);
+            const placed = screenPositions.get(id)!;
+            labels[k]!.style.transform = `translate3d(${placed[0] | 0}px,${placed[1] | 0}px,0)`;
+            labels[k]!.style.opacity = String(placed[2]);
           }
 
-          fA += 1 / Math.max(dt, 1e-4);
-          fN++;
-          fT += dt;
-          if (fT > 0.5) {
+          fpsSum += 1 / Math.max(dt, 1e-4);
+          fpsFrames++;
+          fpsElapsed += dt;
+          if (fpsElapsed > 0.5) {
             const stats: GraphStats = {
-              fps: Math.round(fA / fN),
-              nodes: n,
-              edges: m,
-              frameMs: +(performance.now() - t0).toFixed(2),
-              settled: sim.isSettled(),
+              fps: Math.round(fpsSum / fpsFrames),
+              nodes: nodeCount,
+              edges: edgeCount,
+              frameMs: +(performance.now() - frameStart).toFixed(2),
+              settled: simulation.isSettled(),
               drawnNodes,
               drawnEdges: drawnLinks,
             };
             onStatsRef.current?.(stats);
-            fA = 0;
-            fN = 0;
-            fT = 0;
+            fpsSum = 0;
+            fpsFrames = 0;
+            fpsElapsed = 0;
           }
         }
-        raf = requestAnimationFrame(frame);
-        disposables.push(() => cancelAnimationFrame(raf));
+        frameRequest = requestAnimationFrame(frame);
+        disposables.push(() => cancelAnimationFrame(frameRequest));
 
-        // A lost context can't be drawn to. three's WebGLRenderer registers its
-        // own listeners on this canvas: its webglcontextlost handler calls
-        // preventDefault() — so the browser IS asked to restore the context —
-        // and its webglcontextrestored handler re-initialises three's GL state.
-        // This component deliberately does not resume: the frame loop stops
-        // here and the failure surfaces the same way a thrown boot does,
-        // through the halt panel and onFatal, and nothing in this component
-        // listens for webglcontextrestored (a future change could, and restart
-        // the loop). Unmount still drains everything above. Registered last so
-        // it is the first thing removed on teardown — the forceContextLoss() in
-        // cleanup fires this very event.
-        const onContextLost = () => {
-          cancelAnimationFrame(raf);
+        // Not resumed on restore. Registered last so teardown removes it before forceContextLoss() fires it.
+        const handleContextLost = () => {
+          cancelAnimationFrame(frameRequest);
           const message = "WebGL context lost";
           setFatal(message);
           onFatalRef.current?.(message);
         };
-        el.addEventListener("webglcontextlost", onContextLost);
-        disposables.push(() => el.removeEventListener("webglcontextlost", onContextLost));
+        el.addEventListener("webglcontextlost", handleContextLost);
+        disposables.push(() => el.removeEventListener("webglcontextlost", handleContextLost));
       }
-      // Deliberate: this effect builds and tears down the entire WebGL scene, so
-      // it may only re-run when the graph data itself changes. Optics, callbacks
-      // and selection are read through the refs above precisely so a slider drag
-      // doesn't reallocate every buffer on the GPU.
+      // Rebuilds the whole WebGL scene, so only graph data re-runs it; the rest is read through refs.
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [nodes, edges, nodeCategories, linkCategories, seed, invalidEdges, keyboardNavigation]);
 
@@ -2009,13 +1802,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
       );
     }
 
-    // With keyboard navigation on, the root is a named group the reader tabs
-    // into: its one focus target is a button inside it, and children of
-    // role="img" would be presentational, hidden from assistive tech. Off, it
-    // is a named image as in 1.x. role="img" only appears with a name: an
-    // unnamed image role is itself an axe "role-img-alt" (WCAG A) failure.
-    // tabIndex -1 lets Escape hand focus back to the graph as a whole rather
-    // than dropping it on <body>.
+    // A group, not an image: children of role="img" are hidden from assistive tech.
     return (
       <div
         ref={rootRef}
@@ -2034,20 +1821,16 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
         className={className}
       >
         <div ref={mountRef} style={{ position: "absolute", inset: 0 }} />
-        {/* Rotating label pool + tooltip are placement-driven decoration, not
-          content — aria-hidden here backstops the same attribute set on each
-          element as it's created in boot(), so the whole layer reads as
-          hidden even before the canvas mounts. */}
         <div
           ref={labelRef}
           aria-hidden="true"
           style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
         />
-        {/* The navigation layer: the focus target, the live region and the
-          key hint (a11y/overlay.ts). Visible to assistive tech, unlike the
-          label layer above. */}
         {keyboardNavigation && (
-          <div ref={navRef} style={{ position: "absolute", inset: 0, pointerEvents: "none" }} />
+          <div
+            ref={navigationRef}
+            style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
+          />
         )}
       </div>
     );
