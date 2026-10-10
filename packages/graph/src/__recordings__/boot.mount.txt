@@ -18,8 +18,10 @@ on button[focus] keydown
 on button[focus] focus
 on button[focus] blur
 on div[group] blur
+on window keydown
 on canvas pointermove
 on canvas pointerdown
+on window pointerup
 on canvas click
 on canvas pointerleave
 on canvas wheel {"passive":false}

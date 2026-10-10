@@ -71,28 +71,42 @@ function pinLayout(size: { width: number; height: number }) {
   Object.assign(HTMLElement.prototype, { setPointerCapture() {}, releasePointerCapture() {} });
 }
 
-function spyOnListeners(log: (line: string) => void) {
-  const add = EventTarget.prototype.addEventListener;
-  const remove = EventTarget.prototype.removeEventListener;
-  vi.spyOn(EventTarget.prototype, "addEventListener").mockImplementation(function (
+/**
+ * jsdom's selector engine listens on its inner window the first time a
+ * `:focus`-style query runs; that is test plumbing, not the canvas.
+ */
+function isJsdomInternal(target: EventTarget): boolean {
+  return target !== window && target.constructor.name === "Window";
+}
+
+/** `owner` is `EventTarget.prototype`, or `window`, which jsdom gives its own methods. */
+function spyOnTarget(owner: EventTarget, log: (line: string) => void) {
+  const add = owner.addEventListener;
+  const remove = owner.removeEventListener;
+  vi.spyOn(owner, "addEventListener").mockImplementation(function (
     this: EventTarget,
     type,
     listener,
     options,
   ) {
     const suffix = options === undefined ? "" : ` ${JSON.stringify(options)}`;
-    log(`on ${describeTarget(this)} ${type}${suffix}`);
+    if (!isJsdomInternal(this)) log(`on ${describeTarget(this)} ${type}${suffix}`);
     add.call(this, type, listener, options);
   });
-  vi.spyOn(EventTarget.prototype, "removeEventListener").mockImplementation(function (
+  vi.spyOn(owner, "removeEventListener").mockImplementation(function (
     this: EventTarget,
     type,
     listener,
     options,
   ) {
-    log(`off ${describeTarget(this)} ${type}`);
+    if (!isJsdomInternal(this)) log(`off ${describeTarget(this)} ${type}`);
     remove.call(this, type, listener, options);
   });
+}
+
+function spyOnListeners(log: (line: string) => void) {
+  spyOnTarget(EventTarget.prototype, log);
+  spyOnTarget(window, log);
 }
 
 /**
