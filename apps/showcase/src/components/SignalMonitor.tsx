@@ -142,8 +142,17 @@ export function SignalMonitor() {
         {canRunFaults && (
           <div className="sc-monitor__bar">
             <div className="sc-monitor__channels">
-              <Button active={isSoundOn} onClick={toggleSound}>
-                Sound
+              {/* An icon, named for screen readers; aria-pressed (from
+                  `active`) says whether it is on, and the icon says it too:
+                  waves when on, a cross when muted. */}
+              <Button
+                active={isSoundOn}
+                onClick={toggleSound}
+                className="sc-monitor__sound"
+                aria-label="Sound"
+                title="Sound"
+              >
+                <SpeakerIcon isOn={isSoundOn} />
               </Button>
               <Button onClick={jolt}>Jolt</Button>
             </div>
@@ -151,6 +160,30 @@ export function SignalMonitor() {
         )}
       </Panel>
     </div>
+  );
+}
+
+/** A speaker: sounding when on, crossed out when muted. Drawn in the button's colour. */
+function SpeakerIcon({ isOn }: { isOn: boolean }) {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 16 16"
+      aria-hidden="true"
+      focusable="false"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="square"
+    >
+      <path d="M2 6h3l4-3.5v11L5 10H2z" fill="currentColor" stroke="none" />
+      {isOn ? (
+        <path d="M11.5 5.5a3.5 3.5 0 0 1 0 5M13.5 3.5a6.4 6.4 0 0 1 0 9" />
+      ) : (
+        <path d="M11 6l4 4M15 6l-4 4" />
+      )}
+    </svg>
   );
 }
 
@@ -247,19 +280,41 @@ function useFaultRunner({ activeRef, audioRef, canRunFaults, isAudible }: FaultR
  * Whether the pointer or keyboard focus is on the monitor, and the handlers
  * for its root that track both. Focus moving between the monitor's own
  * buttons is not leaving it.
+ *
+ * Only keyboard focus counts — what the browser marks :focus-visible. A click
+ * on Sound or Jolt focuses the button too, and that focus stays behind when
+ * the pointer leaves, which kept the room playing after a hover ended. A
+ * hidden tab is never present: a pointer that leaves by switching tabs sends
+ * no pointerleave.
  */
 function usePresence() {
   const [isHovered, setIsHovered] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
+  const isPageVisible = usePageVisible();
   const presenceHandlers = {
     onPointerEnter: () => setIsHovered(true),
     onPointerLeave: () => setIsHovered(false),
-    onFocus: () => setIsFocused(true),
+    onFocus: (e: FocusEvent<HTMLDivElement>) => setIsFocused(e.target.matches(":focus-visible")),
+    // A key pressed on a button the pointer focused (Jolt, clicked, then
+    // pressed again with Space) turns that focus into the keyboard's, with no
+    // focus event to say so. Keys only reach the root from focus inside it.
+    onKeyDown: () => setIsFocused(true),
     onBlur: (e: FocusEvent<HTMLDivElement>) => {
       if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setIsFocused(false);
     },
   };
-  return { isPresent: isHovered || isFocused, presenceHandlers };
+  return { isPresent: isPageVisible && (isHovered || isFocused), presenceHandlers };
+}
+
+/** Whether the page's tab is the one showing, followed live. */
+function usePageVisible(): boolean {
+  const [isVisible, setIsVisible] = useState(() => !document.hidden);
+  useEffect(() => {
+    const sync = () => setIsVisible(!document.hidden);
+    document.addEventListener("visibilitychange", sync);
+    return () => document.removeEventListener("visibilitychange", sync);
+  }, []);
+  return isVisible;
 }
 
 interface MonitorRoomOptions {

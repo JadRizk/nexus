@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import { Wordmark } from "@nexus-cyberdeck/react";
 import { SignalMonitor } from "../components/SignalMonitor.js";
+import { REPO } from "../repo.js";
 
 /* ============================================================================
    Home — the landing page
@@ -10,14 +11,23 @@ import { SignalMonitor } from "../components/SignalMonitor.js";
    CRT and search are the site palette's (⌘K, or Search in the header).
    ========================================================================== */
 
-const REPO = "https://github.com/JadRizk/nexus";
-
-const ROUTES: ReadonlyArray<{ path: string; label: string; blurb: string }> = [
+// The labs are desktop consoles: not offered on a phone, as in the header.
+const ROUTES: ReadonlyArray<{
+  path: string;
+  label: string;
+  blurb: string;
+  desktopOnly?: boolean;
+}> = [
   { path: "start", label: "Get started", blurb: "Install and render a first panel." },
   { path: "foundations/tokens", label: "Tokens", blurb: "Every token, both themes." },
   { path: "components", label: "Components", blurb: "Each one live, with a11y notes." },
-  { path: "labs/graph", label: "Graph", blurb: "The WebGL canvas, running." },
-  { path: "labs/glitch", label: "Glitch Lab", blurb: "The signal path, every knob." },
+  { path: "labs/graph", label: "Graph", blurb: "The WebGL canvas, running.", desktopOnly: true },
+  {
+    path: "labs/glitch",
+    label: "Glitch Lab",
+    blurb: "The signal path, every knob.",
+    desktopOnly: true,
+  },
 ];
 
 const BODY: CSSProperties = {
@@ -64,9 +74,7 @@ export function HomePage() {
             <span data-nx-figure>{__NX_COMPONENTS__}</span> components ·{" "}
             <span data-nx-figure>{__NX_TOKENS__}</span> tokens · 2 themes · React 18.3 or 19
           </p>
-          <div
-            style={{ display: "flex", gap: "var(--nx-space-3)", marginTop: "var(--nx-space-6)" }}
-          >
+          <div className="sc-home__ctas">
             {/* Links wearing the button class, as the header's are: they go
                 somewhere, so they can be opened in a new tab or copied. */}
             <a href="#/start" className="nx-btn sc-cta" data-active="1">
@@ -82,7 +90,11 @@ export function HomePage() {
 
       <nav aria-label="Where to go" className="sc-home__routes">
         {ROUTES.map((r) => (
-          <a key={r.path} href={`#/${r.path}`} className="sc-route">
+          <a
+            key={r.path}
+            href={`#/${r.path}`}
+            className={r.desktopOnly ? "sc-route sc-desktop-only" : "sc-route"}
+          >
             <span className="sc-route__label">{r.label} →</span>
             <span className="sc-route__blurb">{r.blurb}</span>
           </a>
