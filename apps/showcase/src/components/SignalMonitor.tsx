@@ -8,12 +8,12 @@ import { fireEvent, shuffleSeed } from "../effects/glitch/core/events.js";
 import type { ActiveEvent } from "../effects/glitch/core/events.js";
 import type { EventId } from "../effects/glitch/data/events/index.js";
 import { useGlitchEngine } from "../effects/glitch/useGlitchEngine.js";
-import { createAudio } from "../effects/glitchAudio.js";
+import { createAudio } from "../effects/glitch/audio/index.js";
 
 /* ============================================================================
    showcase — SignalMonitor
    Home's hero: a small CRT running Glitch Lab's own signal path and
-   synthesiser (effects/glitch/, effects/glitchAudio.js). The pointer
+   synthesiser (effects/glitch/, effects/glitch/audio/). The pointer
    tunes it — across for colour bleed, down for tracking. Each visit lands on
    a channel chosen at random (the graph, with a new layout every time; the
    test bars; or the HUD). Jolt fires one of Glitch Lab's faults.

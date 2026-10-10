@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { EFFECTS } from "./effects/index.js";
-import { EVENTS } from "./events/index.js";
+import { EV_BY_ID, EVENTS } from "./events/index.js";
 
 function duplicates(values: readonly string[]): string[] {
   return values.filter((value, index) => values.indexOf(value) !== index);
@@ -23,6 +23,14 @@ describe("ids", () => {
       expect(duplicates(effect.params.map(([key]) => key))).toEqual([]);
     },
   );
+
+  it("EV_BY_ID has exactly the EVENTS ids as keys", () => {
+    expect(Object.keys(EV_BY_ID).sort()).toEqual(EVENTS.map((event) => event.id).sort());
+  });
+
+  it("EV_BY_ID maps each id to the same object as in EVENTS", () => {
+    for (const event of EVENTS) expect(EV_BY_ID[event.id]).toBe(event);
+  });
 
   it("finds a repeated value", () => {
     expect(duplicates(["a", "b", "a"])).toEqual(["a"]);

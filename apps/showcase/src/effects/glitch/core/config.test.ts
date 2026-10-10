@@ -34,6 +34,16 @@ describe("configFor", () => {
     expect(first.crt).not.toBe(second.crt);
   });
 
+  it("leaves PRESETS unchanged when a result is mutated", () => {
+    const before = structuredClone(PRESETS);
+    for (const preset of Object.keys(PRESETS)) {
+      for (const knobs of Object.values(configFor(preset))) {
+        for (const knob of Object.keys(knobs)) knobs[knob] = -999;
+      }
+    }
+    expect(PRESETS).toEqual(before);
+  });
+
   it("throws a TypeError for an unknown preset", () => {
     expect(() => configFor("NO SUCH PRESET")).toThrow(TypeError);
   });
