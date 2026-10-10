@@ -1,4 +1,4 @@
-import * as THREE from "three";
+import { Color } from "three";
 import { DEFAULT_ARC_BOW, EDGE_ATTRS, encodeGain, encodeRouting } from "./shaders.js";
 import type { GraphEdge, GraphNode, LinkCategory, NodeCategory } from "./types.js";
 
@@ -85,7 +85,7 @@ export function packNodes(input: PackNodesInput): NodeBuffers {
   const nodeMarks = new Float32Array(nodeCount),
     nodeHidden = new Float32Array(nodeCount);
   const nodeTiers = new Float32Array(nodeCount);
-  const scratchColor = new THREE.Color();
+  const scratchColor = new Color();
   for (let i = 0; i < nodeCount; i++) {
     const category = nodeCategories[nodeCategoryIds[i]!]!;
     nodeRadii[i] =
@@ -121,7 +121,7 @@ export function packEdges(input: PackEdgesInput): EdgeBuffers {
   const edgeParams0 = new Float32Array(edgeCount * EDGE_ATTRS.iP0);
   const edgeParams1 = new Float32Array(edgeCount * EDGE_ATTRS.iP1);
   const edgeParams2 = new Float32Array(edgeCount * EDGE_ATTRS.iP2);
-  const scratchColor = new THREE.Color();
+  const scratchColor = new Color();
   for (let e = 0; e < edgeCount; e++) {
     const category = linkCategories[edgeCategoryIds[e]!]!;
     scratchColor.set(category.color);
