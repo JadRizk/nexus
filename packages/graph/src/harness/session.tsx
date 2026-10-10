@@ -28,16 +28,24 @@ function describeElement(el: HTMLElement): string {
   return `${el.textContent} | ${el.style.transform} | opacity ${el.style.opacity}`;
 }
 
+/**
+ * The label layer is the root's one `aria-hidden` child; in it, the tooltip is
+ * the one box with a `max-width`, and every other child is a pooled label.
+ */
+const LABEL_LAYER = ':scope > [aria-label] > div[aria-hidden="true"]';
+const TOOLTIP = '[style*="max-width"]';
+
 /** Placed labels, the tooltip and a hash of everything else in the DOM. */
 function domState(container: HTMLElement): Map<string, string> {
   const fields = new Map<string, string>();
-  const layer = container.firstElementChild?.children[1];
+  const layer = container.querySelector(LABEL_LAYER);
   const children = layer ? [...layer.children] : [];
-  children.forEach((child, k) => {
-    if (!(child instanceof HTMLElement) || child.textContent === "") return;
-    const key = k === children.length - 1 ? "tooltip" : `label.${k}`;
-    fields.set(key, describeElement(child));
-  });
+  let label = 0;
+  for (const child of children) {
+    if (!(child instanceof HTMLElement)) continue;
+    const key = child.matches(TOOLTIP) ? "tooltip" : `label.${label++}`;
+    if (child.textContent !== "") fields.set(key, describeElement(child));
+  }
   fields.set("dom", hashText(container.innerHTML));
   return fields;
 }

@@ -2,21 +2,23 @@
 -- frame 61 +16ms
   p0.target = rt0
   p0.camera = 0.0377593,0,0,0,0,0.0503457,0,0,0,0,-0.1,0,0,0,0,1,-3.5995,-2.26685,5
-  p0.FADE_FS@-10 = visible=true g0 instances=- range=0+Infinity
-  p0.FADE_FS@-10.uColor = [0.00242822,0.00273174,0.00303527]
-  p0.FADE_FS@-10.uAlpha = 0.8496
-  p0.FADE_FS@-10.uReduced = 0
+  p0.FADE@-10 = visible=true g0 instances=- range=0+Infinity
+  FADE@-10.material = blend=Normal(SrcAlpha,OneMinusSrcAlpha,Add) premultiplied=false side=Front transparent=true depthTest=false depthWrite=false
+  p0.FADE@-10.uColor = [0.00242822,0.00273174,0.00303527]
+  p0.FADE@-10.uAlpha = 0.8496
+  p0.FADE@-10.uReduced = 0
   g0.position = +0 2df7970aef29
-  p0.EDGE_FS@0 = visible=true g1 instances=12 range=0+Infinity
-  p0.EDGE_FS@0.uPx = 0.0662088
-  p0.EDGE_FS@0.uWidth = 1.3
-  p0.EDGE_FS@0.uTime = 0.976
-  p0.EDGE_FS@0.uOpacity = 0.4
-  p0.EDGE_FS@0.uFlowSpeed = 0.24
-  p0.EDGE_FS@0.uFocus = 0
-  p0.EDGE_FS@0.uSignal = 1
-  p0.EDGE_FS@0.uPass = 0
-  p0.EDGE_FS@0.uReduced = 0
+  p0.EDGE@0 = visible=true g1 instances=12 range=0+Infinity
+  EDGE@0.material = blend=Custom(One,OneMinusSrcAlpha,Add) premultiplied=true side=Double transparent=true depthTest=false depthWrite=false
+  p0.EDGE@0.uPx = 0.0662088
+  p0.EDGE@0.uWidth = 1.3
+  p0.EDGE@0.uTime = 0.976
+  p0.EDGE@0.uOpacity = 0.4
+  p0.EDGE@0.uFlowSpeed = 0.24
+  p0.EDGE@0.uFocus = 0
+  p0.EDGE@0.uSignal = 1
+  p0.EDGE@0.uPass = 0
+  p0.EDGE@0.uReduced = 0
   g1.position = +0 1bf59c962ef9
   g1.iA = +1 8f9d240a632a
   g1.iB = +1 793d3de7cc73
@@ -24,11 +26,13 @@
   g1.iP0 = +0 28a50cf3df55
   g1.iP1 = +0 73811d635264
   g1.iP2 = +0 d7699308c38c
-  p0.PAD_FS@1 = visible=true g2 instances=12 range=0+Infinity
-  p0.PAD_FS@1.uPx = 0.0662088
-  p0.PAD_FS@1.uWidth = 1.3
-  p0.PAD_FS@1.uOpacity = 0.4
-  p0.PAD_FS@1.uFocus = 0
+  g1.index = +0 393b80d3d117
+  p0.PAD@1 = visible=true g2 instances=12 range=0+Infinity
+  PAD@1.material = blend=Custom(One,OneMinusSrcAlpha,Add) premultiplied=true side=Double transparent=true depthTest=false depthWrite=false
+  p0.PAD@1.uPx = 0.0662088
+  p0.PAD@1.uWidth = 1.3
+  p0.PAD@1.uOpacity = 0.4
+  p0.PAD@1.uFocus = 0
   g2.aPad = +0 7f7caa2f12a7
   g2.iA = same as g1.iA
   g2.iB = same as g1.iB
@@ -36,58 +40,64 @@
   g2.iP0 = same as g1.iP0
   g2.iP1 = same as g1.iP1
   g2.iP2 = same as g1.iP2
-  p0.EDGE_FS@2 = visible=true g1 instances=12 range=0+Infinity
-  p0.EDGE_FS@2.uPx = 0.0662088
-  p0.EDGE_FS@2.uWidth = 1.3
-  p0.EDGE_FS@2.uTime = 0.976
-  p0.EDGE_FS@2.uOpacity = 0.4
-  p0.EDGE_FS@2.uFlowSpeed = 0.24
-  p0.EDGE_FS@2.uFocus = 0
-  p0.EDGE_FS@2.uSignal = 1
-  p0.EDGE_FS@2.uPass = 1
-  p0.EDGE_FS@2.uReduced = 0
-  p0.NODE_FS@3 = visible=true g3 instances=10 range=0+Infinity
-  p0.NODE_FS@3.uTime = 0.976
-  p0.NODE_FS@3.uPx = 0.0662088
-  p0.NODE_FS@3.uHlStart = -999
-  p0.NODE_FS@3.uGlow = 0.8
-  p0.NODE_FS@3.uFocus = 0
-  p0.NODE_FS@3.uReduced = 0
+  g2.index = +0 76cc1cfa7521
+  p0.EDGE@2 = visible=true g1 instances=12 range=0+Infinity
+  EDGE@2.material = blend=Custom(One,One,Add) premultiplied=false side=Double transparent=true depthTest=false depthWrite=false
+  p0.EDGE@2.uPx = 0.0662088
+  p0.EDGE@2.uWidth = 1.3
+  p0.EDGE@2.uTime = 0.976
+  p0.EDGE@2.uOpacity = 0.4
+  p0.EDGE@2.uFlowSpeed = 0.24
+  p0.EDGE@2.uFocus = 0
+  p0.EDGE@2.uSignal = 1
+  p0.EDGE@2.uPass = 1
+  p0.EDGE@2.uReduced = 0
+  p0.NODE@3 = visible=true g3 instances=10 range=0+Infinity
+  NODE@3.material = blend=Custom(One,One,Add) premultiplied=false side=Front transparent=true depthTest=false depthWrite=false
+  p0.NODE@3.uTime = 0.976
+  p0.NODE@3.uPx = 0.0662088
+  p0.NODE@3.uHlStart = -999
+  p0.NODE@3.uGlow = 0.8
+  p0.NODE@3.uFocus = 0
+  p0.NODE@3.uReduced = 0
   g3.position = +0 648d854b9b02
   g3.iPos = +2 c75422e6254d
   g3.iColor = +0 0b6311e3c1d5
   g3.iN0 = +0 4794de960729
   g3.iN1 = +0 38d6224695d1
+  g3.index = +0 3afbb62a75d6
   p1.target = rt1
   p1.camera = 1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0
-  p1.BLUR_FS@0 = visible=true g4 instances=- range=0+Infinity
-  p1.BLUR_FS@0.uTex = rt0.texture
-  p1.BLUR_FS@0.uTexel = [0.00234742,0.003125]
-  p1.BLUR_FS@0.uDir = [1,0]
-  p1.BLUR_FS@0.uThresh = 0.34
+  p1.POST/BLUR@0 = visible=true g4 instances=- range=0+Infinity
+  POST/BLUR@0.material = blend=Normal(SrcAlpha,OneMinusSrcAlpha,Add) premultiplied=false side=Front transparent=false depthTest=false depthWrite=false
+  p1.POST/BLUR@0.uTex = rt0.texture
+  p1.POST/BLUR@0.uTexel = [0.00234742,0.003125]
+  p1.POST/BLUR@0.uDir = [1,0]
+  p1.POST/BLUR@0.uThresh = 0.34
   g4.position = +0 2df7970aef29
   g4.uv = +0 5564a224d45a
   p2.target = rt2
   p2.camera = 1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0
-  p2.BLUR_FS@0 = visible=true g4 instances=- range=0+Infinity
-  p2.BLUR_FS@0.uTex = rt1.texture
-  p2.BLUR_FS@0.uTexel = [0.00234742,0.003125]
-  p2.BLUR_FS@0.uDir = [0,1]
-  p2.BLUR_FS@0.uThresh = 0
+  p2.POST/BLUR@0 = visible=true g4 instances=- range=0+Infinity
+  p2.POST/BLUR@0.uTex = rt1.texture
+  p2.POST/BLUR@0.uTexel = [0.00234742,0.003125]
+  p2.POST/BLUR@0.uDir = [0,1]
+  p2.POST/BLUR@0.uThresh = 0
   p3.target = screen
   p3.camera = 1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0
-  p3.COMPOSITE_FS@0 = visible=true g4 instances=- range=0+Infinity
-  p3.COMPOSITE_FS@0.uScene = rt0.texture
-  p3.COMPOSITE_FS@0.uBloom = rt2.texture
-  p3.COMPOSITE_FS@0.uRes = [1280,960]
-  p3.COMPOSITE_FS@0.uTime = 0.976
-  p3.COMPOSITE_FS@0.uScan = 0.55
-  p3.COMPOSITE_FS@0.uAberr = 0.5
-  p3.COMPOSITE_FS@0.uCurve = 0.55
-  p3.COMPOSITE_FS@0.uGrain = 0.45
-  p3.COMPOSITE_FS@0.uBloomAmt = 0.85
-  p3.COMPOSITE_FS@0.uGlitch = 0.5
-  p3.COMPOSITE_FS@0.uReduced = 0
+  p3.POST/COMPOSITE@0 = visible=true g4 instances=- range=0+Infinity
+  POST/COMPOSITE@0.material = blend=Normal(SrcAlpha,OneMinusSrcAlpha,Add) premultiplied=false side=Front transparent=false depthTest=false depthWrite=false
+  p3.POST/COMPOSITE@0.uScene = rt0.texture
+  p3.POST/COMPOSITE@0.uBloom = rt2.texture
+  p3.POST/COMPOSITE@0.uRes = [1280,960]
+  p3.POST/COMPOSITE@0.uTime = 0.976
+  p3.POST/COMPOSITE@0.uScan = 0.55
+  p3.POST/COMPOSITE@0.uAberr = 0.5
+  p3.POST/COMPOSITE@0.uCurve = 0.55
+  p3.POST/COMPOSITE@0.uGrain = 0.45
+  p3.POST/COMPOSITE@0.uBloomAmt = 0.85
+  p3.POST/COMPOSITE@0.uGlitch = 0.5
+  p3.POST/COMPOSITE@0.uReduced = 0
   renderer.calls = target:rt0 render target:rt1 clear render target:rt2 clear render target:screen clear render
   onFrame.ids = ["n0","n1","n2","n3","n4","n5","n6","n7","n8","n9"]
   onFrame.positions = "#c75422e6254d"
@@ -108,17 +118,17 @@
   dom = 9f9784ed13cd
 -- frame 62 +16ms
   p0.camera = 0.035701,0,0,0,0,0.0476013,0,0,0,0,-0.1,0,0,0,0,1,-3.26,-2.11226,5
-  p0.EDGE_FS@0.uPx = 0.0700261
-  p0.EDGE_FS@0.uTime = 0.992
+  p0.EDGE@0.uPx = 0.0700261
+  p0.EDGE@0.uTime = 0.992
   g1.iA = +1 069a97a69345
   g1.iB = +1 7ef428244e0c
-  p0.PAD_FS@1.uPx = 0.0700261
-  p0.EDGE_FS@2.uPx = 0.0700261
-  p0.EDGE_FS@2.uTime = 0.992
-  p0.NODE_FS@3.uTime = 0.992
-  p0.NODE_FS@3.uPx = 0.0700261
+  p0.PAD@1.uPx = 0.0700261
+  p0.EDGE@2.uPx = 0.0700261
+  p0.EDGE@2.uTime = 0.992
+  p0.NODE@3.uTime = 0.992
+  p0.NODE@3.uPx = 0.0700261
   g3.iPos = +1 270212ed6c9b
-  p3.COMPOSITE_FS@0.uTime = 0.992
+  p3.POST/COMPOSITE@0.uTime = 0.992
   onFrame.positions = "#270212ed6c9b"
   onFrame.camera = {"x":-3.26,"y":-2.11226,"zoom":14.2804}
   label.0 = Node 0 | translate3d(883px,439px,0) | opacity 0.82
@@ -128,17 +138,17 @@
   dom = 961d869ed4f7
 -- frame 63 +16ms
   p0.camera = 0.0338113,0,0,0,0,0.0450817,0,0,0,0,-0.1,0,0,0,0,1,-2.95582,-1.97888,5
-  p0.EDGE_FS@0.uPx = 0.0739399
-  p0.EDGE_FS@0.uTime = 1.008
+  p0.EDGE@0.uPx = 0.0739399
+  p0.EDGE@0.uTime = 1.008
   g1.iA = +1 94ebc3f95bc6
   g1.iB = +1 c0bb10598ecb
-  p0.PAD_FS@1.uPx = 0.0739399
-  p0.EDGE_FS@2.uPx = 0.0739399
-  p0.EDGE_FS@2.uTime = 1.008
-  p0.NODE_FS@3.uTime = 1.008
-  p0.NODE_FS@3.uPx = 0.0739399
+  p0.PAD@1.uPx = 0.0739399
+  p0.EDGE@2.uPx = 0.0739399
+  p0.EDGE@2.uTime = 1.008
+  p0.NODE@3.uTime = 1.008
+  p0.NODE@3.uPx = 0.0739399
   g3.iPos = +1 be872635736b
-  p3.COMPOSITE_FS@0.uTime = 1.008
+  p3.POST/COMPOSITE@0.uTime = 1.008
   onFrame.positions = "#be872635736b"
   onFrame.camera = {"x":-2.95582,"y":-1.97888,"zoom":13.5245}
   label.0 = Node 0 | translate3d(853px,476px,0) | opacity 0.82
@@ -147,17 +157,17 @@
 -- frame 64 +16ms
 onStats [{"fps":63,"nodes":10,"edges":12,"frameMs":0,"settled":false,"drawnNodes":10,"drawnEdges":12}]
   p0.camera = 0.0320759,0,0,0,0,0.0427679,0,0,0,0,-0.1,0,0,0,0,1,-2.68505,-1.87082,5
-  p0.EDGE_FS@0.uPx = 0.07794
-  p0.EDGE_FS@0.uTime = 1.024
+  p0.EDGE@0.uPx = 0.07794
+  p0.EDGE@0.uTime = 1.024
   g1.iA = +1 afc06e940a83
   g1.iB = +1 906f4eb28cc2
-  p0.PAD_FS@1.uPx = 0.07794
-  p0.EDGE_FS@2.uPx = 0.07794
-  p0.EDGE_FS@2.uTime = 1.024
-  p0.NODE_FS@3.uTime = 1.024
-  p0.NODE_FS@3.uPx = 0.07794
+  p0.PAD@1.uPx = 0.07794
+  p0.EDGE@2.uPx = 0.07794
+  p0.EDGE@2.uTime = 1.024
+  p0.NODE@3.uTime = 1.024
+  p0.NODE@3.uPx = 0.07794
   g3.iPos = +1 d4bb6481519a
-  p3.COMPOSITE_FS@0.uTime = 1.024
+  p3.POST/COMPOSITE@0.uTime = 1.024
   onFrame.positions = "#d4bb6481519a"
   onFrame.camera = {"x":-2.68505,"y":-1.87082,"zoom":12.8304}
   label.0 = Node 0 | translate3d(875px,508px,0) | opacity 0.82
@@ -166,17 +176,17 @@ onStats [{"fps":63,"nodes":10,"edges":12,"frameMs":0,"settled":false,"drawnNodes
   dom = 9e33bed90794
 -- frame 65 +16ms
   p0.camera = 0.0304824,0,0,0,0,0.0406432,0,0,0,0,-0.1,0,0,0,0,1,-2.44436,-1.79049,5
-  p0.EDGE_FS@0.uPx = 0.0820145
-  p0.EDGE_FS@0.uTime = 1.04
+  p0.EDGE@0.uPx = 0.0820145
+  p0.EDGE@0.uTime = 1.04
   g1.iA = +1 20ff95ca2555
   g1.iB = +1 ae7daf218dec
-  p0.PAD_FS@1.uPx = 0.0820145
-  p0.EDGE_FS@2.uPx = 0.0820145
-  p0.EDGE_FS@2.uTime = 1.04
-  p0.NODE_FS@3.uTime = 1.04
-  p0.NODE_FS@3.uPx = 0.0820145
+  p0.PAD@1.uPx = 0.0820145
+  p0.EDGE@2.uPx = 0.0820145
+  p0.EDGE@2.uTime = 1.04
+  p0.NODE@3.uTime = 1.04
+  p0.NODE@3.uPx = 0.0820145
   g3.iPos = +1 7857e021f045
-  p3.COMPOSITE_FS@0.uTime = 1.04
+  p3.POST/COMPOSITE@0.uTime = 1.04
   onFrame.positions = "#7857e021f045"
   onFrame.camera = {"x":-2.44436,"y":-1.79049,"zoom":12.193}
   label.0 = Node 0 | translate3d(910px,540px,0) | opacity 0.82
