@@ -6,6 +6,7 @@
  */
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type * as Three from "three";
+import { variant } from "./harness/fixture.js";
 import { openSession } from "./harness/session.js";
 import type { Session } from "./harness/session.js";
 
@@ -43,4 +44,25 @@ it("records a slow frame, which hits the physics step cap", async () => {
   session.step("slow frame", () => session.frames(1, 80));
   session.frames(1);
   await expect(session.text()).toMatchFileSnapshot("__recordings__/boot.slow-frame.txt");
+});
+
+it("records the variant fixture: orphan, states, overrides, rich links, dropped edge", async () => {
+  session.record();
+  session.step("mount the variant fixture, seed 42", () => session.render(variant));
+  session.frames(2);
+  await expect(session.text()).toMatchFileSnapshot("__recordings__/boot.variant.txt");
+});
+
+/**
+ * With `seed={null}` the layout and the shader seeds draw from `Math.random`.
+ * The harness feeds three its own stream, so the canvas stream holds only the
+ * canvas's draws: layout first, then a seed per node, then a seed per edge.
+ * The node and edge seeds land in the node seed and `iP1` hashes on frame 1,
+ * and the layout in every position, so a change to that order shows there.
+ */
+it("records an unseeded mount, which lays out and seeds from Math.random", async () => {
+  session.record();
+  session.step("mount with seed null", () => session.render({ seed: null }));
+  session.frames(1);
+  await expect(session.text()).toMatchFileSnapshot("__recordings__/boot.unseeded.txt");
 });

@@ -62,3 +62,43 @@ export const edges: GraphEdge[] = Array.from({ length: EDGE_COUNT }, (_, i) => (
 }));
 
 export const ariaLabel = "Harness graph";
+
+/**
+ * The data paths the default fixture leaves alone: an orphan (drawn as
+ * ORPHAN_STATE whatever it declares), a declared `state`, per-node `size`,
+ * `sectorAngle` and `radiusTarget`, a link category that sets every optional
+ * field, an edge with an absent end, and one edge `invalidEdges: "drop"` drops.
+ */
+export const variant = {
+  linkCategories: {
+    ...linkCategories,
+    signal: {
+      label: "SIGNAL",
+      color: "#FFB000",
+      width: 1.6,
+      dist: 1.2,
+      strength: 0.4,
+      curve: 0.3,
+      dash: 0.5,
+      gain: 1.6,
+      flow: 0.8,
+      jit: 0.4,
+      routing: "arc",
+      directed: false,
+    },
+  } satisfies Record<string, LinkCategory>,
+  nodes: [
+    { id: "hub", categoryId: "hub", label: "Hub", state: 2, size: 12 },
+    { id: "east", categoryId: "leaf", label: "East", sectorAngle: 0, radiusTarget: 80 },
+    { id: "west", categoryId: "leaf", label: "West", state: 0, sectorAngle: 3.14159 },
+    { id: "lone", categoryId: "leaf", label: "Lone", state: 2 },
+  ] satisfies GraphNode[],
+  edges: [
+    { a: "hub", b: "east", categoryId: "signal" },
+    { a: "hub", b: "west", categoryId: "owns", absentEnd: "b" },
+    { a: "east", b: "west", categoryId: "refs" },
+    { a: "hub", b: "nowhere", categoryId: "signal" },
+  ] satisfies GraphEdge[],
+  invalidEdges: "drop",
+  seed: 42,
+} as const;
