@@ -1,0 +1,1975 @@
+<title>Graph 2.0 Build Brief</title>
+<style>
+  /* Layout: a single reading column (max 1080px) of numbered build sections, with one wide interactive bench for the navigator prototype. Nexus Cyberdeck is dark-only, so this page commits to it deliberately. */
+  :root {
+    color-scheme: dark;
+    --bg: #08090a;
+    --panel: #0a0c0b;
+    --raised: #11150f;
+    --fg: #dff5c7;
+    --muted: #8fa284;
+    --subtle: #6f8465;
+    --line: #22291f;
+    --line-strong: #34402e;
+    --accent: #c6f135; /* new work */
+    --src-q: #9d7bff; /* from qrntn */
+    --src-n: #17e2e5; /* from Nexus */
+    --src-both: #dff5c7; /* converged / shared base */
+    --drop: #ff2e63; /* removed */
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --stencil: Impact, Haettenschweiler, "Arial Narrow Bold", "Arial Narrow", sans-serif;
+    --t-xs: 0.6875rem;
+    --t-sm: 0.8125rem;
+    --t-md: 0.9375rem;
+    --t-lg: 1.25rem;
+    --t-xl: 2.25rem;
+  }
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font: var(--t-md) / 1.6 var(--mono);
+    padding-inline: 16px;
+    padding-block: 0 64px;
+  }
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    display: grid;
+    gap: 56px;
+  }
+  a {
+    color: var(--accent);
+  }
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  h1,
+  h2 {
+    font-family: var(--stencil);
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    text-wrap: balance;
+    margin: 0;
+  }
+  h1 {
+    font-size: clamp(2rem, 6vw, 3.4rem);
+    line-height: 1;
+  }
+  h2 {
+    font-size: var(--t-xl);
+    line-height: 1.05;
+  }
+  h3 {
+    font-size: var(--t-sm);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0;
+    font-weight: 600;
+  }
+  p {
+    margin: 0;
+    max-width: 68ch;
+  }
+  .eyebrow {
+    font-size: var(--t-xs);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .sec {
+    display: grid;
+    gap: 20px;
+  }
+  .sec-head {
+    display: grid;
+    gap: 8px;
+    border-top: 1px solid var(--line-strong);
+    padding-top: 18px;
+  }
+  .lede {
+    color: var(--muted);
+  }
+  code {
+    font-family: var(--mono);
+    color: var(--fg);
+    background: var(--raised);
+    padding: 0 4px;
+    border-radius: 2px;
+    font-size: 0.92em;
+  }
+
+  /* hero */
+  header {
+    padding-top: 48px;
+    display: grid;
+    gap: 20px;
+  }
+  .thesis {
+    font-size: var(--t-lg);
+    line-height: 1.5;
+    max-width: 60ch;
+  }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 22px;
+    font-size: var(--t-sm);
+  }
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .sw {
+    width: 22px;
+    height: 18px;
+    display: inline-grid;
+    place-items: center;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--bg);
+    border-radius: 2px;
+  }
+  .sw.q {
+    background: var(--src-q);
+  }
+  .sw.n {
+    background: var(--src-n);
+  }
+  .sw.new {
+    background: var(--accent);
+  }
+  .sw.both {
+    background: var(--src-both);
+  }
+  .sw.drop {
+    background: var(--drop);
+  }
+  .refs {
+    font-size: var(--t-xs);
+    color: var(--subtle);
+  }
+
+  /* matrix */
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .chipbtn {
+    font: inherit;
+    font-size: var(--t-xs);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--line-strong);
+    padding: 6px 10px;
+    cursor: pointer;
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .chipbtn[aria-pressed="true"] {
+    color: var(--fg);
+    border-color: var(--fg);
+    background: var(--raised);
+  }
+  .matrix {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+  }
+  .layer {
+    background: var(--panel);
+    padding: 16px;
+    display: grid;
+    gap: 10px;
+    align-content: start;
+    min-width: 0;
+  }
+  .layer ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 6px;
+  }
+  .item {
+    display: grid;
+    grid-template-columns: 22px 1fr;
+    gap: 10px;
+    align-items: start;
+    font-size: var(--t-sm);
+    line-height: 1.45;
+  }
+  .item .sw {
+    margin-top: 1px;
+  }
+  .item small {
+    display: block;
+    color: var(--subtle);
+    font-size: var(--t-xs);
+  }
+  .item.dim {
+    opacity: 0.18;
+  }
+  .item.drop span:last-child {
+    text-decoration: line-through;
+    text-decoration-color: var(--drop);
+  }
+
+  /* bench */
+  .bench {
+    display: grid;
+    grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+  }
+  @media (max-width: 820px) {
+    .bench {
+      grid-template-columns: 1fr;
+    }
+  }
+  .stage-col,
+  .side-col {
+    background: var(--panel);
+    padding: 14px;
+    display: grid;
+    gap: 12px;
+    align-content: start;
+    min-width: 0;
+  }
+  .stage {
+    position: relative;
+    background: var(--bg);
+    border: 1px solid var(--line);
+  }
+  .stage svg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  #cursor {
+    position: absolute;
+    width: 34px;
+    height: 34px;
+    transform: translate(-50%, -50%);
+    opacity: 0;
+    border: 0;
+    padding: 0;
+    cursor: default;
+    pointer-events: none;
+  }
+  .keys {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .key {
+    font: inherit;
+    font-size: var(--t-xs);
+    background: var(--raised);
+    color: var(--fg);
+    border: 1px solid var(--line-strong);
+    padding: 6px 8px;
+    cursor: pointer;
+    display: inline-flex;
+    gap: 6px;
+    align-items: baseline;
+  }
+  .key kbd {
+    font-family: var(--mono);
+    color: var(--accent);
+    font-size: var(--t-xs);
+  }
+  .key:hover {
+    border-color: var(--fg);
+  }
+  .hint {
+    font-size: var(--t-xs);
+    color: var(--muted);
+    border-top: 1px dashed var(--line-strong);
+    padding-top: 8px;
+  }
+  .hint.on {
+    color: var(--fg);
+  }
+  dl.state {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 4px 14px;
+    margin: 0;
+    font-size: var(--t-sm);
+  }
+  dl.state dt {
+    color: var(--subtle);
+    text-transform: uppercase;
+    font-size: var(--t-xs);
+    letter-spacing: 0.1em;
+    padding-top: 2px;
+  }
+  dl.state dd {
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .trail {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    font-size: var(--t-xs);
+  }
+  .trail span {
+    border: 1px solid var(--line-strong);
+    padding: 1px 6px;
+  }
+  .trail span.cur {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .log {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 6px;
+    font-size: var(--t-sm);
+  }
+  .log li {
+    border-left: 2px solid var(--line-strong);
+    padding-left: 10px;
+    color: var(--muted);
+  }
+  .log li:first-child {
+    border-left-color: var(--accent);
+    color: var(--fg);
+  }
+  .log li b {
+    color: var(--subtle);
+    font-weight: 400;
+    font-size: var(--t-xs);
+    display: block;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .note {
+    font-size: var(--t-xs);
+    color: var(--subtle);
+  }
+
+  /* vocabulary */
+  .vocab {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+  }
+  .vcell {
+    background: var(--panel);
+    padding: 14px;
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+  }
+  .vcell svg {
+    width: 100%;
+    height: auto;
+    display: block;
+    background: var(--bg);
+  }
+  .vcell p {
+    font-size: var(--t-xs);
+    color: var(--muted);
+  }
+  .vcell .src {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    font-size: var(--t-xs);
+    color: var(--subtle);
+  }
+
+  /* decisions */
+  .decisions {
+    display: grid;
+    gap: 14px;
+  }
+  fieldset {
+    border: 1px solid var(--line-strong);
+    background: var(--panel);
+    padding: 16px;
+    margin: 0;
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+  }
+  legend {
+    padding: 0 6px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+  }
+  .opt {
+    display: grid;
+    grid-template-columns: 18px 1fr;
+    gap: 10px;
+    align-items: start;
+    font-size: var(--t-sm);
+    cursor: pointer;
+  }
+  .opt input {
+    margin-top: 4px;
+    accent-color: var(--accent);
+  }
+  .opt small {
+    display: block;
+    color: var(--subtle);
+    font-size: var(--t-xs);
+  }
+  .rec {
+    font-size: var(--t-xs);
+    color: var(--bg);
+    background: var(--accent);
+    padding: 0 5px;
+    margin-left: 6px;
+    letter-spacing: 0.08em;
+  }
+  .copyrow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+  }
+  .btn {
+    font: inherit;
+    font-size: var(--t-sm);
+    background: var(--accent);
+    color: var(--bg);
+    border: 0;
+    padding: 10px 14px;
+    cursor: pointer;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  #answers {
+    width: 100%;
+    min-height: 96px;
+    background: var(--bg);
+    color: var(--fg);
+    border: 1px solid var(--line-strong);
+    font: var(--t-sm) / 1.5 var(--mono);
+    padding: 10px;
+  }
+
+  /* phases */
+  ol.phases {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    counter-reset: ph;
+  }
+  ol.phases li {
+    background: var(--panel);
+    padding: 14px 16px;
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    gap: 14px;
+    align-items: start;
+    counter-increment: ph;
+  }
+  ol.phases li::before {
+    content: counter(ph);
+    font-family: var(--stencil);
+    font-size: 1.9rem;
+    line-height: 1;
+    color: var(--muted);
+  }
+  ol.phases li.nav::before {
+    color: var(--accent);
+  }
+  ol.phases h4 {
+    margin: 0 0 4px;
+    font-size: var(--t-md);
+  }
+  ol.phases p {
+    font-size: var(--t-sm);
+    color: var(--muted);
+  }
+  .badges {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-end;
+  }
+  .badge {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border: 1px solid var(--line-strong);
+    padding: 1px 6px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .badge.shot {
+    border-color: var(--src-n);
+    color: var(--src-n);
+  }
+  .badge.risk {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  @media (max-width: 560px) {
+    ol.phases li {
+      grid-template-columns: 32px minmax(0, 1fr);
+    }
+    .badges {
+      grid-column: 2;
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+  }
+
+  .codebox {
+    overflow-x: auto;
+    background: var(--panel);
+    border: 1px solid var(--line);
+  }
+  pre {
+    margin: 0;
+    padding: 16px;
+    font: var(--t-sm) / 1.6 var(--mono);
+  }
+  pre .c {
+    color: var(--subtle);
+  }
+  pre .add {
+    color: var(--accent);
+  }
+  pre .del {
+    color: var(--drop);
+  }
+
+  .gates {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+    gap: 12px;
+  }
+  .gate {
+    border: 1px solid var(--line-strong);
+    padding: 14px;
+    display: grid;
+    gap: 6px;
+    align-content: start;
+  }
+  .gate b {
+    font-family: var(--stencil);
+    font-weight: 400;
+    font-size: 1.6rem;
+    letter-spacing: 0.03em;
+    line-height: 1;
+  }
+  .gate p {
+    font-size: var(--t-xs);
+    color: var(--muted);
+  }
+  footer {
+    font-size: var(--t-xs);
+    color: var(--subtle);
+    border-top: 1px solid var(--line);
+    padding-top: 16px;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .e,
+    .n-ring {
+      transition:
+        opacity 0.18s ease,
+        stroke 0.18s ease;
+    }
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">@nexus-cyberdeck/graph · 2.0.0 · build brief · 2026-10-09</span>
+    <h1>Graph 2.0 Build Brief</h1>
+    <p class="thesis">
+      One graph, built from two. qrntn's renderer, camera and layout are the base, and Nexus's
+      hardening is re-applied on top. The part neither graph has is the reason for the rewrite: a
+      way to
+      <em>travel</em> the graph by its connections, by keyboard and by screen reader, with a way
+      back.
+    </p>
+    <div class="legend" aria-label="Source legend">
+      <span class="tag"><span class="sw q">Q</span>From qrntn</span>
+      <span class="tag"><span class="sw n">N</span>From Nexus</span>
+      <span class="tag"><span class="sw new">+</span>New in 2.0</span>
+      <span class="tag"><span class="sw both">=</span>Converged / shared base</span>
+      <span class="tag"><span class="sw drop">×</span>Removed</span>
+    </div>
+    <p class="refs">
+      Specs: <code>docs/specs/graph-migration-qrntn.md</code> (D1–D10, §1–§10) ·
+      <code>docs/specs/graph-usability-research.md</code> (R1–R12). Source pinned at qrntn
+      <code>da0823b</code>, fork base Nexus <code>84f8eca</code>.
+    </p>
+  </header>
+
+  <!-- ===================================================== SOURCES -->
+  <section class="sec" aria-labelledby="h-src">
+    <div class="sec-head">
+      <span class="eyebrow">What goes in</span>
+      <h2 id="h-src">Where every capability comes from</h2>
+      <p class="lede">
+        Grouped by the layer it lives in. Filter by source to see what each side contributes and
+        what we still have to write.
+      </p>
+    </div>
+    <div class="filters" role="group" aria-label="Filter by source" id="filters"></div>
+    <div class="matrix" id="matrix"></div>
+  </section>
+
+  <!-- ===================================================== NAVIGATOR -->
+  <section class="sec" aria-labelledby="h-nav">
+    <div class="sec-head">
+      <span class="eyebrow">The new part · spec §6.5 · research R3–R5, R7</span>
+      <h2 id="h-nav">Try the navigation model</h2>
+      <p class="lede">
+        A working prototype of the key map in the spec, on a small graph of this design system. Tab
+        into the graph, browse a node's connections with ← →, follow one with Enter, and go back
+        with Backspace. The right-hand panel shows what a screen reader would hear. The buttons
+        under the graph run the same actions, the way the visible key hints will for mouse and touch
+        users.
+      </p>
+    </div>
+
+    <div class="bench">
+      <div class="stage-col">
+        <div
+          class="stage"
+          id="stage"
+          role="group"
+          aria-roledescription="graph"
+          aria-label="Nexus design system dependency graph, prototype"
+          tabindex="-1"
+        >
+          <svg id="g" viewBox="0 0 760 430" aria-hidden="true"></svg>
+          <button id="cursor" type="button" aria-pressed="false" aria-label="Graph"></button>
+        </div>
+        <div class="keys" id="keys" aria-label="Navigation actions"></div>
+        <p class="hint" id="hint" aria-hidden="true">
+          Focus the graph to see key hints · ←→ connections · ↑↓ direction · Enter follow · ⌫ back ·
+          Space select · Home start · D describe · ? help · Esc step out
+        </p>
+      </div>
+      <div class="side-col">
+        <h3>Navigator state</h3>
+        <dl class="state">
+          <dt>Current</dt>
+          <dd id="s-cur">—</dd>
+          <dt>Showing</dt>
+          <dd id="s-dir">—</dd>
+          <dt>Cursor</dt>
+          <dd id="s-csr">—</dd>
+          <dt>Selected</dt>
+          <dd id="s-sel">—</dd>
+          <dt>Path</dt>
+          <dd><div class="trail" id="s-trail"></div></dd>
+        </dl>
+        <h3>Screen reader hears</h3>
+        <ol class="log" id="log" aria-hidden="true"></ol>
+        <div class="sr" aria-live="polite" id="live"></div>
+        <p class="note">
+          Shapes encode node kind (circle package · hexagon component · diamond token · square
+          page). Edge kind is carried by route, not colour alone: straight = uses, arc = documents,
+          etched = contains, dashed = pairs with. A filled pad marks the source and an open bracket
+          the target.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================== VOCAB -->
+  <section class="sec" aria-labelledby="h-voc">
+    <div class="sec-head">
+      <span class="eyebrow">Rendering · spec §3.3, §6.4.1</span>
+      <h2 id="h-voc">Edge vocabulary</h2>
+      <p class="lede">
+        Every distinction an edge makes, and which channel carries it. Width never changes with
+        state. Hover and focus move brightness only.
+      </p>
+    </div>
+    <div class="vocab" id="vocab"></div>
+  </section>
+
+  <!-- ===================================================== DECISIONS -->
+  <section class="sec" aria-labelledby="h-dec">
+    <div class="sec-head">
+      <span class="eyebrow">Blocking phase 1 · spec §5</span>
+      <h2 id="h-dec">Three calls only you can make</h2>
+      <p class="lede">
+        Pick an option for each and copy the answers back into the session. The recommended option
+        is pre-selected.
+      </p>
+    </div>
+    <form class="decisions" id="decisions"></form>
+    <div class="copyrow">
+      <button class="btn" type="button" id="copy">Copy answers</button>
+      <span class="note" id="copy-status" role="status"></span>
+    </div>
+    <label class="sr" for="answers">Answers text</label>
+    <textarea id="answers" readonly></textarea>
+  </section>
+
+  <!-- ===================================================== PHASES -->
+  <section class="sec" aria-labelledby="h-ph">
+    <div class="sec-head">
+      <span class="eyebrow">Build order · spec §7</span>
+      <h2 id="h-ph">Nine PRs, in this order</h2>
+      <p class="lede">
+        Every PR ends with typecheck, lint, unit, browser and consumer checks green. Baselines are
+        only refreshed where marked. Navigation (6–7) lands as a pure reducer first, so the key map
+        can change after user testing without touching rendering.
+      </p>
+    </div>
+    <ol class="phases" id="phases"></ol>
+  </section>
+
+  <!-- ===================================================== API -->
+  <section class="sec" aria-labelledby="h-api">
+    <div class="sec-head">
+      <span class="eyebrow">Public surface · spec §6.3</span>
+      <h2 id="h-api">API delta, 1.x → 2.0</h2>
+    </div>
+    <div class="codebox"><pre id="api"></pre></div>
+  </section>
+
+  <!-- ===================================================== GATES -->
+  <section class="sec" aria-labelledby="h-gate">
+    <div class="sec-head">
+      <span class="eyebrow">Definition of done · spec §8, §10</span>
+      <h2 id="h-gate">Release gates</h2>
+    </div>
+    <div class="gates" id="gates"></div>
+  </section>
+
+  <footer>
+    Prototype only: the navigator here is a plain-SVG sketch of <code>a11y/navigator.ts</code>, not
+    the WebGL renderer. Research caveat: the keyboard model rests on small studies (8–13
+    participants), so phase 9 includes a manual screen-reader matrix and, ideally, sessions with
+    blind and low-vision users.
+  </footer>
+</div>
+
+<script>
+  (() => {
+    "use strict";
+    const $ = (s) => document.querySelector(s);
+    const el = (tag, attrs = {}, kids = []) => {
+      const n = document.createElement(tag);
+      for (const [k, v] of Object.entries(attrs)) {
+        if (k === "text") n.textContent = v;
+        else if (k === "html") n.innerHTML = v;
+        else n.setAttribute(k, v);
+      }
+      for (const c of [].concat(kids)) if (c) n.append(c);
+      return n;
+    };
+    const SVGNS = "http://www.w3.org/2000/svg";
+    const sv = (tag, attrs = {}) => {
+      const n = document.createElementNS(SVGNS, tag);
+      for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+      return n;
+    };
+    const store = {
+      get(k) {
+        try {
+          return JSON.parse(localStorage.getItem(k));
+        } catch {
+          return null;
+        }
+      },
+      set(k, v) {
+        try {
+          localStorage.setItem(k, JSON.stringify(v));
+        } catch {
+          /* storage unavailable */
+        }
+      },
+    };
+
+    /* ================================================== SOURCE MATRIX */
+    const SRC = {
+      q: "From qrntn",
+      n: "From Nexus",
+      new: "New in 2.0",
+      both: "Converged",
+      drop: "Removed",
+    };
+    const SW = { q: "Q", n: "N", new: "+", both: "=", drop: "×" };
+    const LAYERS = [
+      [
+        "Render",
+        [
+          [
+            "q",
+            "Two-pass edges",
+            "resting layer composites, live layer adds — crossings stay dark",
+          ],
+          [
+            "q",
+            "Routing: straight · arc · etched",
+            "one encoder, magnitude sentinel fixes odd arcs drawing etched",
+          ],
+          ["q", "Per-category gain", "scaffold vs claim at equal width"],
+          ["q", "Terminal pads and frayed ends", "absentEnd: the trace never lands"],
+          ["q", "Screen-space dash period", "no longer turns solid when zoomed out"],
+          ["both", "SDF glyph shapes, CRT post-process", "shared base, unchanged"],
+          ["both", "Disposer list, unbounded bounding spheres", "both sides built the same fix"],
+        ],
+      ],
+      [
+        "Relate",
+        [
+          [
+            "q",
+            "Neighbourhood tiers: incident, two-hop, rest",
+            "edges between neighbours stop being dimmed",
+          ],
+          ["q", "State moves alpha only, never width", "the picture holds still under the pointer"],
+          ["q", "Selection-scoped link layers", "dense computed edges only around the selection"],
+          [
+            "new",
+            "Static direction pads",
+            "filled source, open bracket target — survives reduced motion (R2)",
+          ],
+          ["new", "Relation verbs per link category", "“uses / used by” for announcements"],
+        ],
+      ],
+      [
+        "Layout",
+        [
+          [
+            "q",
+            "Sector and ring forces",
+            "arms and rings you can learn; slower structural annealing",
+          ],
+          ["q", "reseed() without remount", ""],
+          ["n", "Seeded PRNG (mulberry32)", "byte-identical layouts per seed"],
+          ["new", "Default seed = hash of node ids", "same data, same picture, every visit (R6)"],
+          [
+            "new",
+            "Per-node size / sector / ring overrides",
+            "ends one-category-per-node workaround (D6)",
+          ],
+        ],
+      ],
+      [
+        "Camera",
+        [
+          [
+            "q",
+            "Auto-fit sweep that tracks the settling layout",
+            "hands over the moment the user pans or zooms",
+          ],
+          ["q", "Follow a focused node until it settles", ""],
+          ["q", "fitInset for floating chrome", ""],
+          ["new", "followSelection prop", "keeps 1.x select-to-zoom as a default (D2)"],
+          ["new", "Keyboard focus drives the camera", "panning without dragging, WCAG 2.5.7 (R4)"],
+        ],
+      ],
+      [
+        "Robustness",
+        [
+          ["n", "Validate the graph before WebGL", "named errors instead of TypeErrors"],
+          ["new", "invalidEdges: “error” | “drop” + onWarning", "qrntn's stale data case (D1)"],
+          ["n", "Context loss handled, forced loss on unmount", ""],
+          ["n", "Callbacks read through refs", "plus onFrame / onNavigate"],
+          ["n", "DPR re-read on resize", ""],
+        ],
+      ],
+      [
+        "Motion",
+        [
+          [
+            "n",
+            "uReduced in node, fade and composite shaders",
+            "flicker ≤ 0.94 Hz, no grain, roll or trails",
+          ],
+          ["new", "Gate qrntn's new edge motion", "jitter, packets, sync marks"],
+          [
+            "new",
+            "Skip the 6× intro sweep under reduced motion",
+            "and never replay it on a user-owned reseed (R12)",
+          ],
+        ],
+      ],
+      [
+        "Navigation",
+        [
+          ["q", "DOM layer synced to the canvas per frame", "the mechanism we keep"],
+          ["new", "One Tab stop, traverse by connections", "browse ←→, follow Enter, back ⌫ (R3)"],
+          [
+            "new",
+            "History stack: back() and canGoBack",
+            "Backspace for keys, a Back button for mice (D9)",
+          ],
+          ["new", "Visible key hints", "shortcuts nobody discovers don't exist (R7)"],
+          [
+            "new",
+            "describeNode / rankConnections",
+            "consumer phrasing without domain in the package",
+          ],
+          ["n", "Labels and tooltip aria-hidden, ariaLabel", ""],
+          ["new", "Tooltip: Esc dismisses, never covers the node", "WCAG 1.4.13 (R9)"],
+        ],
+      ],
+      [
+        "Text alternative",
+        [
+          ["new", "describeGraph()", "headless outline of nodes and typed connections (D10)"],
+          ["new", "<GraphOutline> in @nexus-cyberdeck/react", "“view as list” toggle (R8)"],
+        ],
+      ],
+      [
+        "Dropped",
+        [
+          ["drop", "LinkCategory.arrow", "slot reused for gain; direction moves to pads"],
+          ["drop", "One Tab stop per node", "qrntn overlay model — research found it disorienting"],
+          ["drop", "vertexAttribs, webglVersion in stats", ""],
+        ],
+      ],
+    ];
+    const active = new Set(store.get("brief.filters") || Object.keys(SRC));
+    const filters = $("#filters");
+    for (const k of Object.keys(SRC)) {
+      const b = el(
+        "button",
+        { type: "button", class: "chipbtn", "aria-pressed": String(active.has(k)) },
+        [el("span", { class: "sw " + k, text: SW[k], "aria-hidden": "true" }), SRC[k]],
+      );
+      b.addEventListener("click", () => {
+        active.has(k) ? active.delete(k) : active.add(k);
+        b.setAttribute("aria-pressed", String(active.has(k)));
+        store.set("brief.filters", [...active]);
+        paintMatrix();
+      });
+      filters.append(b);
+    }
+    const matrix = $("#matrix");
+    for (const [name, items] of LAYERS) {
+      const ul = el("ul");
+      for (const [src, label, note] of items) {
+        ul.append(
+          el("li", { class: "item" + (src === "drop" ? " drop" : ""), "data-src": src }, [
+            el("span", {
+              class: "sw " + src,
+              text: SW[src],
+              title: SRC[src],
+              "aria-label": SRC[src],
+            }),
+            el("span", {}, [label, note ? el("small", { text: note }) : null]),
+          ]),
+        );
+      }
+      matrix.append(el("div", { class: "layer" }, [el("h3", { text: name }), ul]));
+    }
+    function paintMatrix() {
+      for (const li of matrix.querySelectorAll(".item"))
+        li.classList.toggle("dim", !active.has(li.dataset.src));
+    }
+    paintMatrix();
+
+    /* ================================================== ROUTES (shared by bench + vocab) */
+    const C = { uses: "#dff5c7", documents: "#17e2e5", contains: "#7cff4f", pairs: "#9d7bff" };
+    function routePts(A, B, routing, bow) {
+      const N = 40,
+        pts = [];
+      if (routing === "etched") {
+        const dx = B[0] - A[0],
+          dy = B[1] - A[1];
+        const sx = dx >= 0 ? 1 : -1,
+          sy = dy >= 0 ? 1 : -1;
+        const adx = Math.abs(dx),
+          ady = Math.abs(dy),
+          mn = Math.min(adx, ady),
+          mx = Math.max(adx, ady);
+        const e = (mx - mn) / 2;
+        const ax = adx > ady ? [sx, 0] : [0, sy];
+        const P1 = [A[0] + ax[0] * e, A[1] + ax[1] * e];
+        const P2 = [P1[0] + sx * mn, P1[1] + sy * mn];
+        const segs = [
+          [A, P1],
+          [P1, P2],
+          [P2, B],
+        ];
+        for (const [p, q] of segs)
+          for (let i = 0; i < 14; i++) {
+            const t = i / 14;
+            pts.push([p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t]);
+          }
+        pts.push(B);
+        return pts;
+      }
+      if (routing === "arc") {
+        const ch = [B[0] - A[0], B[1] - A[1]],
+          L = Math.hypot(...ch) || 1;
+        const nr = [-ch[1] / L, ch[0] / L];
+        const Cc = [(A[0] + B[0]) / 2 + nr[0] * L * bow, (A[1] + B[1]) / 2 + nr[1] * L * bow];
+        for (let i = 0; i <= N; i++) {
+          const t = i / N,
+            u = 1 - t;
+          pts.push([
+            u * u * A[0] + 2 * u * t * Cc[0] + t * t * B[0],
+            u * u * A[1] + 2 * u * t * Cc[1] + t * t * B[1],
+          ]);
+        }
+        return pts;
+      }
+      for (let i = 0; i <= N; i++) {
+        const t = i / N;
+        pts.push([A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t]);
+      }
+      return pts;
+    }
+    // Trim a polyline by arc length at both ends; returns points plus end tangents.
+    function trim(pts, ta, tb) {
+      const cut = (p, d) => {
+        let acc = 0;
+        for (let i = 1; i < p.length; i++) {
+          const s = Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]);
+          if (acc + s >= d) {
+            const f = (d - acc) / (s || 1);
+            return [
+              [
+                p[i - 1][0] + (p[i][0] - p[i - 1][0]) * f,
+                p[i - 1][1] + (p[i][1] - p[i - 1][1]) * f,
+              ],
+              ...p.slice(i),
+            ];
+          }
+          acc += s;
+        }
+        return [p[p.length - 1]];
+      };
+      let out = cut(pts, ta);
+      out = cut(out.slice().reverse(), tb).reverse();
+      return out;
+    }
+    const pathD = (p) => "M" + p.map((q) => q[0].toFixed(1) + " " + q[1].toFixed(1)).join("L");
+    // Pad at end point p, with unit direction u pointing INTO the node.
+    function pad(p, u, kind, color, opacity) {
+      const ang = (Math.atan2(u[1], u[0]) * 180) / Math.PI;
+      const g = sv("g", {
+        transform: `translate(${p[0].toFixed(1)} ${p[1].toFixed(1)}) rotate(${ang.toFixed(1)})`,
+        opacity,
+      });
+      if (kind === "filled")
+        g.append(
+          sv("rect", { class: "pad", x: -3.2, y: -3.2, width: 6.4, height: 6.4, fill: color }),
+        );
+      else
+        g.append(
+          sv("path", {
+            class: "pad",
+            d: "M3.4 -4.6 L-3 -4.6 L-3 4.6 L3.4 4.6",
+            fill: "none",
+            stroke: color,
+            "stroke-width": 1.7,
+          }),
+        );
+      return g;
+    }
+    function drawEdge(svg, A, B, rA, rB, o) {
+      const pts = trim(routePts(A, B, o.routing, o.bow || 0.16), rA + 5, rB + 5);
+      if (pts.length < 2) return null;
+      let p = pts,
+        dash = o.dash ? "6 5" : null;
+      if (o.fray) {
+        const k = Math.floor(p.length * 0.62);
+        p = p.slice(0, k);
+      }
+      const g = sv("g", { class: "e" });
+      const line = sv("path", {
+        d: pathD(p),
+        fill: "none",
+        stroke: o.color,
+        "stroke-width": o.width || 1.6,
+        "stroke-linecap": "round",
+      });
+      if (dash) line.setAttribute("stroke-dasharray", dash);
+      if (o.fray) line.setAttribute("stroke-dasharray", "10 3 6 4 3 5 1.5 6");
+      g.append(line);
+      const a0 = pts[0],
+        a1 = pts[1],
+        b0 = pts[pts.length - 1],
+        b1 = pts[pts.length - 2];
+      const ua = norm([a0[0] - a1[0], a0[1] - a1[1]]),
+        ub = norm([b0[0] - b1[0], b0[1] - b1[1]]);
+      const padOp = 1;
+      g.append(pad(a0, ua, "filled", o.color, padOp));
+      if (!o.fray)
+        g.append(pad(b0, ub, o.directed === false ? "filled" : "bracket", o.color, padOp));
+      svg.append(g);
+      return { g, line };
+    }
+    const norm = (v) => {
+      const l = Math.hypot(v[0], v[1]) || 1;
+      return [v[0] / l, v[1] / l];
+    };
+    function glyph(cat, x, y, r) {
+      if (cat === "package") return sv("circle", { cx: x, cy: y, r });
+      if (cat === "component") {
+        const pts = [];
+        for (let i = 0; i < 6; i++) {
+          const a = (Math.PI / 3) * i + Math.PI / 6;
+          pts.push((x + r * Math.cos(a)).toFixed(1) + "," + (y + r * Math.sin(a)).toFixed(1));
+        }
+        return sv("polygon", { points: pts.join(" ") });
+      }
+      if (cat === "token")
+        return sv("polygon", {
+          points: `${x},${y - r * 1.15} ${x + r * 1.15},${y} ${x},${y + r * 1.15} ${x - r * 1.15},${y}`,
+        });
+      return sv("rect", { x: x - r * 0.9, y: y - r * 0.9, width: r * 1.8, height: r * 1.8 });
+    }
+
+    /* ================================================== NAVIGATOR PROTOTYPE */
+    const KINDS = {
+      uses: {
+        label: "uses",
+        verb: "uses",
+        inverse: "used by",
+        routing: "straight",
+        gain: 1.0,
+        directed: true,
+      },
+      documents: {
+        label: "documents",
+        verb: "documents",
+        inverse: "documented by",
+        routing: "arc",
+        gain: 0.7,
+        directed: true,
+      },
+      contains: {
+        label: "contains",
+        verb: "contains",
+        inverse: "part of",
+        routing: "etched",
+        gain: 0.45,
+        directed: true,
+      },
+      pairs: {
+        label: "pairs with",
+        verb: "pairs with",
+        inverse: "pairs with",
+        routing: "straight",
+        gain: 0.8,
+        directed: false,
+        dash: true,
+      },
+    };
+    const CAT = { package: "package", component: "component", token: "token set", page: "page" };
+    const NODES = [
+      { id: "tokens", label: "tokens", cat: "package", x: 150, y: 215, r: 15 },
+      { id: "focus", label: "focus-ring", cat: "token", x: 70, y: 95, r: 9 },
+      { id: "crt", label: "crt.css", cat: "token", x: 70, y: 345, r: 9 },
+      { id: "react", label: "react", cat: "package", x: 330, y: 100, r: 14 },
+      { id: "graph", label: "graph", cat: "package", x: 330, y: 330, r: 14 },
+      { id: "button", label: "Button", cat: "component", x: 505, y: 50, r: 10 },
+      { id: "panel", label: "Panel", cat: "component", x: 545, y: 160, r: 10 },
+      { id: "glyph", label: "Glyph", cat: "component", x: 470, y: 245, r: 10 },
+      { id: "canvas", label: "GraphCanvas", cat: "component", x: 545, y: 370, r: 12 },
+      { id: "showcase", label: "showcase", cat: "page", x: 690, y: 240, r: 13 },
+      { id: "typo", label: "Typography", cat: "page", x: 690, y: 70, r: 9 },
+      { id: "outline", label: "GraphOutline", cat: "component", x: 690, y: 385, r: 9 },
+    ];
+    const EDGES = [
+      ["tokens", "focus", "contains"],
+      ["tokens", "crt", "contains"],
+      ["react", "button", "contains"],
+      ["react", "panel", "contains"],
+      ["react", "glyph", "contains"],
+      ["react", "outline", "contains"],
+      ["graph", "canvas", "contains"],
+      ["button", "tokens", "uses"],
+      ["button", "focus", "uses"],
+      ["panel", "tokens", "uses"],
+      ["glyph", "tokens", "uses"],
+      ["canvas", "crt", "uses"],
+      ["outline", "canvas", "uses"],
+      ["react", "tokens", "uses"],
+      ["graph", "tokens", "uses"],
+      ["canvas", "glyph", "pairs"],
+      ["showcase", "button", "documents"],
+      ["showcase", "panel", "documents"],
+      ["showcase", "canvas", "documents"],
+      ["typo", "tokens", "documents"],
+      ["showcase", "typo", "contains"],
+    ].map(([a, b, kind], i) => ({ i, a, b, kind }));
+    const byId = new Map(NODES.map((n) => [n.id, n]));
+
+    // Structure: ranked connections per node (a11y/adjacency.ts)
+    const conns = new Map(NODES.map((n) => [n.id, []]));
+    for (const e of EDGES) {
+      const k = KINDS[e.kind];
+      conns.get(e.a).push({
+        edge: e,
+        other: e.b,
+        dir: k.directed ? "out" : "both",
+        kind: e.kind,
+        strength: k.gain,
+      });
+      conns.get(e.b).push({
+        edge: e,
+        other: e.a,
+        dir: k.directed ? "in" : "both",
+        kind: e.kind,
+        strength: k.gain,
+      });
+    }
+    for (const list of conns.values())
+      list.sort(
+        (x, y) =>
+          y.strength - x.strength || byId.get(x.other).label.localeCompare(byId.get(y.other).label),
+      );
+    const degree = (id) => conns.get(id).length;
+
+    // Description (describe.ts)
+    const describeNode = (n) => `${n.label}, ${CAT[n.cat]}, ${degree(n.id)} connections`;
+    const phrase = (c) => {
+      const k = KINDS[c.kind],
+        o = byId.get(c.other);
+      if (c.dir === "both") return `${k.verb} ${o.label}, ${CAT[o.cat]}`;
+      return c.dir === "out"
+        ? `${k.verb} ${o.label}, ${CAT[o.cat]}`
+        : `${k.inverse} ${o.label}, ${CAT[o.cat]}`;
+    };
+    const DIRS = ["all", "out", "in"];
+    const DIR_LABEL = { all: "All connections", out: "Outgoing", in: "Incoming" };
+    const summary = () =>
+      `Graph, ${NODES.length} nodes, ${EDGES.length} connections in ${Object.keys(KINDS).length} kinds.`;
+
+    // Navigation state machine (a11y/navigator.ts) — pure reducer.
+    const startId = [...NODES].sort(
+      (a, b) => degree(b.id) - degree(a.id) || a.label.localeCompare(b.label),
+    )[0].id;
+    const init = {
+      entered: false,
+      current: startId,
+      start: startId,
+      cursor: -1,
+      dir: "all",
+      history: [],
+      selected: null,
+    };
+    function visible(state) {
+      const all = conns.get(state.current);
+      return state.dir === "all" ? all : all.filter((c) => c.dir === state.dir || c.dir === "both");
+    }
+    function reduce(s, action) {
+      const list = visible(s);
+      switch (action.type) {
+        case "enter": {
+          const cur = s.selected || s.current;
+          const next = {
+            ...s,
+            entered: true,
+            current: cur,
+            start: s.entered ? s.start : cur,
+            cursor: -1,
+            dir: "all",
+          };
+          return [next, `${summary()} ${describeNode(byId.get(cur))}`];
+        }
+        case "browse": {
+          if (!list.length)
+            return [
+              s,
+              `No ${s.dir === "all" ? "" : DIR_LABEL[s.dir].toLowerCase() + " "}connections`,
+            ];
+          const i =
+            s.cursor < 0
+              ? action.step > 0
+                ? 0
+                : list.length - 1
+              : (s.cursor + action.step + list.length) % list.length;
+          const c = list[i],
+            rank = i === 0 ? ", strongest" : "";
+          return [{ ...s, cursor: i }, `${phrase(c)}. ${i + 1} of ${list.length}${rank}`];
+        }
+        case "dir": {
+          const d = DIRS[(DIRS.indexOf(s.dir) + action.step + DIRS.length) % DIRS.length];
+          const n = { ...s, dir: d, cursor: -1 };
+          return [n, `${DIR_LABEL[d]}, ${visible(n).length} connections`];
+        }
+        case "follow": {
+          if (s.cursor < 0 || !list[s.cursor])
+            return [s, "Choose a connection first with left or right arrow"];
+          const to = list[s.cursor].other;
+          return [
+            { ...s, history: [...s.history, s.current], current: to, cursor: -1, dir: "all" },
+            describeNode(byId.get(to)),
+          ];
+        }
+        case "jump": {
+          if (action.id === s.current) return [s, describeNode(byId.get(s.current))];
+          return [
+            {
+              ...s,
+              entered: true,
+              history: [...s.history, s.current],
+              current: action.id,
+              cursor: -1,
+              dir: "all",
+            },
+            describeNode(byId.get(action.id)),
+          ];
+        }
+        case "back": {
+          if (!s.history.length) return [s, "Start of path"];
+          const prev = s.history[s.history.length - 1];
+          return [
+            { ...s, history: s.history.slice(0, -1), current: prev, cursor: -1, dir: "all" },
+            `Back to ${byId.get(prev).label}`,
+          ];
+        }
+        case "home":
+          return [
+            {
+              ...s,
+              current: s.start,
+              cursor: -1,
+              dir: "all",
+              history: s.current === s.start ? s.history : [...s.history, s.current],
+            },
+            `Start, ${describeNode(byId.get(s.start))}`,
+          ];
+        case "select": {
+          const sel = s.selected === s.current ? null : s.current;
+          return [{ ...s, selected: sel }, sel ? `Selected ${byId.get(sel).label}` : "Deselected"];
+        }
+        case "describe": {
+          const n = byId.get(s.current),
+            all = conns.get(s.current);
+          const byKind = Object.keys(KINDS)
+            .map((k) => [k, all.filter((c) => c.kind === k).length])
+            .filter(([, v]) => v)
+            .map(([k, v]) => `${v} ${KINDS[k].label}`)
+            .join(", ");
+          return [
+            s,
+            `${n.label}. Kind: ${CAT[n.cat]}. ${all.length} connections: ${byKind}. ${s.selected === s.current ? "Selected." : "Not selected."}`,
+          ];
+        }
+        case "help":
+          return [
+            s,
+            "Left and right: browse connections. Up and down: change direction. Enter: follow. Backspace: back. Space: select. Home: start. D: describe. Escape: step out.",
+          ];
+        case "escape":
+          if (s.selected) return [{ ...s, selected: null }, "Deselected"];
+          return [{ ...s, entered: false, cursor: -1 }, "Left graph"];
+        default:
+          return [s, ""];
+      }
+    }
+
+    // DOM layer (a11y/overlay.ts)
+    const svg = $("#g"),
+      cursorBtn = $("#cursor"),
+      stage = $("#stage");
+    const layerE = sv("g"),
+      layerN = sv("g"),
+      layerL = sv("g");
+    svg.append(layerE, layerN, layerL);
+    const edgeEls = new Map();
+    for (const e of EDGES) {
+      const A = byId.get(e.a),
+        B = byId.get(e.b),
+        k = KINDS[e.kind];
+      const r = drawEdge(layerE, [A.x, A.y], [B.x, B.y], A.r, B.r, {
+        routing: k.routing,
+        bow: e.i % 2 ? -0.16 : 0.16,
+        color: C[e.kind],
+        directed: k.directed,
+        dash: k.dash,
+      });
+      if (r) edgeEls.set(e.i, r);
+    }
+    const nodeEls = new Map();
+    for (const n of NODES) {
+      const g = sv("g", { style: "cursor:pointer" });
+      const ring = sv("circle", {
+        cx: n.x,
+        cy: n.y,
+        r: n.r + 7,
+        fill: "none",
+        stroke: "#c6f135",
+        "stroke-width": 2,
+        opacity: 0,
+        class: "n-ring",
+      });
+      const far = sv("circle", {
+        cx: n.x,
+        cy: n.y,
+        r: n.r + 6,
+        fill: "none",
+        stroke: "#c6f135",
+        "stroke-width": 1.4,
+        "stroke-dasharray": "3 3",
+        opacity: 0,
+        class: "n-ring",
+      });
+      const body = glyph(n.cat, n.x, n.y, n.r);
+      body.setAttribute("fill", "#11150f");
+      body.setAttribute("stroke", "#dff5c7");
+      body.setAttribute("stroke-width", 1.6);
+      const dot = sv("circle", { cx: n.x, cy: n.y, r: 3.2, fill: "#c6f135", opacity: 0 });
+      const lab = sv("text", {
+        x: n.x + n.r + 7,
+        y: n.y + 4,
+        fill: "#8fa284",
+        "font-size": 12,
+        "font-family": "ui-monospace, Menlo, monospace",
+      });
+      lab.textContent = n.label;
+      g.append(ring, far, body, dot);
+      layerN.append(g);
+      layerL.append(lab);
+      g.addEventListener("click", () => {
+        dispatch({ type: "jump", id: n.id });
+        cursorBtn.focus({ preventScroll: true });
+      });
+      g.addEventListener("pointerenter", () => {
+        hover = n.id;
+        paint();
+      });
+      g.addEventListener("pointerleave", () => {
+        hover = null;
+        paint();
+      });
+      nodeEls.set(n.id, { ring, far, body, dot, lab });
+    }
+
+    let state = { ...init },
+      hover = null,
+      focused = false;
+    const logEl = $("#log"),
+      live = $("#live");
+    const said = [];
+    let flip = false;
+    function announce(msg, keyLabel) {
+      if (!msg) return;
+      flip = !flip;
+      live.textContent = msg + (flip ? "​" : "");
+      said.unshift([keyLabel, msg]);
+      said.length = Math.min(said.length, 6);
+      logEl.replaceChildren(...said.map(([k, m]) => el("li", {}, [el("b", { text: k }), m])));
+    }
+    function dispatch(action, keyLabel) {
+      const [next, msg] = reduce(state, action);
+      state = next;
+      announce(msg, keyLabel || action.type);
+      paint();
+    }
+    function depths(src) {
+      const d = new Map([[src, 0]]),
+        q = [src];
+      while (q.length) {
+        const v = q.shift();
+        if (d.get(v) >= 2) continue;
+        for (const c of conns.get(v))
+          if (!d.has(c.other)) {
+            d.set(c.other, d.get(v) + 1);
+            q.push(c.other);
+          }
+      }
+      return d;
+    }
+    function paint() {
+      const focusId = focused && state.entered ? state.current : null;
+      const src = hover || focusId;
+      const dep = src ? depths(src) : null;
+      const list = visible(state);
+      const csr = focusId && state.cursor >= 0 ? list[state.cursor] : null;
+      for (const e of EDGES) {
+        const r = edgeEls.get(e.i);
+        if (!r) continue;
+        let op = 0.55,
+          w = 1.6;
+        if (dep) {
+          const incident = e.a === src || e.b === src;
+          const near = dep.has(e.a) && dep.has(e.b) && Math.max(dep.get(e.a), dep.get(e.b)) <= 2;
+          op = incident ? 1 : near ? 0.5 : 0.12;
+        }
+        const isCsr = csr && csr.edge.i === e.i;
+        r.g.setAttribute("opacity", isCsr ? 1 : op);
+        r.line.setAttribute("stroke", isCsr ? "#c6f135" : C[e.kind]);
+        r.line.setAttribute("stroke-width", w); // constant width: state never changes geometry
+        for (const p of r.g.querySelectorAll(".pad")) {
+          if (p.getAttribute("fill") !== "none")
+            p.setAttribute("fill", isCsr ? "#c6f135" : C[e.kind]);
+          else p.setAttribute("stroke", isCsr ? "#c6f135" : C[e.kind]);
+        }
+      }
+      for (const n of NODES) {
+        const ne = nodeEls.get(n.id);
+        const inN = !dep || dep.has(n.id);
+        ne.body.setAttribute("opacity", inN ? 1 : 0.3);
+        ne.lab.setAttribute("opacity", inN ? 1 : 0.3);
+        ne.lab.setAttribute("fill", n.id === src ? "#dff5c7" : "#8fa284");
+        ne.ring.setAttribute("opacity", n.id === focusId ? 1 : 0);
+        ne.far.setAttribute("opacity", csr && csr.other === n.id ? 1 : 0);
+        ne.dot.setAttribute("opacity", state.selected === n.id ? 1 : 0);
+      }
+      // Move the single focus element over the current node.
+      const cur = byId.get(state.current);
+      cursorBtn.style.left = (cur.x / 760) * 100 + "%";
+      cursorBtn.style.top = (cur.y / 430) * 100 + "%";
+      cursorBtn.setAttribute("aria-label", describeNode(cur));
+      cursorBtn.setAttribute("aria-pressed", String(state.selected === state.current));
+      $("#s-cur").textContent = state.entered ? describeNode(cur) : "Not in graph yet: press Tab";
+      $("#s-dir").textContent = `${DIR_LABEL[state.dir]} (${list.length})`;
+      $("#s-csr").textContent = csr
+        ? `${state.cursor + 1} of ${list.length}: ${phrase(csr)}`
+        : "none";
+      $("#s-sel").textContent = state.selected ? byId.get(state.selected).label : "none";
+      const trail = $("#s-trail");
+      trail.replaceChildren(
+        ...[...state.history, state.current].map((id, i, arr) =>
+          el("span", { class: i === arr.length - 1 ? "cur" : "", text: byId.get(id).label }),
+        ),
+      );
+      $("#hint").classList.toggle("on", focused);
+    }
+
+    const KEYMAP = {
+      ArrowRight: [{ type: "browse", step: 1 }, "→"],
+      ArrowLeft: [{ type: "browse", step: -1 }, "←"],
+      ArrowDown: [{ type: "dir", step: 1 }, "↓"],
+      ArrowUp: [{ type: "dir", step: -1 }, "↑"],
+      Enter: [{ type: "follow" }, "Enter"],
+      " ": [{ type: "select" }, "Space"],
+      Backspace: [{ type: "back" }, "Backspace"],
+      Home: [{ type: "home" }, "Home"],
+      d: [{ type: "describe" }, "D"],
+      D: [{ type: "describe" }, "D"],
+      "?": [{ type: "help" }, "?"],
+    };
+    cursorBtn.addEventListener("focus", () => {
+      focused = true;
+      if (!state.entered) dispatch({ type: "enter" }, "Tab");
+      else paint();
+    });
+    cursorBtn.addEventListener("blur", () => {
+      focused = false;
+      paint();
+    });
+    cursorBtn.addEventListener("keydown", (ev) => {
+      if (ev.key === "Escape") {
+        ev.preventDefault();
+        dispatch({ type: "escape" }, "Esc");
+        if (!state.entered) stage.focus();
+        return;
+      }
+      const m = KEYMAP[ev.key];
+      if (!m || ev.metaKey || ev.ctrlKey || ev.altKey) return;
+      ev.preventDefault();
+      dispatch(m[0], m[1]);
+    });
+
+    const KEYBTNS = [
+      ["←", "Previous connection", { type: "browse", step: -1 }],
+      ["→", "Next connection", { type: "browse", step: 1 }],
+      ["↓", "Direction", { type: "dir", step: 1 }],
+      ["Enter", "Follow", { type: "follow" }],
+      ["⌫", "Back", { type: "back" }],
+      ["Space", "Select", { type: "select" }],
+      ["Home", "Start", { type: "home" }],
+      ["D", "Describe", { type: "describe" }],
+      ["?", "Help", { type: "help" }],
+    ];
+    const keys = $("#keys");
+    for (const [k, label, action] of KEYBTNS) {
+      const b = el("button", { type: "button", class: "key" }, [el("kbd", { text: k }), label]);
+      b.addEventListener("click", () => {
+        if (!state.entered) dispatch({ type: "enter" }, "Tab");
+        dispatch(action, k);
+      });
+      keys.append(b);
+    }
+    paint();
+
+    /* ================================================== VOCAB */
+    const VOCAB = [
+      {
+        t: "Straight",
+        src: "q",
+        d: "A plain chord. Default routing.",
+        draw: (s) => drawEdge(s, [30, 60], [210, 40], 8, 8, { routing: "straight", color: C.uses }),
+      },
+      {
+        t: "Arc",
+        src: "q",
+        d: "Shallow bow; adjacent arcs alternate sides so they don't overlap.",
+        draw: (s) =>
+          drawEdge(s, [30, 70], [210, 40], 8, 8, { routing: "arc", bow: 0.22, color: C.documents }),
+      },
+      {
+        t: "Etched",
+        src: "q",
+        d: "Axis, 45°, axis. No right angles, no popping as nodes move.",
+        draw: (s) =>
+          drawEdge(s, [30, 80], [210, 25], 8, 8, { routing: "etched", color: C.contains }),
+      },
+      {
+        t: "Dash (screen px)",
+        src: "q",
+        d: "Same rhythm at every zoom. Here: an undirected pairing.",
+        draw: (s) =>
+          drawEdge(s, [30, 60], [210, 40], 8, 8, {
+            routing: "straight",
+            color: C.pairs,
+            dash: true,
+            directed: false,
+          }),
+      },
+      {
+        t: "Gain",
+        src: "q",
+        d: "Scaffold vs claim at the same width: intensity, not thickness.",
+        draw: (s) => {
+          const a = drawEdge(s, [30, 35], [210, 35], 8, 8, { routing: "straight", color: C.uses });
+          a.g.setAttribute("opacity", 0.35);
+          drawEdge(s, [30, 75], [210, 75], 8, 8, { routing: "straight", color: C.uses });
+        },
+      },
+      {
+        t: "Fray (absentEnd)",
+        src: "q",
+        d: "Declared but empty endpoint: the trace thins out and lands on no pad.",
+        draw: (s) =>
+          drawEdge(s, [30, 55], [210, 55], 8, 8, {
+            routing: "straight",
+            color: C.documents,
+            fray: true,
+          }),
+      },
+      {
+        t: "Direction pads",
+        src: "new",
+        d: "Filled square at the source, open bracket at the target. Static, so it survives reduced motion.",
+        draw: (s) => drawEdge(s, [30, 55], [210, 55], 8, 8, { routing: "straight", color: C.uses }),
+      },
+      {
+        t: "Neighbourhood tiers",
+        src: "q",
+        d: "Incident 1.0 · two-hop 0.45 · rest dimmed. Alpha only; width never changes.",
+        draw: (s) => {
+          [
+            [25, 1],
+            [55, 0.5],
+            [85, 0.12],
+          ].forEach(([y, o]) => {
+            const r = drawEdge(s, [30, y], [210, y], 8, 8, { routing: "straight", color: C.uses });
+            r.g.setAttribute("opacity", o);
+          });
+        },
+      },
+    ];
+    const vocab = $("#vocab");
+    for (const v of VOCAB) {
+      const s = sv("svg", { viewBox: "0 0 240 110", role: "img", "aria-label": v.t + ": " + v.d });
+      // endpoint glyphs
+      v.draw(s);
+      vocab.append(
+        el("div", { class: "vcell" }, [
+          el("h3", { text: v.t }),
+          s,
+          el("p", { text: v.d }),
+          el("span", { class: "src" }, [
+            el("span", { class: "sw " + v.src, text: SW[v.src], "aria-hidden": "true" }),
+            SRC[v.src],
+          ]),
+        ]),
+      );
+    }
+
+    /* ================================================== DECISIONS */
+    const DEC = [
+      {
+        id: "D1",
+        q: "Edges whose endpoint matches no node",
+        opts: [
+          [
+            "error-drop",
+            "invalidEdges prop, default “error”; “drop” reports through onWarning",
+            "Keeps Nexus's released strictness; qrntn opts into dropping.",
+            true,
+          ],
+          [
+            "always-drop",
+            "Always drop and warn (qrntn behaviour)",
+            "Lenient for everyone; reverts a released Nexus changeset.",
+          ],
+          [
+            "always-error",
+            "Always throw (Nexus behaviour)",
+            "qrntn must clean its data before rendering.",
+          ],
+        ],
+      },
+      {
+        id: "D2",
+        q: "Zoom to the neighbourhood when a node is selected",
+        opts: [
+          [
+            "prop-true",
+            "followSelection prop, default true",
+            "1.x behaviour by default, built on focus() and follow; qrntn passes false.",
+            true,
+          ],
+          [
+            "prop-false",
+            "followSelection prop, default false",
+            "Camera never moves on its own; consumers opt in.",
+          ],
+          [
+            "remove",
+            "Remove it; consumers call focus() / fit()",
+            "Smallest engine; every consumer writes the same effect.",
+          ],
+        ],
+      },
+      {
+        id: "D3",
+        q: "Keyboard and screen-reader navigation",
+        opts: [
+          [
+            "in-on",
+            "In GraphCanvas, on by default, connection-traversal model",
+            "The model in the prototype above. Opt out with keyboardNavigation={false}.",
+            true,
+          ],
+          [
+            "in-off",
+            "In GraphCanvas, off by default",
+            "Safer rollout; accessibility opt-ins rarely get turned on.",
+          ],
+          [
+            "separate",
+            "Separate <GraphNavigator> component",
+            "Cleaner package boundary; every consumer has to remember to mount it.",
+          ],
+        ],
+      },
+    ];
+    const saved = store.get("brief.decisions") || {};
+    const form = $("#decisions");
+    for (const d of DEC) {
+      const fs = el("fieldset", {}, [el("legend", { text: `${d.id} · ${d.q}` })]);
+      for (const [val, label, note, rec] of d.opts) {
+        const id = `${d.id}-${val}`;
+        const input = el("input", { type: "radio", name: d.id, id, value: val });
+        if ((saved[d.id] || d.opts.find((o) => o[3])[0]) === val) input.checked = true;
+        const lab = el("label", { class: "opt", for: id }, [
+          input,
+          el("span", {}, [
+            label,
+            rec ? el("span", { class: "rec", text: "REC" }) : null,
+            el("small", { text: note }),
+          ]),
+        ]);
+        fs.append(lab);
+      }
+      form.append(fs);
+    }
+    const answers = $("#answers");
+    function writeAnswers() {
+      const out = {};
+      const lines = DEC.map((d) => {
+        const v = form.querySelector(`input[name="${d.id}"]:checked`).value;
+        out[d.id] = v;
+        const o = d.opts.find((x) => x[0] === v);
+        return `${d.id} (${d.q}): ${o[1]}${o[3] ? " [recommended]" : ""}`;
+      });
+      store.set("brief.decisions", out);
+      answers.value = "Graph 2.0 decisions:\n" + lines.join("\n");
+    }
+    form.addEventListener("change", writeAnswers);
+    form.addEventListener("submit", (e) => e.preventDefault());
+    writeAnswers();
+    $("#copy").addEventListener("click", () => {
+      const st = $("#copy-status");
+      const fallback = () => {
+        answers.focus();
+        answers.select();
+        st.textContent = "Selected — press Cmd+C or Ctrl+C to copy.";
+      };
+      try {
+        navigator.clipboard.writeText(answers.value).then(() => {
+          st.textContent = "Copied. Paste it into the session.";
+        }, fallback);
+      } catch {
+        fallback();
+      }
+    });
+
+    /* ================================================== PHASES */
+    const PHASES = [
+      [
+        "Extract, no behaviour change",
+        "Pull picking, labels and neighbourhood out of today's GraphCanvas with qrntn's tests; extract the validator; pin the 24 px hit target.",
+        [],
+      ],
+      [
+        "Physics and stable layout",
+        "Sector and ring forces, structural annealing, reseed, per-node overrides, merged with the seeded PRNG. seed prop defaults to an id hash; seeded showcase data.",
+        ["baselines"],
+      ],
+      [
+        "Camera",
+        "Auto-fit sweep, follow, fitInset, reframe, followSelection (D2), reduced-motion intro skip, no replay on a user-owned reseed.",
+        [],
+      ],
+      [
+        "Edges and direction",
+        "Routing, gain, pads, fray, two-pass, screen dashes, new default optics, arrow removed, uReduced gating, asymmetric direction pads, edge contrast measured.",
+        ["baselines", "look changes"],
+      ],
+      [
+        "Props, controller, stats",
+        "selectionScopedLinkCategories, onFrame, drawnNodes, DEFAULT_* exports, invalidEdges + onWarning (D1), refs for every callback.",
+        [],
+      ],
+      [
+        "Navigation core (no DOM)",
+        "adjacency, navigator reducer, describe, verbs, history with back() / canGoBack. Every key in the map is a unit test.",
+        ["riskiest logic"],
+        "nav",
+      ],
+      [
+        "Navigation DOM and visuals",
+        "One focus element, live region, key hints, root role → group, focus ring and cursor edge in-canvas, focus-driven camera, tooltip Esc and placement.",
+        ["baselines"],
+        "nav",
+      ],
+      [
+        "Text alternative",
+        "describeGraph() and <GraphOutline> in the React package, with its own a11y and visual tests.",
+        ["baselines"],
+        "nav",
+      ],
+      [
+        "Docs, AT pass, release",
+        "README, migration guide 1.x → 2.0, showcase demo, manual screen-reader matrix, major changeset.",
+        ["release gate"],
+      ],
+    ];
+    const phases = $("#phases");
+    for (const [t, d, b, cls] of PHASES) {
+      phases.append(
+        el("li", { class: cls || "" }, [
+          el("div", {}, [el("h4", { text: t }), el("p", { text: d })]),
+          el(
+            "div",
+            { class: "badges" },
+            b.map((x) =>
+              el("span", {
+                class:
+                  "badge " +
+                  (x === "baselines"
+                    ? "shot"
+                    : x === "riskiest logic" || x === "release gate"
+                      ? "risk"
+                      : ""),
+                text: x,
+              }),
+            ),
+          ),
+        ]),
+      );
+    }
+
+    /* ================================================== API */
+    const API = [
+      ["c", "// GraphNode / GraphEdge"],
+      ["add", "+ size?, sectorAngle?, radiusTarget?          per-node overrides (D6)"],
+      ["add", '+ absentEnd?: "a" | "b"                      frayed endpoint'],
+      ["c", "// LinkCategory"],
+      ["del", "- arrow?: boolean"],
+      ["add", '+ routing?: "straight" | "arc" | "etched"'],
+      ["add", "+ gain?, directed? (default true), verb?, inverseVerb?"],
+      ["c", "// PhysicsConfig / GraphStats"],
+      ["add", "+ sectorForce, radiusForce (default 0)       + drawnNodes"],
+      ["del", "- vertexAttribs, webglVersion"],
+      ["c", "// GraphCanvasProps"],
+      ["add", "+ seed?: number | null                        default: hash of node ids"],
+      ["add", "+ fitInset?, selectionScopedLinkCategories?, followSelection?"],
+      ["add", '+ invalidEdges?: "error" | "drop", onWarning?'],
+      ["add", "+ keyboardNavigation? (true), keyHints? (true)"],
+      ["add", "+ describeNode?, rankConnections?, onNavigate?, onFrame?"],
+      ["", "  ariaLabel?                                    now required when navigation is on"],
+      ["c", "// GraphController"],
+      ["add", "+ reseed(), back(), canGoBack, focusNode(id)"],
+      ["c", "// exports"],
+      ["add", "+ DEFAULT_PHYSICS, DEFAULT_OPTICS, describeGraph(), encodeRouting, EDGE_ATTRS"],
+    ];
+    $("#api").replaceChildren(
+      ...API.flatMap(([c, t]) => [el("span", { class: c, text: t }), "\n"]),
+    );
+
+    /* ================================================== GATES */
+    const GATES = [
+      ["0 regressions", "Every Nexus post-fork fix (N1–N11) is covered by a test after the merge."],
+      [
+        "≥ 3 : 1",
+        "Incident edges against the canvas after the CRT composite, measured by pixel sampling.",
+      ],
+      [
+        "≤ 15 %",
+        "Frame-time cost vs 1.x on a 2,000-node seeded graph, two-pass edges and pads included.",
+      ],
+      [
+        "1 tab stop",
+        "Tab enters and leaves the graph once; focus never lands on body after filtering.",
+      ],
+      [
+        "3 readers",
+        "NVDA + Firefox, JAWS + Chrome, VoiceOver + Safari, recorded in the release PR.",
+      ],
+      ["axe clean", "labs/graph with navigation on and off, and GraphOutline."],
+    ];
+    $("#gates").replaceChildren(
+      ...GATES.map(([b, p]) =>
+        el("div", { class: "gate" }, [el("b", { text: b }), el("p", { text: p })]),
+      ),
+    );
+  })();
+</script>

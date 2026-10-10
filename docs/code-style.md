@@ -2,9 +2,7 @@
 
 What review holds code to. Where a lint rule enforces a line, it is named; "—"
 means review only. The new rules don't yet cover `packages/graph` or
-`.design-sync`, and the naming rule runs on TypeScript files only, so `.js` and
-`.jsx` files such as the Glitch Lab aren't checked for naming until they're
-converted.
+`.design-sync`, and the naming rule runs on TypeScript files only.
 
 **The ratchet.** New rules land as warnings. Once a package reaches zero
 warnings for a rule, that rule becomes an error for that package.
@@ -45,14 +43,15 @@ so that a reader has to jump files to follow one idea.
 
 ## Hooks
 
-| Rule                                                                                                                                          | Why                                                                                        | Lint                              |
-| --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | --------------------------------- |
-| One hook, one concern or external system.                                                                                                     | It can then be named, tested and removed on its own.                                       | —                                 |
-| Pure logic goes in plain functions; the hook is glue.                                                                                         | Plain functions test without rendering.                                                    | —                                 |
-| `useEffectEvent` instead of ref mirrors or `exhaustive-deps` suppressions.                                                                    | It reads the latest value without re-running the effect.                                   | `react-hooks/exhaustive-deps`     |
-| Extract a named hook when a component has more than about three related state or effect hooks.                                                | The name documents what they do together.                                                  | —                                 |
-| Every effect that subscribes, allocates or schedules cleans up.                                                                               | Strict Mode and fast refresh run effects twice; anything left behind leaks or fires twice. | —                                 |
-| Derive during render rather than syncing in an effect ([You Might Not Need an Effect](https://react.dev/learn/you-might-not-need-an-effect)). | An effect that sets state renders twice and can go stale.                                  | `react-hooks/set-state-in-effect` |
+| Rule                                                                                                                                                          | Why                                                                                        | Lint                              |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | --------------------------------- |
+| One hook, one concern or external system.                                                                                                                     | It can then be named, tested and removed on its own.                                       | —                                 |
+| Pure logic goes in plain functions; the hook is glue.                                                                                                         | Plain functions test without rendering.                                                    | —                                 |
+| `useEffectEvent` instead of ref mirrors or `exhaustive-deps` suppressions.                                                                                    | It reads the latest value without re-running the effect.                                   | `react-hooks/exhaustive-deps`     |
+| Exception: published packages support React 18, so they keep ref mirrors written during render; `useEffectEvent` is for the showcase, a private React 19 app. | `useEffectEvent` does not exist in React 18.                                               | —                                 |
+| Extract a named hook when a component has more than about three related state or effect hooks.                                                                | The name documents what they do together.                                                  | —                                 |
+| Every effect that subscribes, allocates or schedules cleans up.                                                                                               | Strict Mode and fast refresh run effects twice; anything left behind leaks or fires twice. | —                                 |
+| Derive during render rather than syncing in an effect ([You Might Not Need an Effect](https://react.dev/learn/you-might-not-need-an-effect)).                 | An effect that sets state renders twice and can go stale.                                  | `react-hooks/set-state-in-effect` |
 
 ## Types
 

@@ -25,7 +25,7 @@ describe("VOICES", () => {
     expect(Object.keys(VOICES).sort()).toEqual(EVENTS.map((event) => event.id).sort());
   });
 
-  // Recorded from the pre-TypeScript glitchAudio.js; a change here changes the sound.
+  // Recorded from the synthesiser before its TypeScript port; a change here changes the sound.
   describe.each(Object.entries(RANDOM))("with Math.random %s", (_name, random) => {
     it.each(EVENTS.map((event) => event.id))("%s schedules the same calls", (id) => {
       expect(schedule(id, random)).toMatchSnapshot();

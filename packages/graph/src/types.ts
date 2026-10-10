@@ -1,17 +1,7 @@
 import type { CSSProperties } from "react";
-
-/* ============================================================================
-   Public types for @nexus-cyberdeck/graph.
-
-   The prototype this was extracted from hardcoded one taxonomy (ATLAS/TAG/
-   UNRSLV/SOURCE/AGENT/NODE, refs/cites/tagged/mentions/contradicts) directly
-   into the engine via module-global `NODE_TYPES`/`LINK_TYPES` lookup tables
-   keyed by a `.type` string. Everything here replaces that with a generic
-   category system: nodes/edges carry a `categoryId`, and the caller supplies
-   `nodeCategories`/`linkCategories` maps describing how each category looks
-   and behaves. The showcase's ATLAS/TAG/etc. vocabulary becomes sample data
-   built from these types, not part of the package.
-   ========================================================================== */
+import type { FitInset, Viewport } from "./camera.js";
+import type { DroppedEdge, InvalidEdgePolicy } from "./validate.js";
+import type { DescribeContext } from "./describe.js";
 
 /** Index into the six SDF node shapes the shader supports — same order @nexus-cyberdeck/react's `GLYPH_SHAPES` uses (circle, hexagon, diamond, ring, square, triangle). */
 export type GlyphShapeIndex = 0 | 1 | 2 | 3 | 4 | 5;
@@ -19,7 +9,7 @@ export type GlyphShapeIndex = 0 | 1 | 2 | 3 | 4 | 5;
 /** 0=DORMANT · 1=STABLE · 2=HOT (breathing/flicker in the node shader) · 3=ORPHAN (dimmed). */
 export type NodeState = 0 | 1 | 2 | 3;
 export const STATE_LABEL = ["DORMANT", "STABLE", "HOT", "ORPHAN"] as const;
-/** A node with zero edges is always displayed as ORPHAN, regardless of its declared state — derived from graph structure the engine already computes, not something the caller needs to set by hand. */
+/** Displayed state of any node with zero edges, whatever its declared state. */
 export const ORPHAN_STATE: NodeState = 3;
 
 /** Zoom level at which each label tier (0-3) starts earning screen space in `labelMode: "auto"`. Tier 0 is always drawn. */
@@ -31,6 +21,12 @@ export interface GraphNode<T = unknown> {
   /** Display text — on-screen label, hover tooltip, inspector title. */
   label: string;
   state?: NodeState;
+  /** Overrides the category's `size`. */
+  size?: number;
+  /** Overrides the category's `sectorAngle`. */
+  sectorAngle?: number;
+  /** Overrides the category's `radiusTarget`. */
+  radiusTarget?: number;
   /** Opaque consumer payload. Never read internally; round-tripped through onSelect/getNode as `GraphNodeSnapshot.data`, the same reference. */
   data?: T;
 }
@@ -39,11 +35,13 @@ export interface GraphEdge<T = unknown> {
   a: GraphNode["id"];
   b: GraphNode["id"];
   categoryId: string;
+  /** Endpoint declared but empty; the trace frays out toward it. An id matching no node is `invalidEdges`' case. */
+  absentEnd?: "a" | "b";
   data?: T;
 }
 
 export interface NodeCategory {
-  /** Display name, e.g. "ATLAS". Not read internally — a consumer's own legend UI is the only reason this lives here rather than in a second parallel lookup. */
+  /** Display name, e.g. "ATLAS"; screen-reader descriptions speak it too. */
   label: string;
   shape: GlyphShapeIndex;
   /** Real hex — GPU-bound (Three.js `Color` parsing), can't be a CSS custom property. */
@@ -55,22 +53,41 @@ export interface NodeCategory {
   mass: number;
   /** Label-visibility tier (0-3); see `TIER_ZOOM`. */
   tier: number;
+  /** Radians from the origin; a tangential pull toward this angle. Needs `PhysicsConfig.sectorForce` > 0. */
+  sectorAngle?: number;
+  /** World units from the origin; a radial spring that replaces gravity. Needs `PhysicsConfig.radiusForce` > 0. */
+  radiusTarget?: number;
 }
 
+/** `straight` chord, `arc` bowed by `curve`, or `etched` axis–45°–axis circuit trace. */
+export type LinkRouting = "straight" | "arc" | "etched";
+
 export interface LinkCategory {
-  /** Display name, e.g. "LINK". Not read internally — same status as NodeCategory.label. */
+  /** Display name, e.g. "LINK"; the default spoken `verb` is built from it. */
   label: string;
   color: string;
+  /** Half-width of the trace, × `OpticsConfig.edgeWidth`. */
   width: number;
   /** Rest distance, as a multiplier of `PhysicsConfig.linkDistance`. */
   dist: number;
   strength: number;
-  dash?: number;
-  arrow?: boolean;
-  /** Packet-flow speed/direction along the edge; negative reverses direction. 0 disables the flow animation. */
-  flow?: number;
+  /** Brightness multiplier on top of `OpticsConfig.edgeOpacity`. Default 1. */
+  gain?: number;
+  /** Default `"straight"`. */
+  routing?: LinkRouting;
+  /** Bow for `routing: "arc"`. Default 0.115. */
   curve?: number;
-  /** Jitter amount for the "contradicts"-style unstable-edge look: a travelling sine at 11 rad/s along the edge, scaled to zero under prefers-reduced-motion. */
+  /** Dash period in screen pixels; 0 or absent is solid. */
+  dash?: number;
+  /** Direction runs `a` to `b`. Default true. */
+  directed?: boolean;
+  /** Spoken from the `a` end, e.g. "uses". Default "<label> to", or "<label> with" when undirected. */
+  verb?: string;
+  /** Spoken from the `b` end, e.g. "used by". Default "<label> from"; ignored when undirected. */
+  inverseVerb?: string;
+  /** Packet-flow speed; negative reverses, 0 disables. */
+  flow?: number;
+  /** Jitter amplitude of a travelling sine at 11 rad/s; zero under prefers-reduced-motion. */
   jit?: number;
 }
 
@@ -80,6 +97,10 @@ export interface PhysicsConfig {
   gravity: number;
   damping: number;
   cursorForce: number;
+  /** Pull toward `sectorAngle`. Default 0 (off). */
+  sectorForce: number;
+  /** Spring toward `radiusTarget`. Default 0 (off). */
+  radiusForce: number;
   /** Alpha target the solver simmers toward; 0 lets it settle to rest. */
   settle: number;
 }
@@ -112,7 +133,7 @@ export interface GraphNodeSnapshot<T = unknown> {
   hex: string;
   state: (typeof STATE_LABEL)[number];
   degree: number;
-  /** Adjacent nodes, grouped by link category id — mirrors the original inspector's "adjacency" list. */
+  /** Adjacent nodes, grouped by link category id. */
   groups: ReadonlyArray<{
     categoryId: string;
     rows: ReadonlyArray<{ id: GraphNode["id"]; label: string; categoryId: string; out: boolean }>;
@@ -121,30 +142,78 @@ export interface GraphNodeSnapshot<T = unknown> {
   data?: T;
 }
 
-/**
- * Per-frame telemetry, sampled about twice a second. Everything here is about
- * the graph being drawn, not about the driver drawing it: `vertexAttribs` and
- * `webglVersion` used to be reported alongside, but they are constants of the
- * host's GL context, never change over the canvas's life, and were only ever
- * there as a leftover debugging aid from bringing the edge program up.
- */
+/** Per-frame telemetry, sampled about twice a second. */
 export interface GraphStats {
   fps: number;
   nodes: number;
   edges: number;
+  /** Nodes left after `hiddenNodeCategories` and `isolateId`. */
+  drawnNodes: number;
   drawnEdges: number;
   frameMs: number;
   settled: boolean;
 }
 
+/** Reused and refilled in place every frame: read it inside `onFrame`, never keep it. */
+export interface FrameGeometry {
+  /** The arrays below are parallel to this. */
+  ids: ReadonlyArray<GraphNode["id"]>;
+  /** [x0, y0, x1, y1, ...], world space. */
+  positions: Float32Array;
+  /** 1 = hidden, 0 = visible. */
+  hidden: Float32Array;
+  /** World units. */
+  radii: Float32Array;
+  camera: { x: number; y: number; zoom: number };
+  viewport: Viewport;
+}
+
+export type SelectSource = "pointer" | "keyboard" | "controller";
+
+export interface Connection<T = unknown> {
+  other: GraphNode<T>;
+  edge: GraphEdge;
+  categoryId: string;
+  /** "out" from the edge's `a`, "in" from its `b`, "both" when undirected. */
+  direction: "out" | "in" | "both";
+  /** The category's weight: |gain| × strength. */
+  strength: number;
+}
+
+export interface NavigateEvent<T = unknown> {
+  action:
+    | "enter"
+    | "browse"
+    | "filter"
+    | "follow"
+    | "toggleSelect"
+    | "back"
+    | "home"
+    | "describe"
+    | "help"
+    | "escape"
+    | "focusNode";
+  /** Null once the reader has left the graph. */
+  node: GraphNodeSnapshot<T> | null;
+  announcement: string;
+}
+
 /** `T` is the node `data` type `getNode` returns; it matches the `T` of the `<GraphCanvas>` the ref is attached to. */
 export interface GraphController<T = unknown> {
-  /** Frames the camera to fit every currently-visible node. */
+  /** Frames every visible node inside `fitInset` and returns the camera to auto-fit. */
   fit(): void;
+  /** Centres the node inside `fitInset` at zoom ≥ 2.6; takes the camera off auto-fit. */
   focus(id: GraphNode["id"]): void;
-  /** Nudges the solver back above rest; `v` is the alpha floor (default matches the original UI's Reheat button). */
+  /** Nudges the solver back above rest; `v` is the alpha floor. Default 1. */
   reheat(v?: number): void;
+  /** Re-scatters and restarts the layout; reproducible when seeded. */
+  reseed(): void;
   getNode(id: GraphNode["id"]): GraphNodeSnapshot<T> | null;
+  /** Undoes the reader's last move and restores its selection via `onSelect`; same as Backspace. */
+  back(): void;
+  readonly canGoBack: boolean;
+  /** Moves keyboard focus (not selection) onto the node; `back()` undoes it. */
+  focusNode(id: GraphNode["id"]): void;
 }
 
 /** `T` is the node `data` type, inferred from `nodes`, `ref` and `onSelect` together — an untyped `GraphController` ref widens it to `unknown`; `onSelect` and the controller's `getNode` hand it back typed. Defaults to `unknown`. */
@@ -156,22 +225,44 @@ export interface GraphCanvasProps<T = unknown> {
   physics?: Partial<PhysicsConfig>;
   optics?: Partial<OpticsConfig>;
   labelMode?: "auto" | "key" | "all" | "off";
-  /** Category ids to hide. Replaces the original's imperative `nodeOn`/`refilter()` — this is a controlled prop instead. */
   hiddenNodeCategories?: readonly string[];
   hiddenLinkCategories?: readonly string[];
+  /** Drawn only on edges touching `selectedId`; hidden when nothing is selected. */
+  selectionScopedLinkCategories?: readonly string[];
   /** When set, only this node and its immediate neighbours are shown. */
   isolateId?: GraphNode["id"] | null;
-  /** Currently selected node, controlled — mirrors `isolateId`. The canvas notifies clicks via `onSelect`; the consumer owns the actual state (same pattern the original's own `useEffect(() => api.current.select(...), [selected])` already implied, just made explicit as a controlled prop instead of an imperative-only sync). */
+  /** Controlled selection; the canvas reports changes through `onSelect`. */
   selectedId?: GraphNode["id"] | null;
   /** Pauses the physics solver (dragging still works) when false. Default true. */
   running?: boolean;
-  /** Fires when the user clicks a node (or clicks empty space, with `null`) — update `selectedId` in response. */
-  onSelect?: (node: GraphNodeSnapshot<T> | null) => void;
+  /** Layout and shader seed. Default derives from node ids; `null` uses `Math.random`. Layout also depends on `nodes` order. */
+  seed?: number | null;
+  /** CSS px covered by the consumer's chrome; camera framings land inside the rest. Omitted sides are 0. */
+  fitInset?: Partial<FitInset>;
+  /** Frame the selection and its neighbours, or the whole graph on clear. Default true. */
+  followSelection?: boolean;
+  /** `null` clears the selection; `"controller"` means `back()`. Update `selectedId` in response. */
+  onSelect?: (node: GraphNodeSnapshot<T> | null, source: SelectSource) => void;
   onStats?: (stats: GraphStats) => void;
-  /** Called once if WebGL setup throws (including an invalid graph: an edge to an unknown node id, a duplicate node id, or a category id missing from the maps) or the WebGL context is lost — the canvas renders nothing further after this. Context loss is terminal by design: three's renderer asks the browser to restore the context (it calls preventDefault on webglcontextlost), but the canvas does not resume when it is restored; remount it to recover. */
+  /** Fires every frame; see `FrameGeometry` for its reuse rule. */
+  onFrame?: (geometry: FrameGeometry) => void;
+  /** Edges to an unknown node id: `"error"` (default) fails via `onFatal`; `"drop"` skips and reports via `onWarning`. */
+  invalidEdges?: InvalidEdgePolicy;
+  /** Recoverable problems, e.g. edges dropped by `invalidEdges: "drop"`. Default `console.warn`. */
+  onWarning?: (message: string, detail: { dropped: readonly DroppedEdge[] }) => void;
+  /** Called once on WebGL setup failure (an invalid graph included) or context loss; the canvas then renders nothing. Remount to recover. */
   onFatal?: (message: string) => void;
-  /** Accessible name for the canvas, exposed via `role="img"`. The label pool and tooltip are `aria-hidden` — this is the one name assistive tech gets for the whole graph. */
+  /** Accessible name for the graph. Required in practice: an unnamed group fails WCAG 4.1.2, and dev builds warn. */
   ariaLabel?: string;
+  /** Default true; false renders the canvas as a named `role="img"`. */
+  keyboardNavigation?: boolean;
+  /** Default true. */
+  keyHints?: boolean;
+  /** Default: "<label>, <category>, <n> connections". */
+  describeNode?: (node: GraphNode<T>, ctx: DescribeContext) => string;
+  /** Most important first. Default: category weight, then category order, then label. */
+  rankConnections?: (a: Connection<T>, b: Connection<T>) => number;
+  onNavigate?: (event: NavigateEvent<T>) => void;
   className?: string;
   style?: CSSProperties;
 }

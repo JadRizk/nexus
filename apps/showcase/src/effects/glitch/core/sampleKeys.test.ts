@@ -43,6 +43,26 @@ describe("sampleKeys", () => {
     expect(sampleKeys(stepped, 0.75)).toBeCloseTo(0.5);
   });
 
+  it("reads the later of two keys at the same time", () => {
+    const repeated: Key[] = [
+      [0, 0],
+      [0.5, 1],
+      [0.5, 2],
+      [1, 3],
+    ];
+    expect([0.25, 0.5, 0.75].map((u) => sampleKeys(repeated, u))).toEqual([0.5, 1, 2.5]);
+  });
+
+  // Pins the #91 final-key bug: the frame loop drops an event at u >= 1, so the 2 is never drawn.
+  it("currently holds the value before a final step key until after u = 1", () => {
+    const stepLast: Key[] = [
+      [0, 0],
+      [0.5, 1],
+      [1, 2, "step"],
+    ];
+    expect([0.5, 0.75, 1, 1.5].map((u) => sampleKeys(stepLast, u))).toEqual([1, 1, 1, 2]);
+  });
+
   it("throws a TypeError for an empty track", () => {
     expect(() => sampleKeys([], 0.5)).toThrow(TypeError);
   });

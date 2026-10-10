@@ -4,6 +4,8 @@
  * stubbed to capture the callback, and the test invokes it once per assertion,
  * so what lands in the uniforms is observed directly rather than inferred.
  *
+ * It covers what reaches the GPU; the physics file covers the solver and camera rig.
+ *
  * @vitest-environment jsdom
  */
 import { act } from "react";
@@ -11,9 +13,10 @@ import { createRoot } from "react-dom/client";
 import type { Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GraphCanvas } from "./GraphCanvas.js";
-import { COMPOSITE_FS, EDGE_FS, EDGE_VS, FADE_FS, NODE_FS } from "./shaders.js";
+import { COMPOSITE_FS, EDGE_FS, EDGE_VS, FADE_FS, NODE_FS, PAD_FS } from "./shaders.js";
+import { OneFactor, OneMinusSrcAlphaFactor } from "three";
 import type * as ThreeModule from "three";
-import type { LinkCategory, NodeCategory } from "./types.js";
+import type { GraphCanvasProps, LinkCategory, NodeCategory } from "./types.js";
 
 type Uniforms = Record<string, { value: unknown }>;
 
@@ -42,6 +45,7 @@ vi.mock("three", async (importOriginal) => {
       return { MAX_VERTEX_ATTRIBS: 0x8869, getParameter: () => 16 };
     }
     dispose() {}
+    forceContextLoss() {}
   }
   class ObservedRawShaderMaterial extends actual.RawShaderMaterial {
     constructor(params: ConstructorParameters<typeof actual.RawShaderMaterial>[0]) {
@@ -250,12 +254,215 @@ describe("bounding spheres", () => {
   });
 });
 
+describe("edge pipeline", () => {
+  function mountGraph() {
+    act(() => {
+      root.render(
+        <GraphCanvas
+          nodes={[
+            { id: "a", categoryId: "atlas", label: "A" },
+            { id: "b", categoryId: "atlas", label: "B" },
+            { id: "c", categoryId: "atlas", label: "C" },
+          ]}
+          edges={[
+            { a: "a", b: "b", categoryId: "uses" },
+            { a: "b", b: "c", categoryId: "pairs", absentEnd: "b" },
+            { a: "c", b: "a", categoryId: "cites", absentEnd: "a" },
+          ]}
+          nodeCategories={nodeCategories}
+          linkCategories={{
+            uses: { label: "USES", color: "#ffffff", width: 1, dist: 1, strength: 1, gain: 0.55 },
+            pairs: {
+              label: "PAIRS",
+              color: "#ffffff",
+              width: 1,
+              dist: 1,
+              strength: 1,
+              routing: "etched",
+              directed: false,
+            },
+            cites: {
+              label: "CITES",
+              color: "#ffffff",
+              width: 1,
+              dist: 1,
+              strength: 1,
+              routing: "arc",
+              gain: 1.2,
+            },
+          }}
+        />,
+      );
+    });
+    const byFragmentShader = (source: string) =>
+      meshes.filter(
+        (mesh) => (mesh.material as { fragmentShader?: string }).fragmentShader === source,
+      );
+    return { edges: byFragmentShader(EDGE_FS), pads: byFragmentShader(PAD_FS) };
+  }
+
+  it("draws edges in two passes and pads between them, under the nodes", () => {
+    const { edges, pads } = mountGraph();
+    expect(edges.map((mesh) => mesh.renderOrder).sort()).toEqual([0, 2]);
+    expect(pads.map((mesh) => mesh.renderOrder)).toEqual([1]);
+    const node = meshes.find(
+      (mesh) => (mesh.material as { fragmentShader?: string }).fragmentShader === NODE_FS,
+    )!;
+    expect(node.renderOrder).toBe(3);
+  });
+
+  it("composites the resting pass and adds the live one", () => {
+    const { edges } = mountGraph();
+    const resting = edges.find((mesh) => mesh.renderOrder === 0)!.material as ThreeModule.Material;
+    const live = edges.find((mesh) => mesh.renderOrder === 2)!.material as ThreeModule.Material;
+    expect(resting.blendDst).toBe(OneMinusSrcAlphaFactor);
+    expect(live.blendDst).toBe(OneFactor);
+  });
+
+  it("encodes routing, signed gain, fray and a symmetric end trim per edge", () => {
+    const { edges, pads } = mountGraph();
+    const geometry = edges[0]!.geometry;
+    const p0 = geometry.getAttribute("iP0").array as Float32Array;
+    const p1 = geometry.getAttribute("iP1").array as Float32Array;
+    const p2 = geometry.getAttribute("iP2").array as Float32Array;
+    expect(geometry.getAttribute("iP2").itemSize).toBe(4);
+    // uses: straight, gain 0.55
+    expect(p0[1]).toBe(0);
+    expect(p0[3]).toBeCloseTo(0.55);
+    // pairs: etched, undirected (negative gain), b end absent
+    expect(p0[5]).toBe(-1000);
+    expect(p0[7]).toBe(-1);
+    expect(p2[4 + 3]).toBe(1);
+    // cites: arcs alternate sides by index, so index 2 bows positive
+    expect(p0[9]).toBeGreaterThan(0);
+    expect(p0[11]).toBeCloseTo(1.2);
+    expect(p2[8 + 3]).toBe(2);
+    expect(p1[2]! / p1[3]!).toBeCloseTo(1);
+    expect(pads[0]!.geometry.getAttribute("iP2")).toBe(geometry.getAttribute("iP2"));
+    expect(pads[0]!.geometry.getAttribute("iP0")).toBe(geometry.getAttribute("iP0"));
+  });
+});
+
+describe("props from qrntn: drop mode, scoped links, drawnNodes, onFrame", () => {
+  const scopedLinkCategories: Record<string, LinkCategory> = {
+    refs: { label: "REFS", color: "#ffffff", width: 1, dist: 1, strength: 1 },
+    sim: { label: "SIM", color: "#ffffff", width: 1, dist: 1, strength: 1 },
+  };
+  const threeNodes = [
+    { id: "a", categoryId: "atlas", label: "A" },
+    { id: "b", categoryId: "atlas", label: "B" },
+    { id: "c", categoryId: "atlas", label: "C" },
+  ];
+  function mountWith(props: Partial<GraphCanvasProps>) {
+    act(() => {
+      root.render(
+        <GraphCanvas
+          nodes={threeNodes}
+          edges={[]}
+          nodeCategories={nodeCategories}
+          linkCategories={scopedLinkCategories}
+          {...props}
+        />,
+      );
+    });
+  }
+  /** The per-edge hide flags (iP2.y) the edge shader reads. */
+  function hiddenFlags(): number[] {
+    const edgeMesh = meshes.find(
+      (mesh) => (mesh.material as { fragmentShader?: string }).fragmentShader === EDGE_FS,
+    )!;
+    const p2 = edgeMesh.geometry.getAttribute("iP2").array as Float32Array;
+    return Array.from({ length: p2.length / 4 }, (_, edge) => p2[edge * 4 + 1]!);
+  }
+  const runFrames = (count: number) => {
+    for (let i = 0; i < count; i++) tick();
+  };
+
+  it('invalidEdges="drop" draws the rest and reports what it dropped through onWarning', () => {
+    const onWarning = vi.fn();
+    const onFatal = vi.fn();
+    mountWith({
+      edges: [
+        { a: "a", b: "b", categoryId: "refs" },
+        { a: "a", b: "gone", categoryId: "refs" },
+      ],
+      invalidEdges: "drop",
+      onWarning,
+      onFatal,
+    });
+    expect(onFatal).not.toHaveBeenCalled();
+    expect(onWarning).toHaveBeenCalledTimes(1);
+    expect(onWarning.mock.calls[0]![0]).toMatch(/dropped 1 edge/);
+    expect(onWarning.mock.calls[0]![1].dropped).toEqual([
+      { index: 1, edge: { a: "a", b: "gone", categoryId: "refs" }, end: "b" },
+    ]);
+    expect(hiddenFlags()).toHaveLength(1);
+  });
+
+  it("falls back to console.warn when no onWarning is given, so a drop is never silent", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    mountWith({ edges: [{ a: "zzz", b: "b", categoryId: "refs" }], invalidEdges: "drop" });
+    expect(warn).toHaveBeenCalledWith(expect.stringMatching(/dropped 1 edge/), expect.any(Array));
+  });
+
+  it("shows a selection-scoped category only on edges touching the selected node", () => {
+    const edges = [
+      { a: "a", b: "b", categoryId: "refs" },
+      { a: "a", b: "b", categoryId: "sim" },
+      { a: "b", b: "c", categoryId: "sim" },
+    ];
+    mountWith({ edges, selectionScopedLinkCategories: ["sim"] });
+    expect(hiddenFlags()).toEqual([0, 1, 1]);
+    mountWith({ edges, selectionScopedLinkCategories: ["sim"], selectedId: "c" });
+    expect(hiddenFlags()).toEqual([0, 1, 0]);
+    mountWith({ edges, selectionScopedLinkCategories: ["sim"], selectedId: null });
+    expect(hiddenFlags()).toEqual([0, 1, 1]);
+  });
+
+  it("reports drawnNodes after hidden categories and isolation", () => {
+    // tick() stamps frames from 0, so pin the start time there or every dt is negative.
+    vi.spyOn(performance, "now").mockReturnValue(0);
+    const onStats = vi.fn();
+    mountWith({
+      edges: [{ a: "a", b: "b", categoryId: "refs" }],
+      isolateId: "a",
+      onStats,
+    });
+    runFrames(40);
+    const last = onStats.mock.calls.at(-1)![0];
+    expect(last).toMatchObject({ nodes: 3, drawnNodes: 2 });
+  });
+
+  it("calls onFrame every frame with live geometry, through the latest callback", () => {
+    const first = vi.fn();
+    mountWith({ onFrame: first });
+    tick();
+    expect(first).toHaveBeenCalledTimes(1);
+    const frame = first.mock.calls[0]![0];
+    expect(frame.ids).toEqual(["a", "b", "c"]);
+    expect(frame.positions).toHaveLength(6);
+    expect(frame.radii).toHaveLength(3);
+    expect(frame.camera.zoom).toBeGreaterThan(0);
+    // One object, refilled every frame, so nothing is allocated per frame.
+    tick();
+    expect(first.mock.calls[1]![0]).toBe(frame);
+    expect(first.mock.calls[1]![0].camera).toBe(frame.camera);
+    first.mockClear();
+    const second = vi.fn();
+    mountWith({ onFrame: second });
+    tick();
+    expect(second).toHaveBeenCalledTimes(1);
+    expect(first).not.toHaveBeenCalled();
+  });
+});
+
 describe("shader sources", () => {
   // Structural guard on the GLSL: the uniform has to be declared and used in
   // every program that reads it, or the value the test above observes on the
   // JS side never reaches a pixel.
   it.each([
     ["EDGE_VS", EDGE_VS],
+    ["EDGE_FS", EDGE_FS],
     ["NODE_FS", NODE_FS],
     ["FADE_FS", FADE_FS],
     ["COMPOSITE_FS", COMPOSITE_FS],

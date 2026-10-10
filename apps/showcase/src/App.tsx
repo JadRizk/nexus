@@ -11,7 +11,7 @@ import {
 } from "@nexus-cyberdeck/react";
 import { HomePage } from "./pages/HomePage.js";
 import NexusCyberdeck from "./graph/NexusCyberdeck.js";
-import GlitchLab from "./effects/GlitchLab.jsx";
+import GlitchLab from "./effects/lab/GlitchLab.js";
 import { href, useRoute } from "./router.js";
 import { DOC_GROUPS, findPage } from "./site.js";
 import type { DocPage } from "./site.js";

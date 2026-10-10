@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { assert, describe, expect, it } from "vitest";
 
 /* ============================================================================
    Where the decorative hairline may be used.
@@ -24,7 +24,7 @@ const components = join(dirname(fileURLToPath(import.meta.url)), "components");
 const REVIEWED: Record<string, string> = {
   "Button/.nx-btn":
     "Text-labelled control. Identified by its label; hover and active change colour and fill.",
-  "Button/.nx-btn:disabled:hover":
+  'Button/.nx-btn:is(:disabled, [aria-disabled="true"]):hover':
     "Resets a disabled button's hover back to the resting hairline. Disabled controls are exempt.",
   "TabStrip/.nx-tabstrip":
     "Outline of a group of text-labelled tabs. The selected tab is an inverted accent block.",
@@ -33,6 +33,8 @@ const REVIEWED: Record<string, string> = {
   "Drawer/.nx-drawer__header": "Divider between regions that already have their own edges.",
   "Drawer/.nx-drawer__footer": "Divider between regions that already have their own edges.",
   "CommandPalette/.nx-palette__hints": "Divider above a decorative, aria-hidden key legend.",
+  "GraphOutline/.nx-graph-outline__node":
+    "Divider between list entries. Each entry is identified by its text label; the disclosure's own focus ring marks focus.",
 };
 
 /** `Component/selector` for every rule in a component's stylesheet that reads the token. */
@@ -43,8 +45,8 @@ function usesOfDecorativeHairline(): string[] {
     if (!existsSync(file)) continue;
     const css = readFileSync(file, "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
     for (const [, selector, body] of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
-      if (body!.includes("--nx-border-default")) {
-        found.push(`${dir}/${selector!.trim().replace(/\s+/g, " ")}`);
+      if (body.includes("--nx-border-default")) {
+        found.push(`${dir}/${selector.trim().replace(/\s+/g, " ")}`);
       }
     }
   }
@@ -70,7 +72,9 @@ describe("the decorative hairline (--nx-border-default)", () => {
 
   it("gives the search field, the one boundary that identifies a control, the 3:1 token", () => {
     const css = readFileSync(join(components, "CommandPalette", "CommandPalette.css"), "utf8");
-    const field = css.match(/\.nx-palette__field\s*\{([^}]*)\}/)![1]!;
+    const rule = css.match(/\.nx-palette__field\s*\{([^}]*)\}/);
+    assert(rule, "CommandPalette.css has a .nx-palette__field rule");
+    const field = rule[1];
     expect(field).toContain("--nx-border-strong");
     expect(field).not.toContain("--nx-border-default");
   });
