@@ -1,17 +1,13 @@
 import { forwardRef, useId, useRef } from "react";
 import type { CSSProperties } from "react";
 
-/* The shapes `describeGraph()` in @nexus-cyberdeck/graph returns. Declared
-   here by shape rather than imported, so this package doesn't depend on the
-   graph's: anything with this shape renders, and the showcase, which uses
-   both, type-checks that the two stay the same. */
+// describeGraph()'s output, declared by shape so this package needn't depend on @nexus-cyberdeck/graph.
 
 export interface GraphOutlineConnection {
-  /** The relation as read from the node it is listed under, e.g. "cited by". */
+  /** As read from the node it is listed under, e.g. "cited by". */
   relation: string;
   id: string | number;
   label: string;
-  /** The other node's kind, e.g. "source". */
   kind: string;
 }
 
@@ -35,25 +31,17 @@ export interface GraphOutlineData {
 
 export interface GraphOutlineProps {
   data: GraphOutlineData;
-  /** Accessible name for the outline as a whole. Default "Graph as a list". */
+  /** Accessible name. Default "Graph as a list". */
   label?: string;
-  /** The selected node, shown open and marked as selected. */
   selectedId?: string | number | null;
-  /** Offers a "Select in graph" button on each node when given. */
+  /** When given, each node offers a "Select in graph" button. */
   onSelect?: (id: string | number) => void;
-  /** Level for the category headings, so the outline slots into the page's outline. Default 3. */
+  /** Level of the category headings. Default 3. */
   headingLevel?: 2 | 3 | 4 | 5;
   style?: CSSProperties;
   className?: string;
 }
 
-/**
- * The graph as a list: a summary, then each category under a heading, then
- * each node as a disclosure holding its connections. The text alternative to
- * the canvas, and the better tool when the question is "what do these two
- * have in common". Every connection's far node is a button that opens and
- * focuses that node's own entry, so the list can be travelled like the graph.
- */
 export const GraphOutline = forwardRef<HTMLElement, GraphOutlineProps>(function GraphOutline(
   {
     data,
@@ -66,17 +54,15 @@ export const GraphOutline = forwardRef<HTMLElement, GraphOutlineProps>(function 
   },
   ref,
 ) {
-  const base = useId();
-  const root = useRef<HTMLElement | null>(null);
+  const baseId = useId();
+  const rootRef = useRef<HTMLElement | null>(null);
   const Heading = `h${headingLevel}` as const;
-  // Ids must be valid and unique per outline, and node and category ids can
-  // be anything. Encoded, a space can't split one id into two idrefs.
-  const keyOf = (id: string | number) => `${base}-n-${encodeURIComponent(String(id))}`;
+  // Encoded, so a space in a node id can't split one idref into two.
+  const keyOf = (id: string | number) => `${baseId}-n-${encodeURIComponent(String(id))}`;
 
-  // A plain button rather than a #link: hash routers treat any # change as
-  // navigation, and the entry has to open as well as come into view.
+  // A button, not a #link: hash routers treat any # change as navigation.
   const jumpTo = (id: string | number) => {
-    const entry = root.current?.querySelector<HTMLDetailsElement>(`[id="${keyOf(id)}"]`);
+    const entry = rootRef.current?.querySelector<HTMLDetailsElement>(`[id="${keyOf(id)}"]`);
     if (!entry) return;
     entry.open = true;
     entry.querySelector("summary")?.focus();
@@ -85,7 +71,7 @@ export const GraphOutline = forwardRef<HTMLElement, GraphOutlineProps>(function 
   return (
     <section
       ref={(el) => {
-        root.current = el;
+        rootRef.current = el;
         if (typeof ref === "function") ref(el);
         else if (ref) ref.current = el;
       }}
@@ -95,7 +81,7 @@ export const GraphOutline = forwardRef<HTMLElement, GraphOutlineProps>(function 
     >
       <p className="nx-graph-outline__summary">{data.summary}</p>
       {data.groups.map((group) => {
-        const headingId = `${base}-g-${encodeURIComponent(group.categoryId)}`;
+        const headingId = `${baseId}-g-${encodeURIComponent(group.categoryId)}`;
         return (
           <section
             key={group.categoryId}
@@ -126,9 +112,7 @@ export const GraphOutline = forwardRef<HTMLElement, GraphOutlineProps>(function 
                           {isSelected ? " · selected" : ""}
                         </span>
                       </summary>
-                      {/* A one-way action, not a toggle: selecting again changes
-                        nothing, so the selected node gets a note in its place
-                        rather than a pressed button that can't be released. */}
+                      {/* Once selected the button becomes a note, so focus moves to the entry first. */}
                       {onSelect &&
                         (isSelected ? (
                           <p className="nx-graph-outline__selected">Selected in graph</p>
@@ -136,10 +120,8 @@ export const GraphOutline = forwardRef<HTMLElement, GraphOutlineProps>(function 
                           <button
                             type="button"
                             className="nx-graph-outline__select"
-                            onClick={(ev) => {
-                              // The button gives way to the note once selected;
-                              // focus goes to the entry rather than to <body>.
-                              ev.currentTarget
+                            onClick={(event) => {
+                              event.currentTarget
                                 .closest("details")
                                 ?.querySelector("summary")
                                 ?.focus();
@@ -154,17 +136,19 @@ export const GraphOutline = forwardRef<HTMLElement, GraphOutlineProps>(function 
                           className="nx-graph-outline__connections"
                           aria-label={`Connections of ${node.label}`}
                         >
-                          {node.connections.map((c, i) => (
-                            <li key={`${String(c.id)}-${i}`}>
-                              <span className="nx-graph-outline__relation">{c.relation}</span>{" "}
+                          {node.connections.map((connection, i) => (
+                            <li key={`${String(connection.id)}-${i}`}>
+                              <span className="nx-graph-outline__relation">
+                                {connection.relation}
+                              </span>{" "}
                               <button
                                 type="button"
                                 className="nx-graph-outline__jump"
-                                onClick={() => jumpTo(c.id)}
+                                onClick={() => jumpTo(connection.id)}
                               >
-                                {c.label}
+                                {connection.label}
                               </button>{" "}
-                              <span className="nx-graph-outline__kind">{c.kind}</span>
+                              <span className="nx-graph-outline__kind">{connection.kind}</span>
                             </li>
                           ))}
                         </ul>

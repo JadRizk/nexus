@@ -1,5 +1,4 @@
-/* The graph as a list. Plain document styles on purpose: this is the text
-   alternative, read top to bottom, so it looks like text rather than a HUD. */
+/* Plain document styles on purpose: the text alternative should read as text, not a HUD. */
 .nx-graph-outline {
   font-family: var(--nx-font-mono);
   font-size: var(--nx-text-md);

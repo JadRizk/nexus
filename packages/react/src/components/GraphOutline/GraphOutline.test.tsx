@@ -49,10 +49,9 @@ describe("GraphOutline", () => {
     render(<GraphOutline data={data} label="Sample graph as a list" />);
     const outline = screen.getByRole("region", { name: "Sample graph as a list" });
     expect(within(outline).getByText(data.summary)).toBeInTheDocument();
-    expect(screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual([
-      "NOTE (1)",
-      "SOURCE (1)",
-    ]);
+    expect(
+      screen.getAllByRole("heading", { level: 3 }).map((heading) => heading.textContent),
+    ).toEqual(["NOTE (1)", "SOURCE (1)"]);
     expect(screen.getByRole("region", { name: /NOTE/ })).toBeInTheDocument();
   });
 
@@ -69,7 +68,7 @@ describe("GraphOutline", () => {
     expect(
       within(list)
         .getAllByRole("listitem")
-        .map((li) => li.textContent),
+        .map((item) => item.textContent),
     ).toEqual(["cites archive-1 source", "tagged with #tag tag"]);
   });
 
@@ -91,15 +90,14 @@ describe("GraphOutline", () => {
     expect(onSelect).toHaveBeenCalledWith("s1");
 
     rerender(<GraphOutline data={data} onSelect={onSelect} selectedId="s1" />);
-    // Not a pressed toggle that can't be released: a note, and no button.
     const selected = screen.getByText("Selected in graph");
     expect(selected.tagName).toBe("P");
     const entry = selected.closest("details");
     assert(entry, "the note sits inside its node's entry");
     expect(screen.getAllByRole("button", { name: /in graph/ })).toHaveLength(1);
-    for (const b of screen.getAllByRole("button")) expect(b).not.toHaveAttribute("aria-pressed");
+    for (const button of screen.getAllByRole("button"))
+      expect(button).not.toHaveAttribute("aria-pressed");
     expect(entry.open).toBe(true);
-    // The button that was pressed is gone; focus went to its entry, not <body>.
     expect(document.activeElement).toBe(entry.querySelector("summary"));
     expect(entry.querySelector("summary")).toHaveAccessibleName(
       "archive-1, source, 1 connection, selected",
@@ -121,7 +119,6 @@ describe("GraphOutline", () => {
       summary: "",
       groups: [
         {
-          // A space would split aria-labelledby into two idrefs, neither real.
           categoryId: "data source",
           label: "X",
           nodes: [
@@ -160,7 +157,6 @@ describe("GraphOutline", () => {
   });
 
   it("does nothing when a connection points at a node the outline leaves out", async () => {
-    // A filtered outline can still name a node it doesn't list.
     const filtered: GraphOutlineData = { ...data, groups: data.groups.slice(0, 1) };
     render(<GraphOutline data={filtered} />);
     const before = document.activeElement;

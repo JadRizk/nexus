@@ -564,12 +564,12 @@ var GraphOutline = forwardRef8(function GraphOutline2({
   style,
   className
 }, ref) {
-  const base = useId3();
-  const root = useRef5(null);
+  const baseId = useId3();
+  const rootRef = useRef5(null);
   const Heading = `h${headingLevel}`;
-  const keyOf = (id) => `${base}-n-${encodeURIComponent(String(id))}`;
+  const keyOf = (id) => `${baseId}-n-${encodeURIComponent(String(id))}`;
   const jumpTo = (id) => {
-    const entry = root.current?.querySelector(`[id="${keyOf(id)}"]`);
+    const entry = rootRef.current?.querySelector(`[id="${keyOf(id)}"]`);
     if (!entry) return;
     entry.open = true;
     entry.querySelector("summary")?.focus();
@@ -578,7 +578,7 @@ var GraphOutline = forwardRef8(function GraphOutline2({
     "section",
     {
       ref: (el) => {
-        root.current = el;
+        rootRef.current = el;
         if (typeof ref === "function") ref(el);
         else if (ref) ref.current = el;
       },
@@ -588,7 +588,7 @@ var GraphOutline = forwardRef8(function GraphOutline2({
     },
     /* @__PURE__ */ React.createElement("p", { className: "nx-graph-outline__summary" }, data.summary),
     data.groups.map((group) => {
-      const headingId = `${base}-g-${encodeURIComponent(group.categoryId)}`;
+      const headingId = `${baseId}-g-${encodeURIComponent(group.categoryId)}`;
       return /* @__PURE__ */ React.createElement(
         "section",
         {
@@ -620,8 +620,8 @@ var GraphOutline = forwardRef8(function GraphOutline2({
               {
                 type: "button",
                 className: "nx-graph-outline__select",
-                onClick: (ev) => {
-                  ev.currentTarget.closest("details")?.querySelector("summary")?.focus();
+                onClick: (event) => {
+                  event.currentTarget.closest("details")?.querySelector("summary")?.focus();
                   onSelect(node.id);
                 }
               },
@@ -633,15 +633,15 @@ var GraphOutline = forwardRef8(function GraphOutline2({
                 className: "nx-graph-outline__connections",
                 "aria-label": `Connections of ${node.label}`
               },
-              node.connections.map((c, i) => /* @__PURE__ */ React.createElement("li", { key: `${String(c.id)}-${i}` }, /* @__PURE__ */ React.createElement("span", { className: "nx-graph-outline__relation" }, c.relation), " ", /* @__PURE__ */ React.createElement(
+              node.connections.map((connection, i) => /* @__PURE__ */ React.createElement("li", { key: `${String(connection.id)}-${i}` }, /* @__PURE__ */ React.createElement("span", { className: "nx-graph-outline__relation" }, connection.relation), " ", /* @__PURE__ */ React.createElement(
                 "button",
                 {
                   type: "button",
                   className: "nx-graph-outline__jump",
-                  onClick: () => jumpTo(c.id)
+                  onClick: () => jumpTo(connection.id)
                 },
-                c.label
-              ), " ", /* @__PURE__ */ React.createElement("span", { className: "nx-graph-outline__kind" }, c.kind)))
+                connection.label
+              ), " ", /* @__PURE__ */ React.createElement("span", { className: "nx-graph-outline__kind" }, connection.kind)))
             )
           ));
         }))
@@ -1472,9 +1472,7 @@ body {
   --nx-btn-border: var(--nx-border-accent);
 }
 
-/* aria-disabled reads the same as disabled. It is the one to use for a
-   button that can lose its action while it holds focus: a disabled button
-   drops focus to <body>, an aria-disabled one keeps it. */
+/* aria-disabled for a button that loses its action while focused: disabled would drop focus to <body>. */
 .nx-btn:is(:disabled, [aria-disabled="true"]) {
   --nx-btn-fg: var(--nx-fg-disabled);
 
@@ -1765,8 +1763,7 @@ body {
 }
 
 /* -------------------------------------------------------------- GraphOutline */
-/* The graph as a list. Plain document styles on purpose: this is the text
-   alternative, read top to bottom, so it looks like text rather than a HUD. */
+/* Plain document styles on purpose: the text alternative should read as text, not a HUD. */
 .nx-graph-outline {
   font-family: var(--nx-font-mono);
   font-size: var(--nx-text-md);
