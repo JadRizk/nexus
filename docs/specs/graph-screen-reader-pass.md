@@ -31,15 +31,15 @@ readers may add their own role or state words around it.
    landmark/heading navigation) to the graph.
    - Focus lands on one element inside a group named "Knowledge graph of
      Nexus Cyberdeck sample data", announced as a graph (the role description).
-   - Heard: "Graph, 200 nodes, 621 connections in 5 kinds." then the node,
-     e.g. "LEDGER//ATLAS, atlas, 29 connections".
+   - Heard: "Graph, 60 nodes, 175 connections in 5 kinds." then the node,
+     e.g. "LEDGER//ATLAS, atlas, 14 connections".
    - On screen: a ring on that node, and the key hint along the bottom.
    - **Check:** the reader switched to focus/forms mode by itself, or stays
      in it after one press of its usual toggle (NVDA Insert+Space, JAWS
      Enter). Note which.
 2. **Browse.** Press → three times, then ←.
    - Heard each time: relation, far node, kind, position, e.g. "links to
-     brittle_vector, node. 1 of 29, strongest".
+     adjacent_basin, node. 1 of 14, strongest".
    - The node itself doesn't change; the browsed edge stays bright on screen.
    - **Check:** the arrows aren't swallowed by browse mode.
 3. **Direction.** Press ↓, ↓, ↓.

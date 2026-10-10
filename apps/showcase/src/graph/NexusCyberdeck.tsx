@@ -36,7 +36,7 @@ const allOn = (ids: readonly string[]) => Object.fromEntries(ids.map((id) => [id
 export default function NexusCyberdeck() {
   const controllerRef = useRef<GraphController>(null);
 
-  const [total, setTotal] = useState(200);
+  const [total, setTotal] = useState(60);
   const [stats, setStats] = useState<GraphStats>(DEFAULT_STATS);
   const [canGoBack, setCanGoBack] = useState(false);
   const [isListView, setIsListView] = useState(false);

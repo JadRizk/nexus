@@ -10,7 +10,7 @@ const T0 = new Date("2026-01-01T00:00:00Z");
 /** Simulated time for the solver to settle (~310 steps, about 5s) and the camera to land. */
 const SETTLE_MS = 8_000;
 
-/** Reads a value from the console's stats readout, e.g. "NODES" -> "200". */
+/** Reads a value from the console's stats readout, e.g. "NODES" -> "60". */
 async function statText(page: Page, name: string): Promise<string> {
   return page.evaluate((labelText) => {
     const label = [...document.querySelectorAll("*")].find(
@@ -150,7 +150,7 @@ test.describe("graph canvas", () => {
     const summary = await graph.locator("[aria-live]").textContent();
     const shown = Number(/^Graph, (\d+) nodes/.exec(summary ?? "")?.[1]);
     expect(shown).toBeGreaterThan(0);
-    expect(shown).toBeLessThan(200);
+    expect(shown).toBeLessThan(60);
   });
 
   test("an Escape that only dismisses the tooltip is marked as handled", async ({ page }) => {
@@ -209,7 +209,7 @@ test.describe("graph canvas", () => {
     const outline = page.getByRole("region", { name: "Sample graph as a list" });
     await expect(outline).toBeVisible();
     await expect(
-      outline.getByText(/^Graph, 200 nodes, \d+ connections in \d+ kinds\.$/),
+      outline.getByText(/^Graph, 60 nodes, \d+ connections in \d+ kinds\.$/),
     ).toBeVisible();
     await expect(outline.getByRole("heading", { level: 3 }).first()).toBeVisible();
 
