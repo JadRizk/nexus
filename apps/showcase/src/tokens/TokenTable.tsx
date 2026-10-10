@@ -241,10 +241,10 @@ const th: CSSProperties = {
   borderBottom: "var(--nx-hairline) solid var(--nx-border-strong)",
 };
 
+// Padding and rule are in showcase.css (.sc-tokens), where a phone's
+// stacked layout can take them off again.
 const td: CSSProperties = {
-  padding: "var(--nx-space-4)",
   verticalAlign: "top",
-  borderBottom: "var(--nx-hairline) solid var(--nx-border-default)",
   overflowWrap: "anywhere",
 };
 
@@ -252,7 +252,10 @@ export function TokenTable({ caption, intro, tokens, preview, contrast }: TokenT
   const { theme } = useNexus();
   return (
     <section data-spec={caption} style={{ marginBottom: "var(--nx-space-8)" }}>
-      <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
+      <table
+        className="sc-tokens"
+        style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}
+      >
         <caption style={{ textAlign: "left", captionSide: "top" }}>
           <SectionHeading as="span">/// {caption}</SectionHeading>
           {intro && (

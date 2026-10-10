@@ -104,6 +104,21 @@ test("the room comes up over the monitor, and Sound silences it", async ({ page 
   await expect(monitor(page)).toHaveAttribute("data-room", "off");
 });
 
+test("a click on Sound or Jolt does not keep the room on once the pointer leaves", async ({
+  page,
+}) => {
+  await gotoPage(page, "home");
+  const jolt = page.getByRole("button", { name: "Jolt" });
+  await jolt.click();
+  await expect(monitor(page)).toHaveAttribute("data-room", "on");
+  await expect(jolt).toBeFocused();
+  // Out through the bottom edge, past the controls: the clicked button keeps
+  // focus, but a pointer's focus is not presence.
+  const box = (await monitor(page).boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height + 40);
+  await expect(monitor(page)).toHaveAttribute("data-room", "off");
+});
+
 test("under reduced motion the screen is a still and the faults and sound are withdrawn", async ({
   page,
 }) => {
