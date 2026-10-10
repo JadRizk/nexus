@@ -14,7 +14,8 @@ const LOW_DRAW = 0.00105;
 const SEED = 42;
 /** three's own draws (`generateUUID`, four per object) come from here, apart from the canvas's. */
 const THREE_SEED = 7;
-const THREE_SOURCE = /[\\/]node_modules[\\/]three[\\/]/;
+/** three from node_modules, or as vite pre-bundles it into `.vite/deps/three.js`. */
+const THREE_SOURCE = /[\\/]node_modules[\\/](?:three[\\/]|\.vite[\\/]deps(?:_ssr)?[\\/]three\.)/;
 /** jsdom has no layout: text is this wide per character and every box this tall. */
 const CHAR_WIDTH = 6;
 const BOX_HEIGHT = 14;
@@ -57,15 +58,18 @@ function isFromThree(): boolean {
 
 /**
  * Two seeded streams: one for three, so creating an object the canvas never
- * draws leaves the recording as it was, and one for the canvas. `lowDraw`
- * `arm` sets up the scripted glitch draw for the frame about to run.
+ * draws leaves the recording as it was, and one for the canvas. `arm` sets up the scripted glitch draw for the frame about to run.
  */
 function pinRandom() {
   const canvas = mulberry32(SEED);
   const three = mulberry32(THREE_SEED);
   const low = { armed: false };
+  let threeDraws = 0;
   vi.spyOn(Math, "random").mockImplementation(() => {
-    if (isFromThree()) return three();
+    if (isFromThree()) {
+      threeDraws++;
+      return three();
+    }
     if (!low.armed) return canvas();
     low.armed = false;
     return LOW_DRAW;
@@ -77,6 +81,13 @@ function pinRandom() {
     },
     disarm() {
       low.armed = false;
+    },
+    /**
+     * Every mount creates three objects, so a session with no three draws means
+     * `THREE_SOURCE` stopped matching and UUID draws fell into the canvas stream.
+     */
+    assertThreeDrew() {
+      if (threeDraws === 0) throw new Error("harness: three's draws never matched THREE_SOURCE");
     },
   };
 }
@@ -213,6 +224,7 @@ export function pinEnvironment(log: (line: string) => void): Environment {
     restore() {
       vi.restoreAllMocks();
       vi.unstubAllGlobals();
+      random.assertThreeDrew();
     },
   };
 }
