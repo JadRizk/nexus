@@ -67,6 +67,130 @@
   border-left-color: var(--nx-fg-accent);
 }
 
+/* The docs layout: sidebar beside the page; on a phone, the page under a
+   toggle that opens the sidebar in place. */
+.sc-doc {
+  display: flex;
+  align-items: flex-start;
+}
+
+/* Beside the page the wrapper is no box at all, so the sidebar stays the
+   row's flex item and sticks to <main> as before; and the toggle is only a
+   phone's, the sidebar being always open here. */
+.sc-docnav {
+  display: contents;
+}
+
+.sc-docnav__toggle {
+  display: none;
+}
+
+@media (width < 640px) {
+  .sc-doc {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sc-docnav {
+    display: block;
+    padding: var(--nx-space-5) var(--nx-space-6) 0;
+  }
+
+  .sc-docnav__toggle {
+    display: flex;
+    gap: var(--nx-space-3);
+    align-items: center;
+    width: 100%;
+    text-align: start;
+  }
+
+  .sc-docnav__current {
+    flex: 1;
+    overflow: hidden;
+    color: var(--nx-fg-default);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Open, it is a plain list in the page's flow: no stickiness, no height
+     cap, no rule beside a page it now sits above. */
+  .sc-sidebar {
+    display: none;
+    flex: none;
+    position: static;
+    max-height: none;
+    padding: 0 0 var(--nx-space-5);
+    border-right: 0;
+    border-bottom: var(--nx-hairline) solid var(--nx-border-default);
+  }
+
+  .sc-sidebar[data-open="1"] {
+    display: block;
+  }
+}
+
+/* ============================================================================
+   Header — wordmark, section links, Star and Search, on one row at every
+   width. A phone drops what it has no room or use for.
+   ========================================================================== */
+
+.sc-header {
+  display: flex;
+  gap: var(--nx-space-6);
+  align-items: center;
+  padding: var(--nx-space-4) var(--nx-space-6);
+}
+
+/* Centred on each other, not on a shared baseline: the version's line box
+   hangs below the wordmark's caps, and a baseline row is centred on that
+   taller box, which lifts the wordmark off the buttons' centre line. */
+.sc-header__brand {
+  display: flex;
+  gap: var(--nx-space-3);
+  align-items: center;
+}
+
+.sc-header__nav {
+  display: flex;
+  flex: 1;
+  gap: var(--nx-space-2);
+}
+
+.sc-header__nav .nx-btn {
+  white-space: nowrap;
+}
+
+.sc-header__actions {
+  display: flex;
+  gap: var(--nx-space-2);
+}
+
+.sc-header__star {
+  display: flex;
+  gap: var(--nx-space-2);
+  align-items: center;
+}
+
+@media (width < 640px) {
+  /* The version is in the footer too; a phone has no ⌘K to press. */
+  .sc-header__version,
+  .sc-header__key {
+    display: none;
+  }
+}
+
+/* The header's wordmark: the link home. A flex box, so it is exactly as tall
+   as the wordmark: inline, it kept room below for descenders the wordmark
+   does not have, and the header centred that taller box, lifting the
+   wordmark off the buttons' centre line. The size is read by the Wordmark
+   (--nx-wordmark-size inherits): caps nearly as tall as the buttons. */
+.sc-brand {
+  --nx-wordmark-size: calc(var(--nx-text-xl) * 1.2);
+
+  display: flex;
+  text-decoration: none;
+}
+
 /* ============================================================================
    Home — the landing page. Layout only; every surface is a library component.
    ========================================================================== */
@@ -83,20 +207,47 @@
   padding: var(--nx-space-8) var(--nx-space-6) 0;
 }
 
-/* Pitch and monitor side by side; the monitor drops under the pitch once the
-   two no longer fit, rather than squeezing either. */
+/* One centred column — pitch over monitor — until both fit side by side.
+   Stacked, each is centred on the page rather than hugging its left edge;
+   side by side, the pitch reads left-aligned against the monitor. */
 .sc-home__hero {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
   gap: var(--nx-space-7);
-  align-items: center;
-  justify-content: space-between;
+  justify-items: center;
+  text-align: center;
 }
 
-/* The pitch gives way first, down to 360px, before the monitor wraps. */
 .sc-home__pitch {
-  flex: 1 1 360px;
-  max-width: 520px;
+  max-width: 560px;
+}
+
+/* Centred, a title that breaks before its last word reads as a stray. */
+.sc-home__pitch h1 {
+  text-wrap: balance;
+}
+
+.sc-home__ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--nx-space-3);
+  justify-content: center;
+  margin-top: var(--nx-space-6);
+}
+
+/* Two columns once there is room for at least 400px of pitch beside the
+   monitor, with the gap and the page's side padding. */
+@media (width >= 1040px) {
+  .sc-home__hero {
+    grid-template-columns: minmax(0, 520px) minmax(0, 560px);
+    align-items: center;
+    justify-content: space-between;
+    justify-items: stretch;
+    text-align: start;
+  }
+
+  .sc-home__ctas {
+    justify-content: flex-start;
+  }
 }
 
 .sc-cta {
@@ -106,9 +257,10 @@
 
 /* ---------------------------------------------------------------- monitor */
 
+/* Fills its column up to 560px, and shrinks with a phone's screen. */
 .sc-monitor {
-  flex: 0 1 560px;
-  min-width: 420px;
+  width: 100%;
+  max-width: 560px;
 }
 
 .sc-monitor__screen {
@@ -152,6 +304,14 @@
 .sc-monitor__channels {
   display: flex;
   gap: var(--nx-space-2);
+}
+
+/* Square-ish, and as tall as Jolt beside it (the row stretches both). */
+.sc-monitor__sound {
+  --nx-btn-padding: 0 var(--nx-space-3);
+
+  display: flex;
+  align-items: center;
 }
 
 /* ----------------------------------------------------------------- routes */
@@ -232,4 +392,60 @@
 .sc-footer__links a:hover {
   color: var(--nx-fg-accent);
   text-decoration: underline;
+}
+
+/* ----------------------------------------------------------- token table */
+
+/* Foundations' four-column token tables (tokens/TokenTable.tsx). */
+.sc-tokens td,
+.sc-tokens tbody th {
+  padding: var(--nx-space-4);
+  border-bottom: var(--nx-hairline) solid var(--nx-border-default);
+}
+
+/* Four columns do not fit a phone, so each row becomes a card: preview and
+   name side by side, then the value and the notes at full width. The column
+   heads go: every cell says what it is (an alias arrow, a ratio, "In the
+   stylesheets of"). */
+@media (width < 640px) {
+  .sc-tokens,
+  .sc-tokens tbody,
+  .sc-tokens caption {
+    display: block;
+  }
+
+  .sc-tokens colgroup,
+  .sc-tokens thead {
+    display: none;
+  }
+
+  .sc-tokens tr {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: var(--nx-space-3) var(--nx-space-5);
+    padding: var(--nx-space-5) 0;
+    border-bottom: var(--nx-hairline) solid var(--nx-border-default);
+  }
+
+  .sc-tokens td,
+  .sc-tokens tbody th {
+    display: block;
+    padding: 0;
+    border: 0;
+  }
+
+  .sc-tokens tr > :nth-child(n + 3) {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ------------------------------------------------------------ phone only */
+
+/* The labs (Graph, Glitch Lab) are docked desktop consoles with no phone
+   layout, so a phone is not offered them. Last in the file, so it overrides
+   the display of whatever it is set on. */
+@media (width < 640px) {
+  .sc-desktop-only {
+    display: none;
+  }
 }

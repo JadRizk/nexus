@@ -12,7 +12,9 @@ test.describe("claims axe cannot make", () => {
   // The decorative hairline (--nx-border-default) is 1.61:1 and exempt from the
   // 3:1 non-text floor, which is only sound while no control is identified by
   // it. Buttons and tabs are identified by their text instead, so this holds
-  // that line in the rendered page: every one carries visible text, and the
+  // that line in the rendered page: every one carries visible text — or an
+  // icon, drawn in the label's own colour (currentColor) and so at text
+  // contrast, as the home monitor's Sound toggle is — and the
   // one boundary that does identify a control (the palette's search field)
   // is drawn in the 3:1 token rather than the hairline.
   // One test per page rather than one test looping them all: a single
@@ -24,10 +26,16 @@ test.describe("claims axe cannot make", () => {
       await gotoPage(page, route, "hud-aa");
       const unlabelled = await page.evaluate(() =>
         [...document.querySelectorAll<HTMLElement>(".nx-btn, .nx-tab")]
-          .filter((el) => (el.textContent ?? "").trim() === "")
+          .filter(
+            (el) =>
+              (el.textContent ?? "").trim() === "" &&
+              !el.querySelector(
+                ":is(svg, svg *)[fill='currentColor'], :is(svg, svg *)[stroke='currentColor']",
+              ),
+          )
           .map((el) => `${el.tagName.toLowerCase()}.${el.className}`),
       );
-      expect(unlabelled, `${route}: controls with no visible text`).toEqual([]);
+      expect(unlabelled, `${route}: controls with no visible text or icon`).toEqual([]);
     });
   }
 
@@ -343,10 +351,14 @@ test.describe("claims axe cannot make", () => {
       await gotoPage(page, route);
       // Controls inside an inert subtree are excluded: a closed Drawer stays
       // mounted with its close button, and that button being unreachable is
-      // the behaviour the Drawer promises, not a defect. So is a closed <details>'s content.
-      const controls = page.locator(
-        ":is(.nx-root button:not([disabled]), .nx-root input:not([disabled]), .nx-root a[href], .nx-root summary):not([inert] *):not(details:not([open]) > :not(summary) *, details:not([open]) > :not(summary))",
-      );
+      // the behaviour the Drawer promises, not a defect. So is a closed <details>'s content,
+      // and so are controls not rendered at this size, such as the docs'
+      // phone-only Pages toggle: hidden is not covered.
+      const controls = page
+        .locator(
+          ":is(.nx-root button:not([disabled]), .nx-root input:not([disabled]), .nx-root a[href], .nx-root summary):not([inert] *):not(details:not([open]) > :not(summary) *, details:not([open]) > :not(summary))",
+        )
+        .filter({ visible: true });
       const total = await controls.count();
       expect(total).toBeGreaterThan(10);
 
