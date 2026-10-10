@@ -33,13 +33,14 @@
   --nx-btn-border: var(--nx-border-accent);
 }
 
-.nx-btn:disabled {
+/* aria-disabled for a button that loses its action while focused: disabled would drop focus to <body>. */
+.nx-btn:is(:disabled, [aria-disabled="true"]) {
   --nx-btn-fg: var(--nx-fg-disabled);
 
   cursor: not-allowed;
 }
 
-.nx-btn:disabled:hover {
+.nx-btn:is(:disabled, [aria-disabled="true"]):hover {
   --nx-btn-bg: transparent;
   --nx-btn-border: var(--nx-border-default);
 }

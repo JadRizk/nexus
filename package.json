@@ -31,7 +31,7 @@
     "test:browser": "node scripts/browser-tests.mjs",
     "test:browser:update": "node scripts/browser-tests.mjs --update-snapshots",
     "test:visual": "node scripts/browser-tests.mjs browser/components.spec.ts browser/states.spec.ts",
-    "test:a11y": "node scripts/browser-tests.mjs browser/a11y.spec.ts",
+    "test:a11y": "node scripts/browser-tests.mjs browser/a11y.spec.ts browser/a11y-claims.spec.ts",
     "build:styles": "npm run build:styles -w packages/react"
   },
   "devDependencies": {

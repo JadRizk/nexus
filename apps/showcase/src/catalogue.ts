@@ -93,6 +93,11 @@ export const COMPONENT_CATALOGUE = [
         title: "LinkGlyph",
         summary: "Relation marks that pair colour with dash and arrow.",
       },
+      {
+        slug: "graph-outline",
+        title: "GraphOutline",
+        summary: "The graph as a list: the text alternative to the canvas.",
+      },
     ],
   },
   {

@@ -5,7 +5,7 @@ zero corner radius, corner ticks, monospace everything, and a WCAG AA mode
 that is enforced at build time rather than promised in a README. It ships with
 a force-directed WebGL graph canvas that speaks the same language.
 
-19 components, two hooks, a search ranker, 86 tokens, two themes. Dark
+20 components, two hooks, a search ranker, 86 tokens, two themes. Dark
 only and desktop first, built for consoles, dashboards and visualisations
 rather than marketing pages. React 18.3 or 19.
 
@@ -43,11 +43,11 @@ down.
 
 ## Packages
 
-| Package                                                | What it is                                                                                                                                      |
-| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`@nexus-cyberdeck/tokens`](packages/tokens/README.md) | CSS custom properties for both themes, typed accessors, contrast ratios computed at build time. Zero dependencies.                              |
-| [`@nexus-cyberdeck/react`](packages/react/README.md)   | The 19 components, `useFocusTrap`, `useHotkey`, `rankItems`. Depends only on tokens.                                                            |
-| [`@nexus-cyberdeck/graph`](packages/graph/README.md)   | Force-directed WebGL canvas on Three.js: SDF glyph nodes, curved links, CRT post-process. Versioned separately; no dependency on the other two. |
+| Package                                                | What it is                                                                                                                                                                                                                              |
+| ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`@nexus-cyberdeck/tokens`](packages/tokens/README.md) | CSS custom properties for both themes, typed accessors, contrast ratios computed at build time. Zero dependencies.                                                                                                                      |
+| [`@nexus-cyberdeck/react`](packages/react/README.md)   | The 20 components, `useFocusTrap`, `useHotkey`, `rankItems`. Depends only on tokens.                                                                                                                                                    |
+| [`@nexus-cyberdeck/graph`](packages/graph/README.md)   | Force-directed WebGL canvas on Three.js: SDF glyph nodes, links that carry kind in form and direction in their ends, CRT post-process, and keyboard and screen-reader navigation. Versioned separately; no dependency on the other two. |
 
 Not using React? `@nexus-cyberdeck/tokens` is plain CSS. Set `data-nx-theme`
 on any element and the custom properties cascade.
@@ -116,7 +116,7 @@ nexus/
 │   │       ├── roles.ts                 semantic role names
 │   │       ├── crt.css                  CSS-only CRT layer
 │   │       └── index.ts                 typed accessors
-│   ├── react/           @nexus-cyberdeck/react    19 components, no runtime deps
+│   ├── react/           @nexus-cyberdeck/react    20 components, no runtime deps
 │   │   ├── build-styles.mjs             assembles the shipped stylesheet
 │   │   └── src/
 │   │       ├── components/<Name>/       one folder per component:
@@ -234,7 +234,8 @@ deliberately broken palette and asserts it refuses to emit.
 
 Every claim below is asserted by a machine. `browser/a11y.spec.ts` runs
 axe-core over the real rendered page, once per route, once per component and
-once per overlay state, plus direct assertions for the things axe cannot see.
+once per overlay state, and `browser/a11y-claims.spec.ts` makes direct
+assertions for the things axe cannot see.
 
 ```bash
 npm run test:a11y

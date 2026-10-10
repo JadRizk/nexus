@@ -29,7 +29,7 @@ const nodeCategories: Record<string, NodeCategory> = {
 };
 const linkCategories: Record<string, LinkCategory> = {};
 
-function renderRoot(ariaLabel?: string) {
+function renderRoot(ariaLabel?: string, keyboardNavigation?: boolean) {
   const html = renderToStaticMarkup(
     createElement(GraphCanvas, {
       nodes: [{ id: "1", categoryId: "topic", label: "Node One" }],
@@ -37,39 +37,63 @@ function renderRoot(ariaLabel?: string) {
       nodeCategories,
       linkCategories,
       ariaLabel,
+      ...(keyboardNavigation === undefined ? {} : { keyboardNavigation }),
     }),
   );
   return html;
 }
 
+const rootTag = (html: string) => html.slice(0, html.indexOf(">") + 1);
+
 describe("GraphCanvas accessibility (static render)", () => {
-  it('names the root element with role="img" and the ariaLabel prop', () => {
-    const html = renderRoot("Knowledge graph of imported notes");
-    expect(html).toContain('role="img"');
-    expect(html).toContain('aria-label="Knowledge graph of imported notes"');
+  describe("with keyboard navigation (the default)", () => {
+    // role="img" would make the focus target inside presentational.
+    it("names the root as a group with a graph role description", () => {
+      const root = rootTag(renderRoot("Knowledge graph of imported notes"));
+      expect(root).toContain('role="group"');
+      expect(root).toContain('aria-roledescription="graph"');
+      expect(root).toContain('aria-label="Knowledge graph of imported notes"');
+      expect(root).not.toContain('role="img"');
+    });
+
+    it("makes the root focusable by script only, so Escape can hand focus back to it", () => {
+      expect(rootTag(renderRoot("Graph"))).toContain('tabindex="-1"');
+    });
+
+    it("renders a navigation layer that assistive tech can see", () => {
+      const html = renderRoot("Graph");
+      // The aria-hidden label layer plus the navigation layer.
+      const layers =
+        html.match(/<div[^>]*position:absolute;inset:0;pointer-events:none[^>]*>/g) ?? [];
+      expect(layers).toHaveLength(2);
+      expect(layers.filter((layer) => layer.includes('aria-hidden="true"'))).toHaveLength(1);
+    });
   });
 
-  // NX-13 rework: this replaces a prior version of this test that asserted
-  // "omits aria-label but keeps role=img" — i.e. it codified the violation
-  // as intended behaviour. role="img" with no accessible name is an axe
-  // "role-img-alt" failure (WCAG 2.0 A, serious): a screen reader announces
-  // "image" with nothing to say what it's an image of, which is worse than
-  // the plain, role-less div this component had before. This test asserts
-  // the opposite of the old one — the root must carry NEITHER role="img"
-  // NOR aria-label when the prop is omitted — and fails immediately if
-  // role="img" is restored unconditionally.
-  it("carries no role and no aria-label on the root when ariaLabel is omitted", () => {
-    const html = renderRoot();
-    expect(html).not.toContain('role="img"');
-    expect(html).not.toContain("aria-label=");
-  });
+  describe("with keyboardNavigation={false}", () => {
+    it('names the root element with role="img" and the ariaLabel prop', () => {
+      const root = rootTag(renderRoot("Knowledge graph of imported notes", false));
+      expect(root).toContain('role="img"');
+      expect(root).toContain('aria-label="Knowledge graph of imported notes"');
+      expect(root).not.toContain("tabindex");
+    });
 
-  it("also omits role when ariaLabel is the empty string", () => {
-    // An empty label is not a name either — guard the falsy-but-present case
-    // so `ariaLabel=""` can't slip a nameless role="img" through the same
-    // door as `undefined`.
-    const html = renderRoot("");
-    expect(html).not.toContain('role="img"');
+    // A nameless role="img" is an axe "role-img-alt" failure (WCAG 2.0 A).
+    it("carries no role and no aria-label when ariaLabel is omitted or empty", () => {
+      for (const label of [undefined, ""]) {
+        const root = rootTag(renderRoot(label, false));
+        expect(root).not.toContain("role=");
+        expect(root).not.toContain("aria-label=");
+      }
+    });
+
+    it("renders no navigation layer", () => {
+      const layers =
+        renderRoot("Graph", false).match(
+          /<div[^>]*position:absolute;inset:0;pointer-events:none[^>]*>/g,
+        ) ?? [];
+      expect(layers).toHaveLength(1);
+    });
   });
 
   it("hides the label layer from assistive tech", () => {
