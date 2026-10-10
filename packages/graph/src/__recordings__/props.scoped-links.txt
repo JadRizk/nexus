@@ -1,7 +1,7 @@
-== hide leaf nodes
+== scope refs links to the selection
 -- frame 61 +16ms
   p0.target = rt0
-  p0.camera = 0.0125242,0,0,0,0,0.016699,0,0,0,0,-0.1,0,0,0,0,1,-4.02108,-2.48237,5
+  p0.camera = 0.0125201,0,0,0,0,0.0166934,0,0,0,0,-0.1,0,0,0,0,1,-4.04145,-2.51817,5
   p0.FADE@-10 = visible=true g0 instances=- range=0+Infinity
   FADE@-10.material = blend=Normal(SrcAlpha,OneMinusSrcAlpha,Add) premultiplied=false side=Front transparent=true depthTest=false depthWrite=false
   p0.FADE@-10.uColor = [0.00242822,0.00273174,0.00303527]
@@ -10,7 +10,7 @@
   g0.position = +0 2df7970aef29
   p0.EDGE@0 = visible=true g1 instances=12 range=0+Infinity
   EDGE@0.material = blend=Custom(One,OneMinusSrcAlpha,Add) premultiplied=true side=Double transparent=true depthTest=false depthWrite=false
-  p0.EDGE@0.uPx = 0.199613
+  p0.EDGE@0.uPx = 0.199679
   p0.EDGE@0.uWidth = 1.3
   p0.EDGE@0.uTime = 0.976
   p0.EDGE@0.uOpacity = 0.4
@@ -25,11 +25,11 @@
   g1.iColor = +0 dc321c508c57
   g1.iP0 = +0 28a50cf3df55
   g1.iP1 = +0 73811d635264
-  g1.iP2 = +2 9a5195b91280
+  g1.iP2 = +2 97296bd6491a
   g1.index = +0 393b80d3d117
   p0.PAD@1 = visible=true g2 instances=12 range=0+Infinity
   PAD@1.material = blend=Custom(One,OneMinusSrcAlpha,Add) premultiplied=true side=Double transparent=true depthTest=false depthWrite=false
-  p0.PAD@1.uPx = 0.199613
+  p0.PAD@1.uPx = 0.199679
   p0.PAD@1.uWidth = 1.3
   p0.PAD@1.uOpacity = 0.4
   p0.PAD@1.uFocus = 0
@@ -43,7 +43,7 @@
   g2.index = +0 76cc1cfa7521
   p0.EDGE@2 = visible=true g1 instances=12 range=0+Infinity
   EDGE@2.material = blend=Custom(One,One,Add) premultiplied=false side=Double transparent=true depthTest=false depthWrite=false
-  p0.EDGE@2.uPx = 0.199613
+  p0.EDGE@2.uPx = 0.199679
   p0.EDGE@2.uWidth = 1.3
   p0.EDGE@2.uTime = 0.976
   p0.EDGE@2.uOpacity = 0.4
@@ -55,7 +55,7 @@
   p0.NODE@3 = visible=true g3 instances=10 range=0+Infinity
   NODE@3.material = blend=Custom(One,One,Add) premultiplied=false side=Front transparent=true depthTest=false depthWrite=false
   p0.NODE@3.uTime = 0.976
-  p0.NODE@3.uPx = 0.199613
+  p0.NODE@3.uPx = 0.199679
   p0.NODE@3.uHlStart = -999
   p0.NODE@3.uGlow = 0.8
   p0.NODE@3.uFocus = 0
@@ -64,7 +64,7 @@
   g3.iPos = +1 a2f3991d6935
   g3.iColor = +0 0b6311e3c1d5
   g3.iN0 = +4 4794de960729
-  g3.iN1 = +4 44beaba1bac5
+  g3.iN1 = +4 38d6224695d1
   g3.index = +0 3afbb62a75d6
   p1.target = rt1
   p1.camera = 1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0
@@ -101,121 +101,153 @@
   renderer.calls = target:rt0 render target:rt1 clear render target:rt2 clear render target:screen clear render
   onFrame.ids = ["n0","n1","n2","n3","n4","n5","n6","n7","n8","n9"]
   onFrame.positions = "#a2f3991d6935"
-  onFrame.hidden = "#0e445c3afa4f"
+  onFrame.hidden = "#b80de5d13875"
   onFrame.radii = "#880e433a0fea"
-  onFrame.camera = {"x":-4.02108,"y":-2.48237,"zoom":5.0097}
+  onFrame.camera = {"x":-4.04145,"y":-2.51817,"zoom":5.00803}
   onFrame.viewport = {"width":800,"height":600,"curve":0.55}
-  label.0 = Node 0 | translate3d(759px,316px,0) | opacity 0.82
-  label.1 = Node 8 | translate3d(627px,234px,0) | opacity 0
-  label.2 = Node 2 | translate3d(476px,256px,0) | opacity 0
+  label.0 = Node 0 | translate3d(759px,315px,0) | opacity 0.82
+  label.1 = Node 8 | translate3d(627px,233px,0) | opacity 0.52
+  label.2 = Node 2 | translate3d(477px,257px,0) | opacity 0.52
   label.3 = Node 9 | translate3d(244px,149px,0) | opacity 0.82
-  label.4 = Node 1 | translate3d(327px,352px,0) | opacity 0
+  label.4 = Node 1 | translate3d(327px,352px,0) | opacity 0.52
   label.5 = Node 6 | translate3d(616px,107px,0) | opacity 0.82
-  label.6 = Node 4 | translate3d(670px,469px,0) | opacity 0
+  label.6 = Node 4 | translate3d(669px,468px,0) | opacity 0.52
   label.7 = Node 3 | translate3d(434px,112px,0) | opacity 0.82
-  label.8 = Node 7 | translate3d(114px,365px,0) | opacity 0
-  label.9 = Node 5 | translate3d(411px,514px,0) | opacity 0
-  dom = 416b37b88ef6
+  label.8 = Node 7 | translate3d(114px,365px,0) | opacity 0.52
+  label.9 = Node 5 | translate3d(412px,513px,0) | opacity 0.52
+  dom = e307aa451313
 -- frame 62 +16ms
-  p0.camera = 0.0125112,0,0,0,0,0.0166816,0,0,0,0,-0.1,0,0,0,0,1,-4.03982,-2.49321,5
-  p0.EDGE@0.uPx = 0.19982
+  p0.camera = 0.0124991,0,0,0,0,0.0166655,0,0,0,0,-0.1,0,0,0,0,1,-4.09886,-2.59659,5
+  p0.EDGE@0.uPx = 0.200014
   p0.EDGE@0.uTime = 0.992
   g1.iA = +1 f18e65aad864
   g1.iB = +1 58be7f1dcc6e
-  g1.iP2 = +0 9a5195b91280
-  p0.PAD@1.uPx = 0.19982
-  p0.EDGE@2.uPx = 0.19982
+  g1.iP2 = +0 97296bd6491a
+  p0.PAD@1.uPx = 0.200014
+  p0.EDGE@2.uPx = 0.200014
   p0.EDGE@2.uTime = 0.992
   p0.NODE@3.uTime = 0.992
-  p0.NODE@3.uPx = 0.19982
+  p0.NODE@3.uPx = 0.200014
   g3.iPos = +1 bc0229cde7e9
   g3.iN0 = +0 4794de960729
-  g3.iN1 = +0 44beaba1bac5
+  g3.iN1 = +0 38d6224695d1
   p3.POST/COMPOSITE@0.uTime = 0.992
   onFrame.positions = "#bc0229cde7e9"
-  onFrame.camera = {"x":-4.03982,"y":-2.49321,"zoom":5.00449}
-  label.7 = Node 3 | translate3d(434px,113px,0) | opacity 0.82
-  dom = 468f597449e6
+  onFrame.camera = {"x":-4.09886,"y":-2.59659,"zoom":4.99966}
+  label.0 = Node 0 | translate3d(759px,316px,0) | opacity 0.82
+  label.1 = Node 8 | translate3d(628px,231px,0) | opacity 0.52
+  label.2 = Node 2 | translate3d(477px,259px,0) | opacity 0.52
+  label.3 = Node 9 | translate3d(245px,148px,0) | opacity 0.82
+  label.4 = Node 1 | translate3d(327px,351px,0) | opacity 0.52
+  label.5 = Node 6 | translate3d(616px,106px,0) | opacity 0.82
+  label.8 = Node 7 | translate3d(115px,365px,0) | opacity 0.52
+  label.9 = Node 5 | translate3d(413px,512px,0) | opacity 0.52
+  dom = 7a4c8effd83f
 -- frame 63 +16ms
-  p0.camera = 0.0125026,0,0,0,0,0.0166701,0,0,0,0,-0.1,0,0,0,0,1,-4.04182,-2.47295,5
-  p0.EDGE@0.uPx = 0.199959
+  p0.camera = 0.0124792,0,0,0,0,0.0166389,0,0,0,0,-0.1,0,0,0,0,1,-4.1559,-2.67202,5
+  p0.EDGE@0.uPx = 0.200333
   p0.EDGE@0.uTime = 1.008
   g1.iA = +1 82a4f320819c
   g1.iB = +1 29a9fc820768
-  p0.PAD@1.uPx = 0.199959
-  p0.EDGE@2.uPx = 0.199959
+  p0.PAD@1.uPx = 0.200333
+  p0.EDGE@2.uPx = 0.200333
   p0.EDGE@2.uTime = 1.008
   p0.NODE@3.uTime = 1.008
-  p0.NODE@3.uPx = 0.199959
+  p0.NODE@3.uPx = 0.200333
   g3.iPos = +1 3c8e0be1ec12
   p3.POST/COMPOSITE@0.uTime = 1.008
   onFrame.positions = "#3c8e0be1ec12"
-  onFrame.camera = {"x":-4.04182,"y":-2.47295,"zoom":5.00104}
-  label.0 = Node 0 | translate3d(758px,317px,0) | opacity 0.82
-  label.3 = Node 9 | translate3d(245px,149px,0) | opacity 0.82
-  label.5 = Node 6 | translate3d(615px,106px,0) | opacity 0.82
-  dom = b27af55d7433
-== hide refs links
+  onFrame.camera = {"x":-4.1559,"y":-2.67202,"zoom":4.99168}
+  label.0 = Node 0 | translate3d(758px,316px,0) | opacity 0.82
+  label.1 = Node 8 | translate3d(629px,230px,0) | opacity 0.52
+  label.2 = Node 2 | translate3d(478px,260px,0) | opacity 0.52
+  label.3 = Node 9 | translate3d(246px,148px,0) | opacity 0.82
+  label.4 = Node 1 | translate3d(327px,350px,0) | opacity 0.52
+  label.6 = Node 4 | translate3d(668px,468px,0) | opacity 0.52
+  label.7 = Node 3 | translate3d(435px,112px,0) | opacity 0.82
+  label.8 = Node 7 | translate3d(116px,365px,0) | opacity 0.52
+  label.9 = Node 5 | translate3d(413px,510px,0) | opacity 0.52
+  dom = ce3da6c1f4bc
+== selectedId n0
 -- frame 64 +16ms
-onStats [{"fps":63,"nodes":10,"edges":12,"frameMs":0,"settled":false,"drawnNodes":4,"drawnEdges":1}]
-  p0.camera = 0.0124979,0,0,0,0,0.0166639,0,0,0,0,-0.1,0,0,0,0,1,-4.02883,-2.42483,5
-  p0.EDGE@0.uPx = 0.200033
+onStats [{"fps":63,"nodes":10,"edges":12,"frameMs":0,"settled":false,"drawnNodes":10,"drawnEdges":7}]
+  p0.camera = 0.0129233,0,0,0,0,0.017231,0,0,0,0,-0.1,0,0,0,0,1,-2.67894,-1.64531,5
+  p0.EDGE@0.uPx = 0.193449
   p0.EDGE@0.uTime = 1.024
+  p0.EDGE@0.uFocus = 1
   g1.iA = +1 f04077fa0e9a
   g1.iB = +1 64ec96d819bd
-  g1.iP2 = +2 36d6752307c5
-  p0.PAD@1.uPx = 0.200033
-  p0.EDGE@2.uPx = 0.200033
+  g1.iP2 = +3 84c50ba22639
+  p0.PAD@1.uPx = 0.193449
+  p0.PAD@1.uFocus = 1
+  p0.EDGE@2.uPx = 0.193449
   p0.EDGE@2.uTime = 1.024
+  p0.EDGE@2.uFocus = 1
   p0.NODE@3.uTime = 1.024
-  p0.NODE@3.uPx = 0.200033
+  p0.NODE@3.uPx = 0.193449
+  p0.NODE@3.uHlStart = 1.008
+  p0.NODE@3.uFocus = 1
   g3.iPos = +1 6819058f133c
-  g3.iN0 = +4 4794de960729
-  g3.iN1 = +4 44beaba1bac5
+  g3.iN0 = +6 26ad9a5fe45f
+  g3.iN1 = +6 dfdda45105fb
   p3.POST/COMPOSITE@0.uTime = 1.024
   onFrame.positions = "#6819058f133c"
-  onFrame.camera = {"x":-4.02883,"y":-2.42483,"zoom":4.99917}
-  label.0 = Node 0 | translate3d(758px,318px,0) | opacity 0.82
-  label.7 = Node 3 | translate3d(435px,114px,0) | opacity 0.82
-  dom = 9e4b867d907e
+  onFrame.camera = {"x":-2.67894,"y":-1.64531,"zoom":5.16931}
+  label.0 = Node 0 | translate3d(763px,323px,0) | opacity 1
+  label.1 = Node 8 | translate3d(629px,230px,0) | opacity 0
+  label.2 = Node 2 | translate3d(478px,260px,0) | opacity 0
+  label.3 = Node 9 | translate3d(232px,148px,0) | opacity 0.28
+  label.4 = Node 1 | translate3d(316px,357px,0) | opacity 0.92
+  label.5 = Node 6 | translate3d(615px,103px,0) | opacity 0.28
+  label.6 = Node 4 | translate3d(670px,479px,0) | opacity 0.92
+  label.7 = Node 3 | translate3d(429px,111px,0) | opacity 0.92
+  label.8 = Node 7 | translate3d(116px,365px,0) | opacity 0
+  label.9 = Node 5 | translate3d(413px,510px,0) | opacity 0
+  dom = dd440510afd5
 -- frame 65 +16ms
-  p0.camera = 0.0124969,0,0,0,0,0.0166625,0,0,0,0,-0.1,0,0,0,0,1,-4.00245,-2.35184,5
-  p0.EDGE@0.uPx = 0.20005
+  p0.camera = 0.0133306,0,0,0,0,0.0177741,0,0,0,0,-0.1,0,0,0,0,1,-1.3297,-0.716912,5
+  p0.EDGE@0.uPx = 0.187539
   p0.EDGE@0.uTime = 1.04
   g1.iA = +1 dcaad4be4b42
   g1.iB = +1 55923698bed1
-  g1.iP2 = +0 36d6752307c5
-  p0.PAD@1.uPx = 0.20005
-  p0.EDGE@2.uPx = 0.20005
+  g1.iP2 = +0 84c50ba22639
+  p0.PAD@1.uPx = 0.187539
+  p0.EDGE@2.uPx = 0.187539
   p0.EDGE@2.uTime = 1.04
   p0.NODE@3.uTime = 1.04
-  p0.NODE@3.uPx = 0.20005
+  p0.NODE@3.uPx = 0.187539
   g3.iPos = +1 eb0bbbd57c73
-  g3.iN0 = +0 4794de960729
-  g3.iN1 = +0 44beaba1bac5
+  g3.iN0 = +0 26ad9a5fe45f
+  g3.iN1 = +0 dfdda45105fb
   p3.POST/COMPOSITE@0.uTime = 1.04
   onFrame.positions = "#eb0bbbd57c73"
-  onFrame.camera = {"x":-4.00245,"y":-2.35184,"zoom":4.99875}
-  label.0 = Node 0 | translate3d(757px,319px,0) | opacity 0.82
-  label.5 = Node 6 | translate3d(615px,105px,0) | opacity 0.82
-  dom = 6ca94e55f03c
+  onFrame.camera = {"x":-1.3297,"y":-0.716912,"zoom":5.33223}
+  label.0 = Node 0 | translate3d(766px,330px,0) | opacity 1
+  label.3 = Node 9 | translate3d(220px,149px,0) | opacity 0.28
+  label.4 = Node 1 | translate3d(306px,364px,0) | opacity 0.92
+  label.5 = Node 6 | translate3d(614px,102px,0) | opacity 0.28
+  label.6 = Node 4 | translate3d(670px,490px,0) | opacity 0.92
+  label.7 = Node 3 | translate3d(422px,111px,0) | opacity 0.92
+  dom = 030f72297a4e
 -- frame 66 +16ms
-  p0.camera = 0.0124991,0,0,0,0,0.0166655,0,0,0,0,-0.1,0,0,0,0,1,-3.96414,-2.25669,5
-  p0.EDGE@0.uPx = 0.200015
+  p0.camera = 0.0137041,0,0,0,0,0.0182722,0,0,0,0,-0.1,0,0,0,0,1,-0.0977431,0.121696,5
+  p0.EDGE@0.uPx = 0.182427
   p0.EDGE@0.uTime = 1.056
   g1.iA = +1 a23d4a87b097
   g1.iB = +1 51ca89e94e73
-  p0.PAD@1.uPx = 0.200015
-  p0.EDGE@2.uPx = 0.200015
+  p0.PAD@1.uPx = 0.182427
+  p0.EDGE@2.uPx = 0.182427
   p0.EDGE@2.uTime = 1.056
   p0.NODE@3.uTime = 1.056
-  p0.NODE@3.uPx = 0.200015
+  p0.NODE@3.uPx = 0.182427
   g3.iPos = +1 931d12225397
   p3.POST/COMPOSITE@0.uTime = 1.056
   onFrame.positions = "#931d12225397"
-  onFrame.camera = {"x":-3.96414,"y":-2.25669,"zoom":4.99964}
-  label.0 = Node 0 | translate3d(757px,321px,0) | opacity 0.82
-  label.3 = Node 9 | translate3d(245px,150px,0) | opacity 0.82
-  label.5 = Node 6 | translate3d(614px,105px,0) | opacity 0.82
-  label.7 = Node 3 | translate3d(435px,115px,0) | opacity 0.82
-  dom = 7503ea455da0
+  onFrame.camera = {"x":-0.0977431,"y":0.121696,"zoom":5.48165}
+  label.0 = Node 0 | translate3d(769px,336px,0) | opacity 1
+  label.3 = Node 9 | translate3d(208px,149px,0) | opacity 0.28
+  label.4 = Node 1 | translate3d(296px,370px,0) | opacity 0.92
+  label.5 = Node 6 | translate3d(613px,100px,0) | opacity 0.28
+  label.6 = Node 4 | translate3d(670px,501px,0) | opacity 0.92
+  label.7 = Node 3 | translate3d(416px,111px,0) | opacity 0.92
+  dom = 0fc64db72b37

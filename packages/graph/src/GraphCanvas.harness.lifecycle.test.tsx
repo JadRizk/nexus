@@ -25,10 +25,24 @@ afterEach(() => {
   session.close();
 });
 
-it("records reduced motion switched on, then off", async () => {
+it("records reduced motion on, a reseed, a selection and a key under it, then off", async () => {
   const { environment } = session;
   session.step("reduced motion on", () => session.act(() => environment.setReducedMotion(true)));
   session.frames(2);
+  // The pan lands before the next frame snaps the camera, so it reads the pose the reseed left.
+  const [x, y] = session.emptyPoint();
+  session.step(`reseed, then pan 30,20 px from ${x},${y} in the same frame`, () => {
+    session.act(() => session.controller.reseed());
+    session.pointer("pointerdown", [x, y]);
+    session.pointer("pointermove", [x + 30, y + 20]);
+    session.pointer("pointerup", [x + 30, y + 20], window);
+  });
+  session.frames(3);
+  session.step("selectedId n3", () => session.render({ selectedId: "n3" }));
+  session.frames(3);
+  session.step("focus", () => session.act(() => session.focusTarget.focus()));
+  session.step("key →", () => session.key("ArrowRight"));
+  session.frames(3);
   session.step("reduced motion off", () => session.act(() => environment.setReducedMotion(false)));
   session.frames(2);
   await expect(session.text()).toMatchFileSnapshot("__recordings__/lifecycle.reduced-motion.txt");

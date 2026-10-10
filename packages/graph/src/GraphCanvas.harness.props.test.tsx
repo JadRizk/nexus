@@ -30,12 +30,38 @@ it("records setting the selectedId prop", async () => {
   await expect(session.text()).toMatchFileSnapshot("__recordings__/props.selected-id.txt");
 });
 
-it("records hiding a node and a link category", async () => {
-  session.step("hide leaf nodes and refs links", () =>
-    session.render({ hiddenNodeCategories: ["leaf"], hiddenLinkCategories: ["refs"] }),
-  );
+it("records hiding a node category, then a link category", async () => {
+  session.step("hide leaf nodes", () => session.render({ hiddenNodeCategories: ["leaf"] }));
+  session.frames(3);
+  session.step("hide refs links", () => session.render({ hiddenLinkCategories: ["refs"] }));
   session.frames(3);
   await expect(session.text()).toMatchFileSnapshot("__recordings__/props.hide-categories.txt");
+});
+
+it("records isolating a node, then clearing it", async () => {
+  session.step("isolateId n0", () => session.render({ isolateId: "n0" }));
+  session.frames(3);
+  session.step("isolateId null", () => session.render({ isolateId: null }));
+  session.frames(2);
+  await expect(session.text()).toMatchFileSnapshot("__recordings__/props.isolate.txt");
+});
+
+it("records refs links scoped to the selection, then a selection", async () => {
+  session.step("scope refs links to the selection", () =>
+    session.render({ selectionScopedLinkCategories: ["refs"] }),
+  );
+  session.frames(3);
+  session.step("selectedId n0", () => session.render({ selectedId: "n0" }));
+  session.frames(3);
+  await expect(session.text()).toMatchFileSnapshot("__recordings__/props.scoped-links.txt");
+});
+
+it("records a fit inset change", async () => {
+  session.step("fitInset top 60, left 200", () =>
+    session.render({ fitInset: { top: 60, left: 200 } }),
+  );
+  session.frames(3);
+  await expect(session.text()).toMatchFileSnapshot("__recordings__/props.fit-inset.txt");
 });
 
 it("records a reseed through the controller", async () => {
