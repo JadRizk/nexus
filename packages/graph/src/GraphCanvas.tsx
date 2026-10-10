@@ -313,6 +313,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
       const dispose = () => {
         while (disposables.length > 0) {
           try {
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- the loop condition just checked disposables.length > 0, so pop() returns a function
             disposables.pop()!();
           } catch (error) {
             console.error(error);
@@ -358,12 +359,12 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
         const edgeCategoryIds = liveEdges.map((edge) => edge.categoryId);
         const linkCategoryIds = Object.keys(linkCategories);
         const degree = computeDegree(
-          Array.from({ length: edgeCount }, (_, e) => ({ a: edgeEndA[e]!, b: edgeEndB[e]! })),
+          Array.from({ length: edgeCount }, (_, e) => ({ a: edgeEndA[e], b: edgeEndB[e] })),
           nodeCount,
         );
         const nodeStates = new Uint8Array(nodeCount);
         for (let i = 0; i < nodeCount; i++)
-          nodeStates[i] = degree[i] === 0 ? ORPHAN_STATE : (nodes[i]!.state ?? 1);
+          nodeStates[i] = degree[i] === 0 ? ORPHAN_STATE : (nodes[i].state ?? 1);
 
         const layoutSeed =
           seed === null ? undefined : (seed ?? seedFromIds(nodes.map((node) => node.id)));
@@ -374,7 +375,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
         const simulation = createPhysics(
           {
             nodes: nodes.map((node) => {
-              const category = nodeCategories[node.categoryId]!;
+              const category = nodeCategories[node.categoryId];
               // Spread only when defined: under exactOptionalPropertyTypes `undefined` isn't absent.
               const sectorAngle = node.sectorAngle ?? category.sectorAngle;
               const radiusTarget = node.radiusTarget ?? category.radiusTarget;
@@ -386,10 +387,10 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
               };
             }),
             edges: Array.from({ length: edgeCount }, (_, e) => {
-              const category = linkCategories[edgeCategoryIds[e]!]!;
+              const category = linkCategories[edgeCategoryIds[e]];
               return {
-                a: edgeEndA[e]!,
-                b: edgeEndB[e]!,
+                a: edgeEndA[e],
+                b: edgeEndB[e],
                 dist: category.dist,
                 strength: category.strength,
               };
@@ -433,10 +434,9 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
         const nodeTiers = new Float32Array(nodeCount);
         const scratchColor = new THREE.Color();
         for (let i = 0; i < nodeCount; i++) {
-          const category = nodeCategories[nodeCategoryIds[i]!]!;
+          const category = nodeCategories[nodeCategoryIds[i]];
           nodeRadii[i] =
-            (nodes[i]!.size ?? category.size) *
-            (1 + Math.min(1.4, Math.log2(1 + degree[i]!) * 0.16));
+            (nodes[i].size ?? category.size) * (1 + Math.min(1.4, Math.log2(1 + degree[i]) * 0.16));
           nodeShapes[i] = category.shape;
           scratchColor.set(category.color);
           nodeColors[i * 3] = scratchColor.r;
@@ -456,7 +456,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           A_JIT = 2,
           A_FRAY = 3;
         for (let e = 0; e < edgeCount; e++) {
-          const category = linkCategories[edgeCategoryIds[e]!]!;
+          const category = linkCategories[edgeCategoryIds[e]];
           scratchColor.set(category.color);
           edgeColors[e * 3] = scratchColor.r;
           edgeColors[e * 3 + 1] = scratchColor.g;
@@ -471,10 +471,10 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           edgeParams0[e * 4 + 3] = encodeGain(category.gain ?? 1, category.directed ?? true);
           edgeParams1[e * 4] = category.flow ?? 0;
           edgeParams1[e * 4 + 1] = visualRandom();
-          edgeParams1[e * 4 + 2] = nodeRadii[edgeEndA[e]!]! * EDGE_END_TRIM;
-          edgeParams1[e * 4 + 3] = nodeRadii[edgeEndB[e]!]! * EDGE_END_TRIM;
+          edgeParams1[e * 4 + 2] = nodeRadii[edgeEndA[e]] * EDGE_END_TRIM;
+          edgeParams1[e * 4 + 3] = nodeRadii[edgeEndB[e]] * EDGE_END_TRIM;
           edgeParams2[e * 4 + A_JIT] = category.jit ?? 0;
-          const absent = liveEdges[e]!.absentEnd;
+          const absent = liveEdges[e].absentEnd;
           edgeParams2[e * 4 + A_FRAY] = absent === "b" ? 1 : absent === "a" ? 2 : 0;
         }
         const dynamicAttribute = (values: Float32Array, size: number) => {
@@ -577,8 +577,8 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
         for (let end = 0; end < 2; end++) {
           const base = end * 4;
           for (let c = 0; c < 4; c++) {
-            padVertices[(base + c) * 3] = corners[c]![0];
-            padVertices[(base + c) * 3 + 1] = corners[c]![1];
+            padVertices[(base + c) * 3] = corners[c][0];
+            padVertices[(base + c) * 3 + 1] = corners[c][1];
             padVertices[(base + c) * 3 + 2] = end;
           }
           padIndices.push(base, base + 1, base + 2, base + 2, base + 1, base + 3);
@@ -626,19 +626,19 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
         const nodeParams0 = new Float32Array(nodeCount * 4),
           nodeParams1 = new Float32Array(nodeCount * 4);
         for (let i = 0; i < nodeCount; i++) {
-          nodeParams0[i * 4] = nodeRadii[i]!;
-          nodeParams0[i * 4 + 1] = nodeShapes[i]!;
-          nodeParams0[i * 4 + 2] = nodeSeeds[i]!;
-          nodeParams1[i * 4] = nodeStates[i]!;
+          nodeParams0[i * 4] = nodeRadii[i];
+          nodeParams0[i * 4 + 1] = nodeShapes[i];
+          nodeParams0[i * 4 + 2] = nodeSeeds[i];
+          nodeParams1[i * 4] = nodeStates[i];
         }
         const positionAttribute = dynamicAttribute(positions, 2),
           nodeParams0Attribute = dynamicAttribute(nodeParams0, 4),
           nodeParams1Attribute = dynamicAttribute(nodeParams1, 4);
         function syncNodes() {
           for (let i = 0; i < nodeCount; i++) {
-            nodeParams0[i * 4 + 3] = nodeDepths[i]!;
-            nodeParams1[i * 4 + 1] = nodeMarks[i]!;
-            nodeParams1[i * 4 + 2] = nodeHidden[i]!;
+            nodeParams0[i * 4 + 3] = nodeDepths[i];
+            nodeParams1[i * 4 + 1] = nodeMarks[i];
+            nodeParams1[i * 4 + 2] = nodeHidden[i];
           }
           nodeParams0Attribute.needsUpdate = true;
           nodeParams1Attribute.needsUpdate = true;
@@ -792,6 +792,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
         disposables.push(() => labels.forEach((label) => label.remove()));
         const LABEL_HEIGHT = 11;
 
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- a fresh canvas with no other context mode always returns its 2d context
         const measureContext = document.createElement("canvas").getContext("2d")!;
         const labelPlacer = createLabelPlacer({
           poolSize: POOL,
@@ -822,7 +823,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
         const bufferSize = new THREE.Vector2();
         const rig = createCameraRig({
           bounds: (indices) => computeBounds(indices),
-          position: (i) => [positions[i * 2]!, positions[i * 2 + 1]!],
+          position: (i) => [positions[i * 2], positions[i * 2 + 1]],
           viewport: () => ({ width: viewWidth, height: viewHeight }),
           inset: () => fitInsetRef.current,
         });
@@ -834,7 +835,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           radii: nodeRadii,
           depth: nodeDepths,
           tier: nodeTiers,
-          label: (i) => nodes[i]!.label,
+          label: (i) => nodes[i].label,
           zoom: 1,
           cx: 0,
           cy: 0,
@@ -865,8 +866,8 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
             bloomHeight = Math.max(2, (bufferHeight / 3) | 0);
           bloomA.setSize(bloomWidth, bloomHeight);
           bloomB.setSize(bloomWidth, bloomHeight);
-          compositeMaterial.uniforms.uRes!.value.set(bufferWidth, bufferHeight);
-          blurMaterial.uniforms.uTexel!.value.set(1 / bloomWidth, 1 / bloomHeight);
+          compositeMaterial.uniforms.uRes.value.set(bufferWidth, bufferHeight);
+          blurMaterial.uniforms.uTexel.value.set(1 / bloomWidth, 1 / bloomHeight);
           renderer.setRenderTarget(sceneTarget);
           renderer.clear();
           renderer.setRenderTarget(null);
@@ -883,8 +884,8 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
         const nodeLabels = nodes.map((node) => node.label);
         const userRank = rankConnectionsRef.current;
         const toPublic = (connection: NavConnection) => ({
-          other: nodes[connection.other]!,
-          edge: liveEdges[connection.edge]!,
+          other: nodes[connection.other],
+          edge: liveEdges[connection.edge],
           categoryId: connection.categoryId,
           direction: connection.direction,
           strength: connection.strength,
@@ -961,13 +962,13 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           let shownNodes = 0;
           for (let i = 0; i < nodeCount; i++) {
             nodeHidden[i] =
-              hiddenNode.has(nodeCategoryIds[i]!) || (allow !== null && !allow.has(i)) ? 1 : 0;
+              hiddenNode.has(nodeCategoryIds[i]) || (allow !== null && !allow.has(i)) ? 1 : 0;
             if (!nodeHidden[i]) shownNodes++;
           }
           drawnNodes = shownNodes;
           let shown = 0;
           for (let e = 0; e < edgeCount; e++) {
-            const categoryId = edgeCategoryIds[e]!;
+            const categoryId = edgeCategoryIds[e];
             const scopedOut =
               scopedLink.has(categoryId) &&
               edgeEndA[e] !== selectedIndex &&
@@ -975,8 +976,8 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
             const isShown =
               !hiddenLink.has(categoryId) &&
               !scopedOut &&
-              !nodeHidden[edgeEndA[e]!] &&
-              !nodeHidden[edgeEndB[e]!];
+              !nodeHidden[edgeEndA[e]] &&
+              !nodeHidden[edgeEndB[e]];
             edgeParams2[e * 4 + A_HIDE] = isShown ? 0 : 1;
             if (isShown) shown++;
           }
@@ -997,11 +998,11 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
             hasAny = false;
           const count = indices ? indices.length : nodeCount;
           for (let k = 0; k < count; k++) {
-            const i = indices ? indices[k]! : k;
+            const i = indices ? indices[k] : k;
             if (nodeHidden[i]) continue;
             hasAny = true;
-            const x = positions[i * 2]!,
-              y = positions[i * 2 + 1]!;
+            const x = positions[i * 2],
+              y = positions[i * 2 + 1];
             if (x < x0) x0 = x;
             if (x > x1) x1 = x;
             if (y < y0) y0 = y;
@@ -1014,17 +1015,17 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
 
         function highlight(index: number) {
           computeNeighbourhood(neighbourhoodGraph, index, nodeDepths, edgeTiers);
-          for (let e = 0; e < edgeCount; e++) edgeParams2[e * 4 + A_TIER] = edgeTiers[e]!;
+          for (let e = 0; e < edgeCount; e++) edgeParams2[e * 4 + A_TIER] = edgeTiers[e];
           if (index >= 0) {
-            nodeMaterial.uniforms.uHlStart!.value = clock;
+            nodeMaterial.uniforms.uHlStart.value = clock;
           }
           syncNodes();
           edgeParams2Attribute.needsUpdate = true;
           const focus = index >= 0 ? 1 : 0;
-          nodeMaterial.uniforms.uFocus!.value = focus;
-          edgeMaterial.uniforms.uFocus!.value = focus;
-          edgeLiveMaterial.uniforms.uFocus!.value = focus;
-          padMaterial.uniforms.uFocus!.value = focus;
+          nodeMaterial.uniforms.uFocus.value = focus;
+          edgeMaterial.uniforms.uFocus.value = focus;
+          edgeLiveMaterial.uniforms.uFocus.value = focus;
+          padMaterial.uniforms.uFocus.value = focus;
         }
         let tooltipIndex = -1,
           suppressedTooltip = -1;
@@ -1037,13 +1038,13 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
             return;
           }
           tooltipIndex = index;
-          const category = nodeCategories[nodeCategoryIds[index]!]!;
+          const category = nodeCategories[nodeCategoryIds[index]];
           if (tooltip.dataset.k !== String(index)) {
             tooltip.dataset.k = String(index);
             tooltip.textContent = "";
             const name = document.createElement("span");
             name.style.color = category.color;
-            name.textContent = nodes[index]!.label;
+            name.textContent = nodes[index].label;
             const meta = document.createElement("span");
             // 4.5:1 over the brightest node colour behind the translucent ground.
             meta.style.color = "#6F8465";
@@ -1054,21 +1055,21 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           }
           // Beside the node, on the side fewer of its edges leave from.
           const anchor = project(
-            positions[index * 2]!,
-            positions[index * 2 + 1]!,
+            positions[index * 2],
+            positions[index * 2 + 1],
             rig.live.zoom,
             rig.live.x,
             rig.live.y,
             viewport,
             TOOLTIP_OUT,
           );
-          const radius = glyphRadiusPx(nodeRadii[index]!, rig.live.zoom);
+          const radius = glyphRadiusPx(nodeRadii[index], rig.live.zoom);
           const width = tooltip.offsetWidth,
             height = tooltip.offsetHeight;
           let toRight = 0,
             toLeft = 0;
-          for (const connection of connections[index]!) {
-            if (positions[connection.other * 2]! >= positions[index * 2]!) toRight++;
+          for (const connection of connections[index]) {
+            if (positions[connection.other * 2] >= positions[index * 2]) toRight++;
             else toLeft++;
           }
           const inset = fitInsetRef.current;
@@ -1090,10 +1091,10 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           nodeMarks.fill(0);
           if (hoveredIndex >= 0) nodeMarks[hoveredIndex] = 1;
           const browsed = cursorConnection();
-          if (browsed) nodeMarks[browsed.other] = Math.max(nodeMarks[browsed.other]!, 1);
+          if (browsed) nodeMarks[browsed.other] = Math.max(nodeMarks[browsed.other], 1);
           if (selectedIndex >= 0) nodeMarks[selectedIndex] = 2;
           const focused = focusedNode();
-          if (focused >= 0) nodeMarks[focused] = nodeMarks[focused]! + 4;
+          if (focused >= 0) nodeMarks[focused] = nodeMarks[focused] + 4;
           syncNodes();
         }
         function applySelection(index: number) {
@@ -1108,7 +1109,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
             if (index >= 0)
               rig.frameAround(
                 index,
-                connections[index]!.map((connection) => connection.other),
+                connections[index].map((connection) => connection.other),
               );
             else rig.release();
           }
@@ -1119,7 +1120,8 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
             .map((categoryId) => ({
               categoryId,
               // A self-loop is one connection but a row from each end.
-              rows: connections[i]!.filter((connection) => connection.categoryId === categoryId)
+              rows: connections[i]
+                .filter((connection) => connection.categoryId === categoryId)
                 .flatMap((connection) =>
                   connection.other === i
                     ? [
@@ -1130,33 +1132,33 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
                 )
                 .sort(
                   (first, second) =>
-                    nodeLabels[first.connection.other]!.localeCompare(
-                      nodeLabels[second.connection.other]!,
+                    nodeLabels[first.connection.other].localeCompare(
+                      nodeLabels[second.connection.other],
                     ) ||
                     first.connection.edge - second.connection.edge ||
                     Number(second.out) - Number(first.out),
                 )
                 .map(({ connection, out }) => ({
-                  id: nodes[connection.other]!.id,
-                  label: nodes[connection.other]!.label,
-                  categoryId: nodeCategoryIds[connection.other]!,
+                  id: nodes[connection.other].id,
+                  label: nodes[connection.other].label,
+                  categoryId: nodeCategoryIds[connection.other],
                   out,
                 })),
             }))
             .filter((group) => group.rows.length > 0);
           return {
-            id: nodes[i]!.id,
-            categoryId: nodeCategoryIds[i]!,
-            label: nodes[i]!.label,
+            id: nodes[i].id,
+            categoryId: nodeCategoryIds[i],
+            label: nodes[i].label,
             hex: hex4(i),
-            state: STATE_LABEL[nodeStates[i]!]!,
-            degree: degree[i]!,
+            state: STATE_LABEL[nodeStates[i]],
+            degree: degree[i],
             groups,
-            data: nodes[i]!.data,
+            data: nodes[i].data,
           };
         };
 
-        const categoryLabel = (i: number) => nodeCategories[nodeCategoryIds[i]!]!.label;
+        const categoryLabel = (i: number) => nodeCategories[nodeCategoryIds[i]].label;
         const isVisible = (i: number) => i >= 0 && i < nodeCount && nodeHidden[i] === 0;
         const isEdgeVisible = (e: number) => edgeParams2[e * 4 + A_HIDE] === 0;
         const fallback = () => {
@@ -1165,8 +1167,8 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
             if (!isVisible(i)) continue;
             if (
               best < 0 ||
-              degree[i]! > degree[best]! ||
-              (degree[i] === degree[best] && nodeLabels[i]!.localeCompare(nodeLabels[best]!) < 0)
+              degree[i] > degree[best] ||
+              (degree[i] === degree[best] && nodeLabels[i].localeCompare(nodeLabels[best]) < 0)
             )
               best = i;
           }
@@ -1174,7 +1176,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
         };
         // The count spoken on landing must match the list browsing reads.
         const reachable = (i: number) =>
-          visibleConnections(connections[i]!, isVisible, isEdgeVisible, "all");
+          visibleConnections(connections[i], isVisible, isEdgeVisible, "all");
         const describeContext = (i: number, selected: boolean) => ({
           categoryLabel: categoryLabel(i),
           connections: reachable(i).length,
@@ -1182,8 +1184,8 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
         });
         const navigationContext: NavContext = {
           connections: (i, filter) =>
-            visibleConnections(connections[i]!, isVisible, isEdgeVisible, filter),
-          allConnections: (i) => connections[i]!,
+            visibleConnections(connections[i], isVisible, isEdgeVisible, filter),
+          allConnections: (i) => connections[i],
           isVisible,
           fallback,
           text: {
@@ -1192,18 +1194,18 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
               for (let i = 0; i < nodeCount; i++) if (isVisible(i)) shownNodes++;
               const kinds = new Set<string>();
               for (let e = 0; e < edgeCount; e++)
-                if (isEdgeVisible(e)) kinds.add(edgeCategoryIds[e]!);
+                if (isEdgeVisible(e)) kinds.add(edgeCategoryIds[e]);
               return summaryText(shownNodes, drawnLinks, kinds.size);
             },
             node: (i, selected) =>
               describeNodeRef.current
-                ? describeNodeRef.current(nodes[i]!, describeContext(i, selected))
-                : defaultNodeText(nodeLabels[i]!, describeContext(i, selected)),
+                ? describeNodeRef.current(nodes[i], describeContext(i, selected))
+                : defaultNodeText(nodeLabels[i], describeContext(i, selected)),
             connection: (_i, connection, position, of) =>
               connectionText(
-                linkCategories[connection.categoryId]!,
+                linkCategories[connection.categoryId],
                 connection,
-                nodeLabels[connection.other]!,
+                nodeLabels[connection.other],
                 categoryLabel(connection.other),
                 position,
                 of,
@@ -1213,12 +1215,12 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
               const counts = new Map<string, number>();
               for (const connection of reachable(i)) {
                 const relation = relationText(
-                  linkCategories[connection.categoryId]!,
+                  linkCategories[connection.categoryId],
                   connection.direction,
                 );
                 counts.set(relation, (counts.get(relation) ?? 0) + 1);
               }
-              return detailText(nodeLabels[i]!, describeContext(i, selected), [...counts]);
+              return detailText(nodeLabels[i], describeContext(i, selected), [...counts]);
             },
             help: HELP_TEXT,
           },
@@ -1250,7 +1252,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           if (force || target !== highlightTarget || cursorEdge !== highlightCursorEdge) {
             highlight(target);
             if (browsed) {
-              for (const connection of connections[focused]!)
+              for (const connection of connections[focused])
                 edgeParams2[connection.edge * 4 + A_TIER] =
                   connection.edge === browsed.edge ? 1 : TIER_NEARBY;
               edgeParams2Attribute.needsUpdate = true;
@@ -1616,37 +1618,37 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
 
           if (dirty) {
             for (let e = 0; e < edgeCount; e++) {
-              const a = edgeEndA[e]!,
-                b = edgeEndB[e]!;
-              edgeAPositions[e * 2] = positions[a * 2]!;
-              edgeAPositions[e * 2 + 1] = positions[a * 2 + 1]!;
-              edgeBPositions[e * 2] = positions[b * 2]!;
-              edgeBPositions[e * 2 + 1] = positions[b * 2 + 1]!;
+              const a = edgeEndA[e],
+                b = edgeEndB[e];
+              edgeAPositions[e * 2] = positions[a * 2];
+              edgeAPositions[e * 2 + 1] = positions[a * 2 + 1];
+              edgeBPositions[e * 2] = positions[b * 2];
+              edgeBPositions[e * 2 + 1] = positions[b * 2 + 1];
             }
             edgeAAttribute.needsUpdate = true;
             edgeBAttribute.needsUpdate = true;
             dirty = didStep;
           }
 
-          nodeMaterial.uniforms.uTime!.value = clock;
-          nodeMaterial.uniforms.uPx!.value = pixelSize;
-          nodeMaterial.uniforms.uGlow!.value = optics.glow;
+          nodeMaterial.uniforms.uTime.value = clock;
+          nodeMaterial.uniforms.uPx.value = pixelSize;
+          nodeMaterial.uniforms.uGlow.value = optics.glow;
           const uReduced = reduced ? 1 : 0;
           for (const material of [edgeMaterial, edgeLiveMaterial]) {
-            material.uniforms.uTime!.value = clock;
-            material.uniforms.uPx!.value = pixelSize;
-            material.uniforms.uWidth!.value = optics.edgeWidth;
-            material.uniforms.uOpacity!.value = optics.edgeOpacity;
-            material.uniforms.uFlowSpeed!.value = optics.flowSpeed;
-            material.uniforms.uReduced!.value = uReduced;
+            material.uniforms.uTime.value = clock;
+            material.uniforms.uPx.value = pixelSize;
+            material.uniforms.uWidth.value = optics.edgeWidth;
+            material.uniforms.uOpacity.value = optics.edgeOpacity;
+            material.uniforms.uFlowSpeed.value = optics.flowSpeed;
+            material.uniforms.uReduced.value = uReduced;
           }
-          padMaterial.uniforms.uPx!.value = pixelSize;
-          padMaterial.uniforms.uWidth!.value = optics.edgeWidth;
-          padMaterial.uniforms.uOpacity!.value = optics.edgeOpacity;
-          fadeMaterial.uniforms.uAlpha!.value = 1 - optics.trails * 0.94;
-          nodeMaterial.uniforms.uReduced!.value = uReduced;
-          fadeMaterial.uniforms.uReduced!.value = uReduced;
-          compositeMaterial.uniforms.uReduced!.value = uReduced;
+          padMaterial.uniforms.uPx.value = pixelSize;
+          padMaterial.uniforms.uWidth.value = optics.edgeWidth;
+          padMaterial.uniforms.uOpacity.value = optics.edgeOpacity;
+          fadeMaterial.uniforms.uAlpha.value = 1 - optics.trails * 0.94;
+          nodeMaterial.uniforms.uReduced.value = uReduced;
+          fadeMaterial.uniforms.uReduced.value = uReduced;
+          compositeMaterial.uniforms.uReduced.value = uReduced;
 
           if (
             !reduced &&
@@ -1660,29 +1662,29 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           renderer.setRenderTarget(sceneTarget);
           renderer.render(scene, camera);
 
-          blurMaterial.uniforms.uTex!.value = sceneTarget.texture;
-          blurMaterial.uniforms.uDir!.value.set(1, 0);
-          blurMaterial.uniforms.uThresh!.value = 0.34;
+          blurMaterial.uniforms.uTex.value = sceneTarget.texture;
+          blurMaterial.uniforms.uDir.value.set(1, 0);
+          blurMaterial.uniforms.uThresh.value = 0.34;
           screenQuad.material = blurMaterial;
           renderer.setRenderTarget(bloomA);
           renderer.clear();
           renderer.render(postScene, postCamera);
-          blurMaterial.uniforms.uTex!.value = bloomA.texture;
-          blurMaterial.uniforms.uDir!.value.set(0, 1);
-          blurMaterial.uniforms.uThresh!.value = 0.0;
+          blurMaterial.uniforms.uTex.value = bloomA.texture;
+          blurMaterial.uniforms.uDir.value.set(0, 1);
+          blurMaterial.uniforms.uThresh.value = 0.0;
           renderer.setRenderTarget(bloomB);
           renderer.clear();
           renderer.render(postScene, postCamera);
 
-          compositeMaterial.uniforms.uScene!.value = sceneTarget.texture;
-          compositeMaterial.uniforms.uBloom!.value = bloomB.texture;
-          compositeMaterial.uniforms.uTime!.value = clock;
-          compositeMaterial.uniforms.uScan!.value = optics.scan;
-          compositeMaterial.uniforms.uAberr!.value = optics.aberr;
-          compositeMaterial.uniforms.uCurve!.value = optics.curve;
-          compositeMaterial.uniforms.uGrain!.value = optics.grain;
-          compositeMaterial.uniforms.uBloomAmt!.value = optics.bloom;
-          compositeMaterial.uniforms.uGlitch!.value = glitchAmount;
+          compositeMaterial.uniforms.uScene.value = sceneTarget.texture;
+          compositeMaterial.uniforms.uBloom.value = bloomB.texture;
+          compositeMaterial.uniforms.uTime.value = clock;
+          compositeMaterial.uniforms.uScan.value = optics.scan;
+          compositeMaterial.uniforms.uAberr.value = optics.aberr;
+          compositeMaterial.uniforms.uCurve.value = optics.curve;
+          compositeMaterial.uniforms.uGrain.value = optics.grain;
+          compositeMaterial.uniforms.uBloomAmt.value = optics.bloom;
+          compositeMaterial.uniforms.uGlitch.value = glitchAmount;
           screenQuad.material = compositeMaterial;
           renderer.setRenderTarget(null);
           renderer.clear();
@@ -1699,8 +1701,8 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           if (overlay && navigation && navigation.current >= 0) {
             const current = navigation.current;
             const focusPoint = project(
-              positions[current * 2]!,
-              positions[current * 2 + 1]!,
+              positions[current * 2],
+              positions[current * 2 + 1],
               zoom,
               rig.live.x,
               rig.live.y,
@@ -1710,26 +1712,26 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
             overlay.place(
               focusPoint[0],
               focusPoint[1],
-              glyphRadiusPx(nodeRadii[current]!, zoom) * 2,
+              glyphRadiusPx(nodeRadii[current], zoom) * 2,
             );
           }
           for (let k = 0; k < POOL; k++) {
-            if (owner[k]! >= 0 && !screenPositions.has(owner[k]!)) {
+            if (owner[k] >= 0 && !screenPositions.has(owner[k])) {
               owner[k] = -1;
-              labels[k]!.style.opacity = "0";
+              labels[k].style.opacity = "0";
             }
           }
           const held = new Set<number>();
-          for (let k = 0; k < POOL; k++) if (owner[k]! >= 0) held.add(owner[k]!);
+          for (let k = 0; k < POOL; k++) if (owner[k] >= 0) held.add(owner[k]);
           let free = 0;
           for (const id of screenPositions.keys()) {
             if (held.has(id)) continue;
-            while (free < POOL && owner[free]! >= 0) free++;
+            while (free < POOL && owner[free] >= 0) free++;
             if (free >= POOL) break;
             owner[free] = id;
-            const category = nodeCategories[nodeCategoryIds[id]!]!;
-            const poolLabel = labels[free]!;
-            poolLabel.textContent = nodes[id]!.label;
+            const category = nodeCategories[nodeCategoryIds[id]];
+            const poolLabel = labels[free];
+            poolLabel.textContent = nodes[id].label;
             poolLabel.style.color = category.color;
             poolLabel.style.fontSize = category.tier === 0 ? "10.5px" : "9px";
             poolLabel.style.fontWeight = category.tier === 0 ? "700" : "500";
@@ -1737,11 +1739,12 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
             held.add(id);
           }
           for (let k = 0; k < POOL; k++) {
-            const id = owner[k]!;
+            const id = owner[k];
             if (id < 0) continue;
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- an owner >= 0 is always in screenPositions: the loop above clears the rest, and new owners come from its keys
             const placed = screenPositions.get(id)!;
-            labels[k]!.style.transform = `translate3d(${placed[0] | 0}px,${placed[1] | 0}px,0)`;
-            labels[k]!.style.opacity = String(placed[2]);
+            labels[k].style.transform = `translate3d(${placed[0] | 0}px,${placed[1] | 0}px,0)`;
+            labels[k].style.opacity = String(placed[2]);
           }
 
           fpsSum += 1 / Math.max(dt, 1e-4);

@@ -113,7 +113,7 @@ describe("validateGraph", () => {
     });
 
     it("drops nothing and reports nothing under the default policy", () => {
-      const validated = validateGraph(nodes, [edges[0]!], nodeCategories, linkCategories);
+      const validated = validateGraph(nodes, [edges[0]], nodeCategories, linkCategories);
       expect(validated.dropped).toEqual([]);
       expect(validated.edges).toEqual([edges[0]]);
     });

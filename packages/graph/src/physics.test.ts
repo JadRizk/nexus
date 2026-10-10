@@ -32,8 +32,8 @@ describe("createPhysics", () => {
     });
     sim.setParams({ repulsion: 0, linkDistance: 50, gravity: 0, damping: 0.6, cursorForce: 0 });
     for (let i = 0; i < 500; i++) sim.step();
-    const dx = sim.pos[2]! - sim.pos[0]!,
-      dy = sim.pos[3]! - sim.pos[1]!;
+    const dx = sim.pos[2] - sim.pos[0],
+      dy = sim.pos[3] - sim.pos[1];
     const d = Math.sqrt(dx * dx + dy * dy);
     // rest distance = eRest(1) * linkDistance(50) = 50 — generous band around it,
     // this is checking convergence toward the target, not exact equilibrium.
@@ -50,9 +50,9 @@ describe("createPhysics", () => {
       edges: [],
     });
     sim.setParams({ repulsion: 900, linkDistance: 1, gravity: 0, damping: 0.6, cursorForce: 0 });
-    const before = Math.hypot(sim.pos[2]! - sim.pos[0]!, sim.pos[3]! - sim.pos[1]!);
+    const before = Math.hypot(sim.pos[2] - sim.pos[0], sim.pos[3] - sim.pos[1]);
     for (let i = 0; i < 200; i++) sim.step();
-    const after = Math.hypot(sim.pos[2]! - sim.pos[0]!, sim.pos[3]! - sim.pos[1]!);
+    const after = Math.hypot(sim.pos[2] - sim.pos[0], sim.pos[3] - sim.pos[1]);
     expect(after).toBeGreaterThan(before);
   });
 
@@ -60,9 +60,9 @@ describe("createPhysics", () => {
     const sim = createPhysics({ nodes: [{ charge: 1, mass: 1 }], edges: [] });
     sim.pin(-1, 0, 0); // no-op, just confirms pin(-1,...) doesn't throw
     sim.setParams({ repulsion: 0, linkDistance: 1, gravity: 0.05, damping: 0.6, cursorForce: 0 });
-    const before = Math.hypot(sim.pos[0]!, sim.pos[1]!);
+    const before = Math.hypot(sim.pos[0], sim.pos[1]);
     for (let i = 0; i < 300; i++) sim.step();
-    const after = Math.hypot(sim.pos[0]!, sim.pos[1]!);
+    const after = Math.hypot(sim.pos[0], sim.pos[1]);
     expect(after).toBeLessThan(before);
   });
 
@@ -147,7 +147,7 @@ describe("createPhysics", () => {
     sim.pin(-1, 0, 0);
     sim.setParams({ ...NO_FORCES, gravity: 0.05, damping: 0.6, radiusForce: 0.05 });
     for (let i = 0; i < 400; i++) sim.step();
-    const radius = Math.hypot(sim.pos[0]!, sim.pos[1]!);
+    const radius = Math.hypot(sim.pos[0], sim.pos[1]);
     expect(radius).toBeGreaterThan(100);
     expect(radius).toBeLessThan(200);
   });
@@ -162,7 +162,7 @@ describe("createPhysics", () => {
       sim.setParams({ ...NO_FORCES, gravity: 0.05, damping: 0.62, radiusForce: 0.05 });
       let steps = 0;
       while (sim.step() && steps < 5000) steps++;
-      const radius = Math.hypot(sim.pos[0]!, sim.pos[1]!);
+      const radius = Math.hypot(sim.pos[0], sim.pos[1]);
       expect(Math.abs(radius - 150)).toBeLessThan(1.5);
     }
   });
@@ -177,11 +177,11 @@ describe("createPhysics", () => {
     let steps = 0,
       minRadius = Infinity;
     while (sim.step() && steps < 5000) {
-      minRadius = Math.min(minRadius, Math.hypot(sim.pos[0]!, sim.pos[1]!));
+      minRadius = Math.min(minRadius, Math.hypot(sim.pos[0], sim.pos[1]));
       steps++;
     }
     expect(minRadius).toBeGreaterThan(150 - 5);
-    expect(Math.abs(Math.hypot(sim.pos[0]!, sim.pos[1]!) - 150)).toBeLessThan(1.5);
+    expect(Math.abs(Math.hypot(sim.pos[0], sim.pos[1]) - 150)).toBeLessThan(1.5);
   });
 
   it("radius force is inert at zero, even on a node carrying a radiusTarget", () => {
@@ -190,9 +190,9 @@ describe("createPhysics", () => {
     sim.step();
     sim.pin(-1, 0, 0);
     sim.setParams({ ...NO_FORCES, gravity: 0.05, damping: 0.6 });
-    const before = Math.hypot(sim.pos[0]!, sim.pos[1]!);
+    const before = Math.hypot(sim.pos[0], sim.pos[1]);
     for (let i = 0; i < 300; i++) sim.step();
-    expect(Math.hypot(sim.pos[0]!, sim.pos[1]!)).toBeLessThan(before);
+    expect(Math.hypot(sim.pos[0], sim.pos[1])).toBeLessThan(before);
   });
 
   it("sector force rotates a node toward its arm angle while roughly preserving its radius", () => {
@@ -204,9 +204,9 @@ describe("createPhysics", () => {
     sim.step();
     sim.pin(-1, 0, 0);
     sim.setParams({ ...NO_FORCES, damping: 0.6, sectorForce: 0.02 });
-    const before = { x: sim.pos[0]!, y: sim.pos[1]! };
+    const before = { x: sim.pos[0], y: sim.pos[1] };
     for (let i = 0; i < 300; i++) sim.step();
-    const after = { x: sim.pos[0]!, y: sim.pos[1]! };
+    const after = { x: sim.pos[0], y: sim.pos[1] };
     expect(Math.abs(Math.PI / 2 - Math.atan2(after.y, after.x))).toBeLessThan((2 * Math.PI) / 180);
     const radiusBefore = Math.hypot(before.x, before.y),
       radiusAfter = Math.hypot(after.x, after.y);
@@ -236,8 +236,8 @@ describe("createPhysics", () => {
     }));
     const sim = createPhysics({ nodes, edges: [] }, { seed: 7 });
     for (let i = 0; i < 40; i++) {
-      const x = sim.pos[i * 2]!,
-        y = sim.pos[i * 2 + 1]!;
+      const x = sim.pos[i * 2],
+        y = sim.pos[i * 2 + 1];
       expect(Math.abs(Math.hypot(x, y) - 200)).toBeLessThanOrEqual(35);
       expect(Math.abs(Math.atan2(y, x) - Math.PI / 4)).toBeLessThanOrEqual((20 * Math.PI) / 180);
     }

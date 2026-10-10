@@ -129,15 +129,15 @@ export function describeGraph<T = unknown>(input: DescribeGraphInput<T>): GraphO
     ? (a: NavConnection, b: NavConnection) =>
         userRank(
           {
-            other: nodes[a.other]!,
-            edge: edges[a.edge]!,
+            other: nodes[a.other],
+            edge: edges[a.edge],
             categoryId: a.categoryId,
             direction: a.direction,
             strength: a.strength,
           },
           {
-            other: nodes[b.other]!,
-            edge: edges[b.edge]!,
+            other: nodes[b.other],
+            edge: edges[b.edge],
             categoryId: b.categoryId,
             direction: b.direction,
             strength: b.strength,
@@ -149,17 +149,17 @@ export function describeGraph<T = unknown>(input: DescribeGraphInput<T>): GraphO
   const isolatedIndex = input.isolateId == null ? -1 : (idToIndex.get(input.isolateId) ?? -1);
   const allow = isolationSet(isolatedIndex, eA, eB);
   const isVisible = (index: number) =>
-    !hiddenNode.has(nodes[index]!.categoryId) && (allow === null || allow.has(index));
-  const isEdgeVisible = (edge: number) => !hiddenLink.has(edgeCategoryIds[edge]!);
-  const kindOf = (index: number) => nodeCategories[nodes[index]!.categoryId]!.label.toLowerCase();
+    !hiddenNode.has(nodes[index].categoryId) && (allow === null || allow.has(index));
+  const isEdgeVisible = (edge: number) => !hiddenLink.has(edgeCategoryIds[edge]);
+  const kindOf = (index: number) => nodeCategories[nodes[index].categoryId].label.toLowerCase();
 
   let shownNodes = 0,
     shownEdges = 0;
   const kinds = new Set<string>();
   for (let e = 0; e < edges.length; e++) {
-    if (isEdgeVisible(e) && isVisible(eA[e]!) && isVisible(eB[e]!)) {
+    if (isEdgeVisible(e) && isVisible(eA[e]) && isVisible(eB[e])) {
       shownEdges++;
-      kinds.add(edgeCategoryIds[e]!);
+      kinds.add(edgeCategoryIds[e]);
     }
   }
 
@@ -167,10 +167,10 @@ export function describeGraph<T = unknown>(input: DescribeGraphInput<T>): GraphO
   for (let i = 0; i < nodes.length; i++) {
     if (!isVisible(i)) continue;
     shownNodes++;
-    const node = nodes[i]!;
-    const connections = visibleConnections(lists[i]!, isVisible, isEdgeVisible, "all");
+    const node = nodes[i];
+    const connections = visibleConnections(lists[i], isVisible, isEdgeVisible, "all");
     const ctx: DescribeContext = {
-      categoryLabel: nodeCategories[node.categoryId]!.label,
+      categoryLabel: nodeCategories[node.categoryId].label,
       connections: connections.length,
       selected: false,
     };
@@ -181,9 +181,9 @@ export function describeGraph<T = unknown>(input: DescribeGraphInput<T>): GraphO
         ? input.describeNode(node, ctx)
         : defaultNodeText(node.label, ctx),
       connections: connections.map((connection) => ({
-        relation: relationText(linkCategories[connection.categoryId]!, connection.direction),
-        id: nodes[connection.other]!.id,
-        label: labels[connection.other]!,
+        relation: relationText(linkCategories[connection.categoryId], connection.direction),
+        id: nodes[connection.other].id,
+        label: labels[connection.other],
         kind: kindOf(connection.other),
       })),
     };

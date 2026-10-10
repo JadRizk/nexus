@@ -22,8 +22,8 @@ function buildGraph(
   edges.forEach(([a, b], edge) => {
     edgeA[edge] = a;
     edgeB[edge] = b;
-    incidence[a]!.push({ edge, other: b });
-    incidence[b]!.push({ edge, other: a });
+    incidence[a].push({ edge, other: b });
+    incidence[b].push({ edge, other: a });
   });
   const hidden = new Float32Array(nodeCount);
   for (const i of hiddenNodes) hidden[i] = 1;
@@ -135,8 +135,10 @@ describe("isolationSet", () => {
   it("keeps the node and everything one edge away, either end, and nothing when -1", () => {
     const edgeA = Int32Array.from([0, 1, 2, 4]),
       edgeB = Int32Array.from([1, 2, 3, 1]);
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- isolationSet returns null only for -1; 1 and 5 are real node indices
     expect([...isolationSet(1, edgeA, edgeB)!].sort()).toEqual([0, 1, 2, 4]);
     expect(isolationSet(-1, edgeA, edgeB)).toBeNull();
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- isolationSet returns null only for -1; 1 and 5 are real node indices
     expect([...isolationSet(5, edgeA, edgeB)!]).toEqual([5]);
   });
 });

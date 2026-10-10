@@ -35,7 +35,7 @@ export function validateGraph(
   const show = (id: unknown) => JSON.stringify(id);
   const idToIndex = new Map<unknown, number>();
   for (let i = 0; i < nodeCount; i++) {
-    const node = nodes[i]!;
+    const node = nodes[i];
     if (idToIndex.has(node.id))
       throw new Error(`GraphCanvas: nodes[${i}] duplicates id ${show(node.id)}`);
     if (nodeCategories[node.categoryId] === undefined) {
@@ -49,7 +49,7 @@ export function validateGraph(
   const dropped: DroppedEdge[] = [];
   const ends: number[] = [];
   for (let e = 0; e < edges.length; e++) {
-    const edge = edges[e]!;
+    const edge = edges[e];
     const indexA = idToIndex.get(edge.a),
       indexB = idToIndex.get(edge.b);
     if (indexA === undefined || indexB === undefined) {
@@ -74,8 +74,8 @@ export function validateGraph(
   const endpointsA = new Int32Array(keptCount),
     endpointsB = new Int32Array(keptCount);
   for (let e = 0; e < keptCount; e++) {
-    endpointsA[e] = ends[e * 2]!;
-    endpointsB[e] = ends[e * 2 + 1]!;
+    endpointsA[e] = ends[e * 2];
+    endpointsB[e] = ends[e * 2 + 1];
   }
   return { idToIndex, edges: kept, dropped, eA: endpointsA, eB: endpointsB };
 }

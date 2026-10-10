@@ -74,8 +74,8 @@ export function computeDegree(
 ): Uint16Array {
   const degree = new Uint16Array(nodeCount);
   for (const e of edges) {
-    degree[e.a]!++;
-    degree[e.b]!++;
+    degree[e.a]++;
+    degree[e.b]++;
   }
   return degree;
 }
@@ -126,7 +126,7 @@ export function createPhysics(graph: PhysicsGraph, options: PhysicsOptions = {})
   const SEED_RADIUS_JITTER = 70;
   function seedPositions(): void {
     for (let i = 0; i < n; i++) {
-      const node = graph.nodes[i]!;
+      const node = graph.nodes[i];
       if (node.sectorAngle === undefined && node.radiusTarget === undefined) {
         const angle = (i / n) * Math.PI * 10,
           radius = 30 + Math.sqrt(i) * 9;
@@ -143,7 +143,7 @@ export function createPhysics(graph: PhysicsGraph, options: PhysicsOptions = {})
     }
   }
   for (let i = 0; i < n; i++) {
-    const node = graph.nodes[i]!;
+    const node = graph.nodes[i];
     charge[i] = node.charge;
     mass[i] = node.mass;
     if (node.sectorAngle !== undefined) {
@@ -158,11 +158,11 @@ export function createPhysics(graph: PhysicsGraph, options: PhysicsOptions = {})
   seedPositions();
   // Stiffness normalised by degree, or a 35-link hub diverges under Euler.
   for (let e = 0; e < m; e++) {
-    const edge = graph.edges[e]!,
+    const edge = graph.edges[e],
       a = edge.a,
       b = edge.b;
-    const da = Math.max(1, degree[a]!),
-      db = Math.max(1, degree[b]!);
+    const da = Math.max(1, degree[a]),
+      db = Math.max(1, degree[b]);
     eA[e] = a;
     eB[e] = b;
     eRest[e] = edge.dist;
@@ -202,43 +202,43 @@ export function createPhysics(graph: PhysicsGraph, options: PhysicsOptions = {})
     fy.fill(0);
     const k = P.repulsion * alpha;
     for (let i = 0; i < n; i++) {
-      const xi = pos[i * 2]!,
-        yi = pos[i * 2 + 1]!,
-        ci = charge[i]!;
+      const xi = pos[i * 2],
+        yi = pos[i * 2 + 1],
+        ci = charge[i];
       for (let j = i + 1; j < n; j++) {
-        let dx = pos[j * 2]! - xi,
-          dy = pos[j * 2 + 1]! - yi;
+        let dx = pos[j * 2] - xi,
+          dy = pos[j * 2 + 1] - yi;
         let d2 = dx * dx + dy * dy;
         if (d2 < 1e-3) {
           dx = random() - 0.5;
           dy = random() - 0.5;
           d2 = dx * dx + dy * dy + 1e-3;
         }
-        const f = (k * ci * charge[j]!) / (d2 * Math.sqrt(d2));
+        const f = (k * ci * charge[j]) / (d2 * Math.sqrt(d2));
         const ax = dx * f,
           ay = dy * f;
         fx[i] -= ax;
         fy[i] -= ay;
-        fx[j]! += ax;
-        fy[j]! += ay;
+        fx[j] += ax;
+        fy[j] += ay;
       }
     }
     for (let e = 0; e < m; e++) {
-      const a = eA[e]!,
-        b = eB[e]!;
-      let dx = pos[b * 2]! - pos[a * 2]!,
-        dy = pos[b * 2 + 1]! - pos[a * 2 + 1]!;
+      const a = eA[e],
+        b = eB[e];
+      let dx = pos[b * 2] - pos[a * 2],
+        dy = pos[b * 2 + 1] - pos[a * 2 + 1];
       let d = Math.sqrt(dx * dx + dy * dy);
       if (d < 1e-4) {
         dx = random() - 0.5;
         dy = random() - 0.5;
         d = 1e-2;
       }
-      const f = ((d - eRest[e]! * P.linkDistance) / d) * eK[e]! * alpha;
-      fx[a] += dx * f * eWA[e]!;
-      fy[a] += dy * f * eWA[e]!;
-      fx[b]! -= dx * f * eWB[e]!;
-      fy[b]! -= dy * f * eWB[e]!;
+      const f = ((d - eRest[e] * P.linkDistance) / d) * eK[e] * alpha;
+      fx[a] += dx * f * eWA[e];
+      fy[a] += dy * f * eWA[e];
+      fx[b] -= dx * f * eWB[e];
+      fy[b] -= dy * f * eWB[e];
     }
     const g = P.gravity * alpha,
       damp = P.damping,
@@ -247,55 +247,55 @@ export function createPhysics(graph: PhysicsGraph, options: PhysicsOptions = {})
       radiusStrength = P.radiusForce * structAlpha;
     let maxS = 0;
     for (let i = 0; i < n; i++) {
-      const x = pos[i * 2]!,
-        y = pos[i * 2 + 1]!;
+      const x = pos[i * 2],
+        y = pos[i * 2 + 1];
       if (radiusStrength !== 0 && hasRadiusTarget[i] !== 0) {
         const r = Math.sqrt(x * x + y * y);
         if (r > 1e-3) {
           const nx = x / r,
             ny = y / r;
-          const pull = (r - radiusTarget[i]!) * radiusStrength;
-          fx[i]! -= nx * pull;
-          fy[i]! -= ny * pull;
+          const pull = (r - radiusTarget[i]) * radiusStrength;
+          fx[i] -= nx * pull;
+          fy[i] -= ny * pull;
           // Critically damp the radial mode at the current damping so the spring never overshoots;
           // clamped at 0, since a negative term would cancel friction and blow up.
-          const dampedStiffness = damp * (radiusStrength / mass[i]!);
+          const dampedStiffness = damp * (radiusStrength / mass[i]);
           const radialDamping =
             dampedStiffness < 1 ? 1 - Math.pow(1 - Math.sqrt(dampedStiffness), 2) / damp : 1;
           if (radialDamping > 0) {
-            const radialVelocity = vel[i * 2]! * nx + vel[i * 2 + 1]! * ny;
-            const brake = radialDamping * radialVelocity * mass[i]!;
-            fx[i]! -= nx * brake;
-            fy[i]! -= ny * brake;
+            const radialVelocity = vel[i * 2] * nx + vel[i * 2 + 1] * ny;
+            const brake = radialDamping * radialVelocity * mass[i];
+            fx[i] -= nx * brake;
+            fy[i] -= ny * brake;
           }
         }
       } else {
-        fx[i]! -= x * g;
-        fy[i]! -= y * g;
+        fx[i] -= x * g;
+        fy[i] -= y * g;
       }
       if (curOn && cf !== 0) {
         const dx = x - curX,
           dy = y - curY,
           d2 = dx * dx + dy * dy + 60;
         const inv = (cf * 14000) / (d2 * Math.sqrt(d2));
-        fx[i]! += dx * inv;
-        fy[i]! += dy * inv;
+        fx[i] += dx * inv;
+        fy[i] += dy * inv;
       }
       // Tangential only; scaled by radius, capped at 260 so far outliers aren't over-shoved.
       if (sectorStrength !== 0 && hasSector[i] !== 0) {
         const r = Math.sqrt(x * x + y * y);
         if (r > 1e-3) {
           const theta = Math.atan2(y, x);
-          let angleDelta = sector[i]! - theta;
+          let angleDelta = sector[i] - theta;
           angleDelta -= Math.PI * 2 * Math.round(angleDelta / (Math.PI * 2));
           const magnitude = sectorStrength * angleDelta * Math.min(r, 260);
-          fx[i]! += -Math.sin(theta) * magnitude;
-          fy[i]! += Math.cos(theta) * magnitude;
+          fx[i] += -Math.sin(theta) * magnitude;
+          fy[i] += Math.cos(theta) * magnitude;
         }
       }
-      const im = 1 / mass[i]!;
-      let vx = (vel[i * 2]! + fx[i]! * im) * damp,
-        vy = (vel[i * 2 + 1]! + fy[i]! * im) * damp;
+      const im = 1 / mass[i];
+      let vx = (vel[i * 2] + fx[i] * im) * damp,
+        vy = (vel[i * 2 + 1] + fy[i] * im) * damp;
       const s2 = vx * vx + vy * vy;
       if (s2 > 400) {
         const s = 20 / Math.sqrt(s2);
