@@ -27,7 +27,7 @@ export interface PreparedGraph {
   nodeCount: number;
   edgeCount: number;
   nodeCategoryIds: string[];
-  denseIds: Array<GraphNode["id"]>;
+  denseIds: GraphNode["id"][];
   edgeCategoryIds: string[];
   linkCategoryIds: string[];
   /** Live-edge count touching each node. */
