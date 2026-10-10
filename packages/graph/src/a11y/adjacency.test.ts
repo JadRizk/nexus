@@ -35,7 +35,7 @@ describe("buildConnections", () => {
 
   it("ranks by weight (|gain| × strength), then category order, then far label", () => {
     expect(
-      lists[0]!.map((connection) => [labels[connection.other], connection.categoryId]),
+      lists[0].map((connection) => [labels[connection.other], connection.categoryId]),
     ).toEqual([
       ["gamma", "strong"],
       ["alpha", "pair"],
@@ -45,12 +45,12 @@ describe("buildConnections", () => {
   });
 
   it("records direction from each end, and both for an undirected category", () => {
-    const hub = lists[0]!;
+    const hub = lists[0];
     expect(hub.find((connection) => connection.edge === 0)!.direction).toBe("out");
     expect(hub.find((connection) => connection.edge === 1)!.direction).toBe("in");
     expect(hub.find((connection) => connection.edge === 2)!.direction).toBe("both");
-    expect(lists[2]![0]!.direction).toBe("in");
-    expect(lists[1]![0]!.direction).toBe("both");
+    expect(lists[2][0].direction).toBe("in");
+    expect(lists[1][0].direction).toBe("both");
   });
 
   it("lists a self-loop once", () => {
@@ -79,7 +79,7 @@ describe("visibleConnections", () => {
 
   it("drops connections to hidden nodes and along hidden edges", () => {
     const visible = visibleConnections(
-      lists[0]!,
+      lists[0],
       (node) => node !== 1,
       (edge) => edge !== 3,
       "all",
@@ -89,10 +89,10 @@ describe("visibleConnections", () => {
 
   it("keeps undirected connections under either direction filter", () => {
     expect(
-      visibleConnections(lists[0]!, all, all, "out").map((connection) => connection.edge),
+      visibleConnections(lists[0], all, all, "out").map((connection) => connection.edge),
     ).toEqual([2, 0, 3]);
     expect(
-      visibleConnections(lists[0]!, all, all, "in").map((connection) => connection.edge),
+      visibleConnections(lists[0], all, all, "in").map((connection) => connection.edge),
     ).toEqual([1, 2]);
   });
 });

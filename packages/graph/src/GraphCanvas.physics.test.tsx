@@ -262,7 +262,7 @@ describe("GraphCanvas layout seed and structure", () => {
     root = createRoot(container);
     mount();
     expect(createCalls).toHaveLength(2);
-    expect(createCalls[1]!.startPositions).toEqual(createCalls[0]!.startPositions);
+    expect(createCalls[1].startPositions).toEqual(createCalls[0].startPositions);
   });
 
   it("passes an explicit seed through unchanged", () => {
@@ -284,7 +284,7 @@ describe("GraphCanvas layout seed and structure", () => {
   it("gives a node's own sectorAngle/radiusTarget precedence over its category's, and omits absent ones", () => {
     mount(undefined, {
       nodeCategories: {
-        atlas: { ...nodeCategories["atlas"]!, sectorAngle: 1, radiusTarget: 100 },
+        atlas: { ...nodeCategories["atlas"], sectorAngle: 1, radiusTarget: 100 },
       },
       nodes: [
         { id: "a", categoryId: "atlas", label: "A", sectorAngle: 2 },
@@ -400,7 +400,7 @@ describe("GraphCanvas history: controller.back() and canGoBack", () => {
 describe("GraphCanvas keyboard and screen-reader navigation", () => {
   const focusTarget = () =>
     container.querySelector<HTMLButtonElement>("button[data-nx-graph-focus]");
-  const spoken = () => container.querySelector("[aria-live]")!.textContent!.replace(/\u200b/g, "");
+  const spoken = () => container.querySelector("[aria-live]")!.textContent.replace(/\u200b/g, "");
   const press = (key: string) =>
     act(() => {
       focusTarget()!.dispatchEvent(
@@ -411,7 +411,7 @@ describe("GraphCanvas keyboard and screen-reader navigation", () => {
     ({
       ariaLabel: "Test graph",
       linkCategories: {
-        refs: { ...linkCategories["refs"]!, verb: "refers to", inverseVerb: "referred to by" },
+        refs: { ...linkCategories["refs"], verb: "refers to", inverseVerb: "referred to by" },
       },
       ...extra,
     }) as Partial<GraphCanvasProps>;
@@ -457,7 +457,7 @@ describe("GraphCanvas keyboard and screen-reader navigation", () => {
     press("Escape");
     expect(onSelect).toHaveBeenLastCalledWith(null, "keyboard");
     press("Escape");
-    const group = container.querySelector<HTMLElement>('[role="group"]')!;
+    const group = container.querySelector<HTMLElement>('[role="group"]');
     expect(document.activeElement).toBe(group);
   });
 
@@ -517,7 +517,7 @@ describe("GraphCanvas keyboard and screen-reader navigation", () => {
         { a: "a", b: "a", categoryId: "refs" },
       ],
     } as Partial<GraphCanvasProps>);
-    const rows = ref.current!.getNode("a")!.groups[0]!.rows;
+    const rows = ref.current!.getNode("a")!.groups[0].rows;
     expect(rows.map((row) => [row.id, row.out])).toEqual([
       ["a", true],
       ["a", false],
@@ -604,7 +604,7 @@ describe("GraphCanvas boot and teardown", () => {
     mount(undefined, { edges: [{ a: "a", b: "zzz", categoryId: "refs" }], onFatal });
     expect(renderers).toHaveLength(0);
     expect(onFatal).toHaveBeenCalledTimes(1);
-    expect(onFatal.mock.calls[0]![0]).toBe(
+    expect(onFatal.mock.calls[0][0]).toBe(
       'GraphCanvas: edges[0].b references unknown node id "zzz"',
     );
     expect(container.textContent).toContain("SYSTEM HALT");
@@ -645,7 +645,7 @@ describe("GraphCanvas boot and teardown", () => {
       "ResizeObserver",
       class {
         constructor() {
-          labelLayer = container.firstElementChild!.children[1]!;
+          labelLayer = container.firstElementChild!.children[1];
           throw new Error("no ResizeObserver here");
         }
       },
@@ -655,7 +655,7 @@ describe("GraphCanvas boot and teardown", () => {
 
     expect(onFatal).toHaveBeenCalledWith("no ResizeObserver here");
     expect(renderers).toHaveLength(1);
-    const renderer = renderers[0]!;
+    const renderer = renderers[0];
     expect(renderer.teardown).toEqual(["dispose", "forceContextLoss"]);
     expect(renderer.domElement.parentNode).toBeNull();
     expect(labelLayer).not.toBeNull();
@@ -665,7 +665,7 @@ describe("GraphCanvas boot and teardown", () => {
   it("forces context loss after disposing the renderer on unmount", () => {
     mount();
     expect(renderers).toHaveLength(1);
-    const renderer = renderers[0]!;
+    const renderer = renderers[0];
     expect(renderer.teardown).toEqual([]);
     act(() => root.unmount());
     expect(renderer.teardown).toEqual(["dispose", "forceContextLoss"]);
@@ -678,7 +678,7 @@ describe("GraphCanvas boot and teardown", () => {
     vi.stubGlobal("cancelAnimationFrame", cancel);
     const onFatal = vi.fn();
     mount(undefined, { onFatal });
-    const canvas = renderers[0]!.domElement;
+    const canvas = renderers[0].domElement;
     expect(cancel).not.toHaveBeenCalled();
 
     act(() => {

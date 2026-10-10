@@ -26,8 +26,8 @@ const lists = buildConnections(
 function makeCtx(hidden: Set<number> = new Set()): NavContext {
   const isVisible = (node: number) => node >= 0 && node < 5 && !hidden.has(node);
   return {
-    connections: (node, filter) => visibleConnections(lists[node]!, isVisible, () => true, filter),
-    allConnections: (node) => lists[node]!,
+    connections: (node, filter) => visibleConnections(lists[node], isVisible, () => true, filter),
+    allConnections: (node) => lists[node],
     isVisible,
     fallback: () => (isVisible(0) ? 0 : ([1, 2, 3, 4].find(isVisible) ?? -1)),
     text: {

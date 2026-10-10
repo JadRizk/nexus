@@ -74,11 +74,11 @@ export function createLabelPlacer(options: LabelPlacerOptions): LabelPlacer {
   }
 
   function labelWidth(i: number, text: string, landmark: boolean): number {
-    if (widthCache[i]! < 0) {
+    if (widthCache[i] < 0) {
       const font = landmark ? `700 10.5px ${MONO}` : `500 9px ${MONO}`;
       widthCache[i] = measure(text, font) + text.length * (landmark ? 1.47 : 0.72) + 7;
     }
-    return widthCache[i]!;
+    return widthCache[i];
   }
 
   function place(view: LabelView, out: Map<number, PlacedLabel>): number {
@@ -99,25 +99,25 @@ export function createLabelPlacer(options: LabelPlacerOptions): LabelPlacer {
     let candidateCount = 0;
     for (let i = 0; i < count; i++) {
       if (hidden[i] !== 0) continue;
-      const x = positions[i * 2]!,
-        y = positions[i * 2 + 1]!;
+      const x = positions[i * 2],
+        y = positions[i * 2 + 1];
       if (Math.abs(x - cx) > halfWidth || Math.abs(y - cy) > halfHeight) continue;
 
-      const nodeTier = tier[i]!;
+      const nodeTier = tier[i];
       const isTarget = i === selectedIndex || i === hoverIndex;
-      const inFlow = depth[i]! >= 0;
+      const inFlow = depth[i] >= 0;
       const landmark = nodeTier === 0;
 
       let earns: boolean;
       if (mode === "all") earns = true;
       else if (mode === "key") earns = landmark || isTarget || depth[i] === 1;
-      else earns = isTarget || inFlow || zoom >= TIER_ZOOM[nodeTier]!;
+      else earns = isTarget || inFlow || zoom >= TIER_ZOOM[nodeTier];
       if (!earns) continue;
 
       // Landmarks stay while focused so the reader keeps their bearings.
       if (focused && !inFlow && !isTarget && !landmark) continue;
 
-      let score = radii[i]! + (3 - nodeTier) * 9;
+      let score = radii[i] + (3 - nodeTier) * 9;
       if (inFlow) score += depth[i] === 1 ? 70 : 30;
       if (i === hoverIndex) score += SCORE_HOVER_OVERRIDE;
       if (i === selectedIndex) score += SCORE_SELECT_OVERRIDE;
@@ -127,14 +127,14 @@ export function createLabelPlacer(options: LabelPlacerOptions): LabelPlacer {
     // Stable sort: equal scores keep ascending node index, which a test pins.
     candidateOrder
       .subarray(0, candidateCount)
-      .sort((a, b) => candidateScore[b]! - candidateScore[a]!);
+      .sort((a, b) => candidateScore[b] - candidateScore[a]);
 
     let boxCount = 0;
     for (let k = 0; k < candidateCount && out.size < poolSize; k++) {
-      const i = candidateOrder[k]!;
+      const i = candidateOrder[k];
       const screen = project(
-        positions[i * 2]!,
-        positions[i * 2 + 1]!,
+        positions[i * 2],
+        positions[i * 2 + 1],
         zoom,
         cx,
         cy,
@@ -144,15 +144,15 @@ export function createLabelPlacer(options: LabelPlacerOptions): LabelPlacer {
       const sx = screen[0],
         sy = screen[1];
       if (sx < -60 || sx > width + 60 || sy < -24 || sy > height + 24) continue;
-      const landmark = tier[i]! === 0;
-      const boxLeft = sx + glyphRadiusPx(radii[i]!, zoom) + 8;
+      const landmark = tier[i] === 0;
+      const boxLeft = sx + glyphRadiusPx(radii[i], zoom) + 8;
       const boxTop = sy - labelHeight * 0.5;
       const boxWidth = labelWidth(i, view.label(i), landmark);
       let hit = false;
       for (let q = 0; q < boxCount; q++) {
-        const placedLeft = boxX[q]!,
-          placedTop = boxY[q]!,
-          placedWidth = boxW[q]!;
+        const placedLeft = boxX[q],
+          placedTop = boxY[q],
+          placedWidth = boxW[q];
         if (
           boxLeft < placedLeft + placedWidth &&
           boxLeft + boxWidth > placedLeft &&
@@ -167,7 +167,7 @@ export function createLabelPlacer(options: LabelPlacerOptions): LabelPlacer {
       const opacity =
         i === selectedIndex || i === hoverIndex
           ? 1
-          : depth[i]! >= 0
+          : depth[i] >= 0
             ? 0.92
             : focused
               ? 0.28

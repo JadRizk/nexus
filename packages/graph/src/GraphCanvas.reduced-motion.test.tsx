@@ -192,20 +192,20 @@ describe("GraphCanvas prefers-reduced-motion", () => {
     const { canvas, comp } = mount(null);
     tick();
     expect(canvas.dataset.nxReducedMotion).toBe("false");
-    expect(comp.uReduced!.value).toBe(0);
+    expect(comp.uReduced.value).toBe(0);
     // The intro glitch flourish is scheduled at boot; the uniform carries it.
-    expect(comp.uGlitch!.value).toBe(1);
+    expect(comp.uGlitch.value).toBe(1);
   });
 
   it("zeroes the composite uniforms and flags the canvas when reduce is set at mount", () => {
     const { canvas, edge, node, fade, comp } = mount(new FakeMediaQueryList(true));
     tick();
     expect(canvas.dataset.nxReducedMotion).toBe("true");
-    expect(edge.uReduced!.value).toBe(1);
-    expect(comp.uReduced!.value).toBe(1);
-    expect(comp.uGlitch!.value).toBe(0);
-    expect(node.uReduced!.value).toBe(1);
-    expect(fade.uReduced!.value).toBe(1);
+    expect(edge.uReduced.value).toBe(1);
+    expect(comp.uReduced.value).toBe(1);
+    expect(comp.uGlitch.value).toBe(0);
+    expect(node.uReduced.value).toBe(1);
+    expect(fade.uReduced.value).toBe(1);
   });
 
   it("follows a change of the media query without a remount", () => {
@@ -213,18 +213,18 @@ describe("GraphCanvas prefers-reduced-motion", () => {
     const { canvas, comp } = mount(query);
     tick();
     expect(canvas.dataset.nxReducedMotion).toBe("false");
-    expect(comp.uReduced!.value).toBe(0);
+    expect(comp.uReduced.value).toBe(0);
 
     query.flip(true);
     tick();
     expect(canvas.dataset.nxReducedMotion).toBe("true");
-    expect(comp.uReduced!.value).toBe(1);
-    expect(comp.uGlitch!.value).toBe(0);
+    expect(comp.uReduced.value).toBe(1);
+    expect(comp.uGlitch.value).toBe(0);
 
     query.flip(false);
     tick();
     expect(canvas.dataset.nxReducedMotion).toBe("false");
-    expect(comp.uReduced!.value).toBe(0);
+    expect(comp.uReduced.value).toBe(0);
   });
 
   it("unsubscribes from the media query on unmount", () => {
@@ -321,7 +321,7 @@ describe("edge pipeline", () => {
 
   it("encodes routing, signed gain, fray and a symmetric end trim per edge", () => {
     const { edges, pads } = mountGraph();
-    const geometry = edges[0]!.geometry;
+    const geometry = edges[0].geometry;
     const p0 = geometry.getAttribute("iP0").array as Float32Array;
     const p1 = geometry.getAttribute("iP1").array as Float32Array;
     const p2 = geometry.getAttribute("iP2").array as Float32Array;
@@ -337,9 +337,9 @@ describe("edge pipeline", () => {
     expect(p0[9]).toBeGreaterThan(0);
     expect(p0[11]).toBeCloseTo(1.2);
     expect(p2[8 + 3]).toBe(2);
-    expect(p1[2]! / p1[3]!).toBeCloseTo(1);
-    expect(pads[0]!.geometry.getAttribute("iP2")).toBe(geometry.getAttribute("iP2"));
-    expect(pads[0]!.geometry.getAttribute("iP0")).toBe(geometry.getAttribute("iP0"));
+    expect(p1[2] / p1[3]).toBeCloseTo(1);
+    expect(pads[0].geometry.getAttribute("iP2")).toBe(geometry.getAttribute("iP2"));
+    expect(pads[0].geometry.getAttribute("iP0")).toBe(geometry.getAttribute("iP0"));
   });
 });
 
@@ -372,7 +372,7 @@ describe("props from qrntn: drop mode, scoped links, drawnNodes, onFrame", () =>
       (mesh) => (mesh.material as { fragmentShader?: string }).fragmentShader === EDGE_FS,
     )!;
     const p2 = edgeMesh.geometry.getAttribute("iP2").array as Float32Array;
-    return Array.from({ length: p2.length / 4 }, (_, edge) => p2[edge * 4 + 1]!);
+    return Array.from({ length: p2.length / 4 }, (_, edge) => p2[edge * 4 + 1]);
   }
   const runFrames = (count: number) => {
     for (let i = 0; i < count; i++) tick();
@@ -392,8 +392,8 @@ describe("props from qrntn: drop mode, scoped links, drawnNodes, onFrame", () =>
     });
     expect(onFatal).not.toHaveBeenCalled();
     expect(onWarning).toHaveBeenCalledTimes(1);
-    expect(onWarning.mock.calls[0]![0]).toMatch(/dropped 1 edge/);
-    expect(onWarning.mock.calls[0]![1].dropped).toEqual([
+    expect(onWarning.mock.calls[0][0]).toMatch(/dropped 1 edge/);
+    expect(onWarning.mock.calls[0][1].dropped).toEqual([
       { index: 1, edge: { a: "a", b: "gone", categoryId: "refs" }, end: "b" },
     ]);
     expect(hiddenFlags()).toHaveLength(1);
@@ -438,15 +438,15 @@ describe("props from qrntn: drop mode, scoped links, drawnNodes, onFrame", () =>
     mountWith({ onFrame: first });
     tick();
     expect(first).toHaveBeenCalledTimes(1);
-    const frame = first.mock.calls[0]![0];
+    const frame = first.mock.calls[0][0];
     expect(frame.ids).toEqual(["a", "b", "c"]);
     expect(frame.positions).toHaveLength(6);
     expect(frame.radii).toHaveLength(3);
     expect(frame.camera.zoom).toBeGreaterThan(0);
     // One object, refilled every frame, so nothing is allocated per frame.
     tick();
-    expect(first.mock.calls[1]![0]).toBe(frame);
-    expect(first.mock.calls[1]![0].camera).toBe(frame.camera);
+    expect(first.mock.calls[1][0]).toBe(frame);
+    expect(first.mock.calls[1][0].camera).toBe(frame.camera);
     first.mockClear();
     const second = vi.fn();
     mountWith({ onFrame: second });

@@ -90,7 +90,7 @@ function goTo(state: NavState, node: number): NavState {
 
 /** Index of the newest history entry whose node is visible, or -1. */
 export function lastVisible(history: readonly HistoryEntry[], ctx: Pick<NavContext, "isVisible">) {
-  for (let k = history.length - 1; k >= 0; k--) if (ctx.isVisible(history[k]!.node)) return k;
+  for (let k = history.length - 1; k >= 0; k--) if (ctx.isVisible(history[k].node)) return k;
   return -1;
 }
 
@@ -151,7 +151,7 @@ export function navigate(
         {
           announce: ctx.text.connection(
             state.current,
-            connections[cursor]!,
+            connections[cursor],
             cursor + 1,
             connections.length,
           ),
@@ -161,7 +161,7 @@ export function navigate(
 
     case "filter": {
       const filter =
-        FILTERS[(FILTERS.indexOf(state.filter) + action.step + FILTERS.length) % FILTERS.length]!;
+        FILTERS[(FILTERS.indexOf(state.filter) + action.step + FILTERS.length) % FILTERS.length];
       const next = { ...state, filter, cursor: -1 };
       return [
         next,

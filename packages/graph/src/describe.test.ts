@@ -152,14 +152,14 @@ describe("describeGraph", () => {
   });
 
   it("reads each connection from the node's side, ranked as the keyboard reads them", () => {
-    const beta = describeGraph(input).groups[0]!.nodes[1]!;
+    const beta = describeGraph(input).groups[0].nodes[1];
     expect(beta.description).toBe("beta, note, 2 connections");
     expect(beta.connections).toEqual([
       { relation: "cites", id: "s2", label: "zeta-src", kind: "source" },
       { relation: "link from", id: "n2", label: "alpha", kind: "note" },
     ]);
-    const tag = describeGraph(input).groups[2]!.nodes[0]!;
-    expect(tag.connections[0]!.relation).toBe("tagged with");
+    const tag = describeGraph(input).groups[2].nodes[0];
+    expect(tag.connections[0].relation).toBe("tagged with");
   });
 
   it("leaves out hidden categories, and connections to or along them", () => {
@@ -170,10 +170,10 @@ describe("describeGraph", () => {
     });
     expect(outline.summary).toBe("Graph, 3 nodes, 1 connection in 1 kind.");
     expect(outline.groups.map((group) => group.label)).toEqual(["NOTE", "TAG"]);
-    expect(outline.groups[0]!.nodes[1]!.connections.map((connection) => connection.label)).toEqual([
+    expect(outline.groups[0].nodes[1].connections.map((connection) => connection.label)).toEqual([
       "alpha",
     ]);
-    expect(outline.groups[0]!.nodes[1]!.description).toBe("beta, note, 1 connection");
+    expect(outline.groups[0].nodes[1].description).toBe("beta, note, 1 connection");
   });
 
   it("follows describeNode, rankConnections and invalidEdges like GraphCanvas", () => {
@@ -184,7 +184,7 @@ describe("describeGraph", () => {
       describeNode: (node) => `NODE ${node.label}`,
       rankConnections: (first, second) => first.other.label.localeCompare(second.other.label),
     });
-    const beta = outline.groups[0]!.nodes[1]!;
+    const beta = outline.groups[0].nodes[1];
     expect(beta.description).toBe("NODE beta");
     expect(beta.connections.map((connection) => connection.label)).toEqual(["alpha", "zeta-src"]);
     expect(() =>
@@ -220,7 +220,7 @@ describe("describeGraph", () => {
       describeNode,
       rankConnections: (first, second) => first.other.data!.words - second.other.data!.words,
     });
-    const beta = outline.groups[0]!.nodes[1]!;
+    const beta = outline.groups[0].nodes[1];
     expect(beta.description).toBe("beta, 1 words");
     expect(beta.connections.map((connection) => connection.label)).toEqual(["zeta-src", "alpha"]);
   });

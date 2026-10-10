@@ -22,8 +22,8 @@ function buildGraph(
   edges.forEach(([a, b], edge) => {
     edgeA[edge] = a;
     edgeB[edge] = b;
-    incidence[a]!.push({ edge, other: b });
-    incidence[b]!.push({ edge, other: a });
+    incidence[a].push({ edge, other: b });
+    incidence[b].push({ edge, other: a });
   });
   const hidden = new Float32Array(nodeCount);
   for (const i of hiddenNodes) hidden[i] = 1;

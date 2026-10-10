@@ -18,10 +18,10 @@ export function pickNode(
   const grab = Math.max(PICK_GRAB_MIN, PICK_GRAB_PX / zoom);
   for (let i = 0; i < count; i++) {
     if (hidden[i] !== 0) continue;
-    const dx = positions[i * 2]! - x,
-      dy = positions[i * 2 + 1]! - y;
+    const dx = positions[i * 2] - x,
+      dy = positions[i * 2 + 1] - y;
     const distanceSq = dx * dx + dy * dy,
-      reach = radii[i]! + grab;
+      reach = radii[i] + grab;
     if (distanceSq < reach * reach && distanceSq < bestDistanceSq) {
       bestDistanceSq = distanceSq;
       bestIndex = i;

@@ -137,7 +137,7 @@ describe("the live region", () => {
     const first = live().textContent;
     overlay.announce("Start of path");
     expect(live().textContent).not.toBe(first);
-    expect(live().textContent!.replace(/\u200b/g, "")).toBe("Start of path");
+    expect(live().textContent.replace(/\u200b/g, "")).toBe("Start of path");
   });
 });
 

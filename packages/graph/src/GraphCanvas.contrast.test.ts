@@ -45,7 +45,7 @@ function luminance([r, g, b]: RGB): number {
     const c = v / 255;
     return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
   });
-  return 0.2126 * lr! + 0.7152 * lg! + 0.0722 * lb!;
+  return 0.2126 * lr + 0.7152 * lg + 0.0722 * lb;
 }
 
 function contrastRatio(a: RGB, b: RGB): number {
@@ -57,7 +57,7 @@ function contrastRatio(a: RGB, b: RGB): number {
 
 /** Alpha-composites `fg` (with `alpha`, 0-1) over an opaque `bg`. */
 function compositeOver(fg: RGB, alpha: number, bg: RGB): RGB {
-  return fg.map((c, i) => c * alpha + bg[i]! * (1 - alpha)) as RGB;
+  return fg.map((c, i) => c * alpha + bg[i] * (1 - alpha)) as RGB;
 }
 
 // Both literals are read out of GraphCanvas.tsx rather than restated here, so
