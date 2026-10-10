@@ -17,7 +17,7 @@ export type LabelMode = "auto" | "key" | "all" | "off";
 
 export interface GraphConsoleProps {
   stats: GraphStats;
-  cfg: DeckConfig;
+  config: DeckConfig;
   onConfig: SetDeckConfig;
   total: number;
   onTotal: (total: number) => void;
@@ -34,7 +34,7 @@ export interface GraphConsoleProps {
   onBack: () => void;
 }
 
-const KV_GAP = { gap: "var(--nx-space-2)" };
+const KEY_VALUE_GAP = { gap: "var(--nx-space-2)" };
 
 function fpsColour(fps: number): string {
   if (fps > 50) return "var(--nx-fg-accent)";
@@ -77,18 +77,17 @@ function StatsReadout({ stats }: { stats: GraphStats }) {
         }}
       >
         <KeyValue
-          style={KV_GAP}
+          style={KEY_VALUE_GAP}
           label="NODES"
-          // "drawn/total" while a filter or an isolate hides some.
           value={
             stats.drawnNodes < stats.nodes ? `${stats.drawnNodes}/${stats.nodes}` : stats.nodes
           }
         />
-        <KeyValue style={KV_GAP} label="LINKS" value={stats.edges} />
-        <KeyValue style={KV_GAP} label="DRAWN" value={stats.drawnEdges} />
-        <KeyValue style={KV_GAP} label="FRAME" value={stats.frameMs} />
+        <KeyValue style={KEY_VALUE_GAP} label="LINKS" value={stats.edges} />
+        <KeyValue style={KEY_VALUE_GAP} label="DRAWN" value={stats.drawnEdges} />
+        <KeyValue style={KEY_VALUE_GAP} label="FRAME" value={stats.frameMs} />
         <KeyValue
-          style={KV_GAP}
+          style={KEY_VALUE_GAP}
           label="SOLVER"
           value={
             <span style={{ color: stats.settled ? "var(--nx-fg-accent)" : "var(--nx-fg-warning)" }}>
@@ -103,25 +102,29 @@ function StatsReadout({ stats }: { stats: GraphStats }) {
 
 function ConfigSliders({
   sliders,
-  cfg,
+  config,
   onConfig,
 }: {
   sliders: readonly SliderSpec[];
-  cfg: DeckConfig;
+  config: DeckConfig;
   onConfig: SetDeckConfig;
 }) {
   return (
     <>
       {sliders.map(({ key, ...slider }) => (
-        <Slider key={key} {...slider} value={cfg[key]} onChange={(v) => onConfig(key, v)} />
+        <Slider
+          key={key}
+          {...slider}
+          value={config[key]}
+          onChange={(value) => onConfig(key, value)}
+        />
       ))}
     </>
   );
 }
 
-/** The left-hand console: frame stats, the optics and solver sliders, label mode and actions. */
 export function GraphConsole(props: GraphConsoleProps) {
-  const { cfg, onConfig } = props;
+  const { config, onConfig } = props;
   const [tab, setTab] = useState<"crt" | "sim">("crt");
   return (
     <Panel style={{ flexShrink: 0 }}>
@@ -140,10 +143,10 @@ export function GraphConsole(props: GraphConsoleProps) {
       </div>
 
       {tab === "crt" ? (
-        <ConfigSliders sliders={OPTICS_SLIDERS} cfg={cfg} onConfig={onConfig} />
+        <ConfigSliders sliders={OPTICS_SLIDERS} config={config} onConfig={onConfig} />
       ) : (
         <>
-          <ConfigSliders sliders={SOLVER_SLIDERS} cfg={cfg} onConfig={onConfig} />
+          <ConfigSliders sliders={SOLVER_SLIDERS} config={config} onConfig={onConfig} />
           <Slider
             label="corpus size"
             value={props.total}
@@ -215,16 +218,11 @@ function ConsoleActions({
       <Button style={{ minWidth: 0 }} onClick={onReseed}>
         Reseed
       </Button>
-      {/* An action that names where it goes, not a toggle: a pressed
-        button whose name flips reads as "View as graph, pressed" while
-        the list is showing. */}
+      {/* Not a toggle: a pressed button whose name flips reads wrongly. */}
       <Button style={{ minWidth: 0, gridColumn: "1 / -1" }} onClick={onToggleListView}>
         {isListView ? "View as graph" : "View as list"}
       </Button>
-      {/* Back is the same step Backspace takes inside the graph: the
-        previous node and the selection that went with it. aria-disabled,
-        not disabled: pressing Back down to the start would otherwise
-        disable the very button holding focus and drop it on <body>. */}
+      {/* aria-disabled, not disabled: disabling the focused button drops focus on <body>. */}
       <Button
         style={{ minWidth: 0, gridColumn: "1 / -1" }}
         aria-disabled={!canGoBack || undefined}

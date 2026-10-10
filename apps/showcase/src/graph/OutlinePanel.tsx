@@ -15,7 +15,6 @@ export interface OutlinePanelProps {
   onSelect: (id: string | number) => void;
 }
 
-/** The list view: GraphOutline over the canvas, filtered like the canvas. */
 export function OutlinePanel({
   nodes,
   edges,

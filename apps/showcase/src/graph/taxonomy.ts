@@ -1,12 +1,6 @@
 import type { LinkCategory, NodeCategory } from "@nexus-cyberdeck/graph";
 
-/* ============================================================================
-   The Graph page's taxonomy — ATLAS/TAG/UNRSLV/SOURCE/AGENT/NODE and the five
-   relations. One demo's sample data (see sampleData.ts for the corpus drawn
-   over it); @nexus-cyberdeck/graph itself is domain-agnostic.
-   ========================================================================== */
-
-export const NODE_CATEGORIES: Record<string, NodeCategory> = {
+export const NODE_CATEGORIES = {
   moc: {
     label: "ATLAS",
     code: "ATL",
@@ -67,21 +61,13 @@ export const NODE_CATEGORIES: Record<string, NodeCategory> = {
     charge: 0.6,
     mass: 0.5,
   },
-};
-export const NODE_CATEGORY_IDS = Object.keys(NODE_CATEGORIES);
+} as const satisfies Record<string, NodeCategory>;
+export type NodeCategoryId = keyof typeof NODE_CATEGORIES;
+export const NODE_CATEGORY_IDS = Object.keys(NODE_CATEGORIES) as NodeCategoryId[];
 
-// Link colours are deliberately bright: the CRT composite removes ~45% of
-// signal, so anything that starts dim disappears entirely on screen.
-//
-// Each kind is told apart by form as well as colour, so the legend still
-// works in greyscale or for a reader who can't separate these hues: routing
-// (straight, arc, etched), dash rhythm, and gain (how bright it sits at rest).
-// LINK is the scaffold that hangs notes off their atlas — etched and quiet.
-// The rest are claims, drawn brighter. TAGGED and CONFLICT have no direction,
-// so they end in two plain bars; the rest end in a bracket at their target.
-// `verb` / `inverseVerb` are how a screen reader reads each relation from
-// either end ("cites" / "cited by").
-export const LINK_CATEGORIES: Record<string, LinkCategory> = {
+// Bright on purpose: the CRT composite removes ~45% of the signal.
+// Routing, dash and gain differ per kind so the legend survives greyscale and colour blindness.
+export const LINK_CATEGORIES = {
   refs: {
     label: "LINK",
     color: "#3AC6D4",
@@ -141,20 +127,21 @@ export const LINK_CATEGORIES: Record<string, LinkCategory> = {
     directed: false,
     verb: "conflicts with",
   },
-};
-export const LINK_CATEGORY_IDS = Object.keys(LINK_CATEGORIES);
+} as const satisfies Record<string, LinkCategory>;
+export type LinkCategoryId = keyof typeof LINK_CATEGORIES;
+export const LINK_CATEGORY_IDS = Object.keys(LINK_CATEGORIES) as LinkCategoryId[];
 
-/** The category `id` names. Throws for an id this taxonomy lacks, which
- *  would mean the data and the taxonomy have drifted apart. */
+/** Throws for an id this taxonomy lacks: the data and the taxonomy have drifted apart. */
 export function nodeCategory(id: string): NodeCategory {
-  const category = NODE_CATEGORIES[id];
+  const categories: Record<string, NodeCategory> = NODE_CATEGORIES;
+  const category = categories[id];
   if (!category) throw new Error(`Unknown node category "${id}"`);
   return category;
 }
 
-/** The category `id` names. Throws like {@link nodeCategory}. */
 export function linkCategory(id: string): LinkCategory {
-  const category = LINK_CATEGORIES[id];
+  const categories: Record<string, LinkCategory> = LINK_CATEGORIES;
+  const category = categories[id];
   if (!category) throw new Error(`Unknown link category "${id}"`);
   return category;
 }

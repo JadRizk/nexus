@@ -209,8 +209,7 @@ export function LinkGlyphPage() {
   );
 }
 
-// A small graph for the outline: three kinds of node, three kinds of link.
-const OUTLINE_KIND = (
+const outlineCategory = (
   label: string,
   shape: NodeCategory["shape"],
   color: string,
@@ -224,12 +223,12 @@ const OUTLINE_KIND = (
   mass: 1,
   tier: 1,
 });
-const OUTLINE_NODE_CATEGORIES: Record<string, NodeCategory> = {
-  atlas: OUTLINE_KIND("ATLAS", 1, "#C6F135"),
-  note: OUTLINE_KIND("NODE", 0, "#3AC6D4"),
-  source: OUTLINE_KIND("SOURCE", 2, "#FF8A1E"),
-};
-const OUTLINE_LINK_CATEGORIES: Record<string, LinkCategory> = {
+const OUTLINE_NODE_CATEGORIES = {
+  atlas: outlineCategory("ATLAS", 1, "#C6F135"),
+  note: outlineCategory("NODE", 0, "#3AC6D4"),
+  source: outlineCategory("SOURCE", 2, "#FF8A1E"),
+} as const satisfies Record<string, NodeCategory>;
+const OUTLINE_LINK_CATEGORIES = {
   refs: {
     label: "LINK",
     color: "#3AC6D4",
@@ -257,7 +256,7 @@ const OUTLINE_LINK_CATEGORIES: Record<string, LinkCategory> = {
     verb: "conflicts with",
     directed: false,
   },
-};
+} as const satisfies Record<string, LinkCategory>;
 const OUTLINE_NODES: GraphNode[] = [
   { id: "ledger", categoryId: "atlas", label: "LEDGER//ATLAS" },
   { id: "folded", categoryId: "note", label: "folded_index" },

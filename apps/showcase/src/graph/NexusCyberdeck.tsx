@@ -7,7 +7,13 @@ import type {
   OpticsConfig,
   PhysicsConfig,
 } from "@nexus-cyberdeck/graph";
-import { CONSOLE_WIDTH, DEFAULT_CFG, DEFAULT_STATS, DRAWER_WIDTH, PANEL_GAP } from "./controls.js";
+import {
+  CONSOLE_WIDTH,
+  DEFAULT_CONFIG,
+  DEFAULT_STATS,
+  DRAWER_WIDTH,
+  PANEL_GAP,
+} from "./controls.js";
 import type { SetDeckConfig } from "./controls.js";
 import { GraphConsole } from "./GraphConsole.js";
 import type { LabelMode } from "./GraphConsole.js";
@@ -22,39 +28,21 @@ import {
   NODE_CATEGORY_IDS,
 } from "./taxonomy.js";
 
-/* ============================================================================
-   NEXUS // CYBERDECK  —  typed knowledge graph on a CRT
-
-   The physics, shaders and render loop live in @nexus-cyberdeck/graph's
-   <GraphCanvas>, generic over any node/edge taxonomy. This page owns exactly
-   what a consumer of that package is expected to own: the sample data
-   (taxonomy.ts, sampleData.ts), the slider state (controls.ts) and the chrome
-   around the canvas (GraphConsole, GraphLegend, InspectorDrawer, OutlinePanel).
-   ========================================================================== */
-
-/** Space the console leaves on the left, and the drawer on the right, in px. */
 const CONSOLE_INSET = PANEL_GAP + CONSOLE_WIDTH + PANEL_GAP;
 const DRAWER_INSET = PANEL_GAP + DRAWER_WIDTH + PANEL_GAP;
 
-const allOn = (ids: readonly string[]) => Object.fromEntries(ids.map((k) => [k, true]));
+const allOn = (ids: readonly string[]) => Object.fromEntries(ids.map((id) => [id, true]));
 
 export default function NexusCyberdeck() {
   const controllerRef = useRef<GraphController>(null);
 
   const [total, setTotal] = useState(200);
   const [stats, setStats] = useState<GraphStats>(DEFAULT_STATS);
-  // controller.canGoBack is read after each selection change, when GraphCanvas's
-  // own effects (a child's) have run and its history is current, and after
-  // every keyboard step, which can add history without selecting anything.
   const [canGoBack, setCanGoBack] = useState(false);
-  // The same graph as a list (GraphOutline), over the canvas. The canvas stays
-  // mounted underneath, so closing the list returns to exactly the same view.
   const [isListView, setIsListView] = useState(false);
   const [selected, setSelected] = useState<GraphNodeSnapshot | null>(null);
-  // Whether the current selection came from a key inside the graph (onSelect's
-  // source). The drawer stays non-modal for those, so the reader keeps their
-  // place in the graph; every other way of selecting opens it as a dialog.
   const [isKeyboardSelection, setIsKeyboardSelection] = useState(false);
+  // An effect, not derived: the history lives in the controller and is current only after GraphCanvas's effects.
   useEffect(() => {
     setCanGoBack(controllerRef.current?.canGoBack ?? false);
   }, [selected]);
@@ -65,32 +53,41 @@ export default function NexusCyberdeck() {
   const [nodeOn, setNodeOn] = useState(() => allOn(NODE_CATEGORY_IDS));
   const [linkOn, setLinkOn] = useState(() => allOn(LINK_CATEGORY_IDS));
 
-  const [cfg, setCfg] = useState(DEFAULT_CFG);
-  const set = useCallback<SetDeckConfig>((k, v) => setCfg((p) => ({ ...p, [k]: v })), []);
+  const [config, setConfig] = useState(DEFAULT_CONFIG);
+  const setConfigValue = useCallback<SetDeckConfig>(
+    (key, value) => setConfig((previous) => ({ ...previous, [key]: value })),
+    [],
+  );
 
   const sampleGraph = useMemo(() => generateSampleGraph(total), [total]);
 
-  const hiddenNodeCategories = useMemo(() => NODE_CATEGORY_IDS.filter((k) => !nodeOn[k]), [nodeOn]);
-  const hiddenLinkCategories = useMemo(() => LINK_CATEGORY_IDS.filter((k) => !linkOn[k]), [linkOn]);
+  const hiddenNodeCategories = useMemo(
+    () => NODE_CATEGORY_IDS.filter((categoryId) => !nodeOn[categoryId]),
+    [nodeOn],
+  );
+  const hiddenLinkCategories = useMemo(
+    () => LINK_CATEGORY_IDS.filter((categoryId) => !linkOn[categoryId]),
+    [linkOn],
+  );
 
   const physics: Partial<PhysicsConfig> = {
-    repulsion: cfg.repulsion,
-    linkDistance: cfg.linkDistance,
-    cursorForce: cfg.cursorForce,
-    settle: cfg.settle,
+    repulsion: config.repulsion,
+    linkDistance: config.linkDistance,
+    cursorForce: config.cursorForce,
+    settle: config.settle,
   };
   const optics: Partial<OpticsConfig> = {
-    glow: cfg.glow,
-    trails: cfg.trails,
-    edgeOpacity: cfg.edgeOpacity,
-    edgeWidth: cfg.edgeWidth,
-    flowSpeed: cfg.flowSpeed,
-    scan: cfg.scan,
-    aberr: cfg.aberr,
-    curve: cfg.curve,
-    grain: cfg.grain,
-    bloom: cfg.bloom,
-    glitch: cfg.glitch,
+    glow: config.glow,
+    trails: config.trails,
+    edgeOpacity: config.edgeOpacity,
+    edgeWidth: config.edgeWidth,
+    flowSpeed: config.flowSpeed,
+    scan: config.scan,
+    aberr: config.aberr,
+    curve: config.curve,
+    grain: config.grain,
+    bloom: config.bloom,
+    glitch: config.glitch,
   };
 
   const clearSelection = useCallback(() => {
@@ -98,27 +95,23 @@ export default function NexusCyberdeck() {
     setIsolate(null);
   }, []);
 
-  const goTo = useCallback((id: number) => {
-    const d = controllerRef.current?.getNode(id);
-    if (!d) return;
-    setSelected(d);
+  const handleGoTo = useCallback((id: number) => {
+    const node = controllerRef.current?.getNode(id);
+    if (!node) return;
+    setSelected(node);
     setIsKeyboardSelection(false);
     controllerRef.current?.focus(id);
-    // walking the graph while isolated should move the isolation with you,
-    // otherwise the node you just jumped to is the only thing you can't expand
-    setIsolate((v) => (v !== null ? id : v));
+    // An isolation follows the walk, or the node just reached couldn't be expanded.
+    setIsolate((previous) => (previous !== null ? id : previous));
   }, []);
 
   useEffect(() => {
-    // A page-wide "Escape resets the view". Not for an Escape something has
-    // already handled: the graph's own Escape steps out one stage at a time
-    // (selection, tooltip, then the graph), and clearing the isolation on top
-    // of "leave the graph" would throw away the reader's context.
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !e.defaultPrevented) clearSelection();
+    // Skip an Escape the graph already handled: it steps out one stage at a time.
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !event.defaultPrevented) clearSelection();
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
   }, [clearSelection]);
 
   return (
@@ -146,9 +139,6 @@ export default function NexusCyberdeck() {
         hiddenLinkCategories={hiddenLinkCategories}
         isolateId={isolate}
         selectedId={selected?.id ?? null}
-        // The console (left) and the details drawer (right, only while
-        // something is selected) float over the canvas. Framing lands the
-        // graph in what they leave.
         fitInset={{ left: CONSOLE_INSET, right: selected ? DRAWER_INSET : 0 }}
         running={isRunning}
         onSelect={(node, source) => {
@@ -159,7 +149,6 @@ export default function NexusCyberdeck() {
         onStats={setStats}
       />
 
-      {/* -------------------------------------------------- left: console+legend */}
       <div
         style={{
           position: "absolute",
@@ -177,12 +166,12 @@ export default function NexusCyberdeck() {
       >
         <GraphConsole
           stats={stats}
-          cfg={cfg}
-          onConfig={set}
+          config={config}
+          onConfig={setConfigValue}
           total={total}
-          onTotal={(v) => {
+          onTotal={(nextTotal) => {
             clearSelection();
-            setTotal(v);
+            setTotal(nextTotal);
           }}
           labelMode={labelMode}
           onLabelMode={setLabelMode}
@@ -191,23 +180,26 @@ export default function NexusCyberdeck() {
           canGoBack={canGoBack}
           onFit={() => controllerRef.current?.fit()}
           onReheat={() => controllerRef.current?.reheat()}
-          onToggleRunning={() => setIsRunning((r) => !r)}
+          onToggleRunning={() => setIsRunning((isCurrentlyRunning) => !isCurrentlyRunning)}
           onReseed={() => {
             clearSelection();
             controllerRef.current?.reseed();
           }}
-          onToggleListView={() => setIsListView((v) => !v)}
+          onToggleListView={() => setIsListView((isCurrentlyListView) => !isCurrentlyListView)}
           onBack={() => controllerRef.current?.back()}
         />
         <GraphLegend
           nodeOn={nodeOn}
           linkOn={linkOn}
-          onNodeToggle={(k, v) => setNodeOn((p) => ({ ...p, [k]: v }))}
-          onLinkToggle={(k, v) => setLinkOn((p) => ({ ...p, [k]: v }))}
+          onNodeToggle={(categoryId, isOn) =>
+            setNodeOn((previous) => ({ ...previous, [categoryId]: isOn }))
+          }
+          onLinkToggle={(categoryId, isOn) =>
+            setLinkOn((previous) => ({ ...previous, [categoryId]: isOn }))
+          }
         />
       </div>
 
-      {/* ------------------------------------------------------------ list view */}
       {isListView && (
         <OutlinePanel
           nodes={sampleGraph.nodes}
@@ -224,7 +216,6 @@ export default function NexusCyberdeck() {
         />
       )}
 
-      {/* ------------------------------------------------------------- drawer */}
       <InspectorDrawer
         selected={selected}
         isModal={!isKeyboardSelection}
@@ -233,15 +224,14 @@ export default function NexusCyberdeck() {
         onIsolate={() => {
           if (!selected) return;
           const id = selected.id as number;
-          setIsolate((v) => (v === id ? null : id));
+          setIsolate((previous) => (previous === id ? null : id));
         }}
         onFocus={() => {
           if (selected) controllerRef.current?.focus(selected.id);
         }}
-        onGoTo={goTo}
+        onGoTo={handleGoTo}
       />
 
-      {/* ------------------------------------------------------------ hint bar */}
       <div
         style={{
           position: "absolute",

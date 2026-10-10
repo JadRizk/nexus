@@ -16,23 +16,22 @@ export interface GraphLegendProps {
   onLinkToggle: (categoryId: string, isOn: boolean) => void;
 }
 
-/** The legend, which doubles as the category filter. */
 export function GraphLegend({ nodeOn, linkOn, onNodeToggle, onLinkToggle }: GraphLegendProps) {
   return (
     <Panel style={{ flexShrink: 0 }}>
       <SectionHeading>/// entity class</SectionHeading>
-      {NODE_CATEGORY_IDS.map((k) => {
-        const category = nodeCategory(k);
+      {NODE_CATEGORY_IDS.map((categoryId) => {
+        const category = nodeCategory(categoryId);
         return (
           <ToggleRow
-            key={k}
-            checked={!!nodeOn[k]}
-            onChange={(v) => onNodeToggle(k, v)}
+            key={categoryId}
+            checked={!!nodeOn[categoryId]}
+            onChange={(isOn) => onNodeToggle(categoryId, isOn)}
             icon={
               <Glyph
                 shape={GLYPH_SHAPES[category.shape]}
                 colour={category.color}
-                muted={!nodeOn[k]}
+                muted={!nodeOn[categoryId]}
               />
             }
             label={category.label}
@@ -42,22 +41,21 @@ export function GraphLegend({ nodeOn, linkOn, onNodeToggle, onLinkToggle }: Grap
       })}
       <div style={{ height: "var(--nx-space-3)" }} />
       <SectionHeading>/// relation</SectionHeading>
-      {LINK_CATEGORY_IDS.map((k) => {
-        const category = linkCategory(k);
+      {LINK_CATEGORY_IDS.map((categoryId) => {
+        const category = linkCategory(categoryId);
         return (
           <ToggleRow
-            key={k}
-            checked={!!linkOn[k]}
-            onChange={(v) => onLinkToggle(k, v)}
+            key={categoryId}
+            checked={!!linkOn[categoryId]}
+            onChange={(isOn) => onLinkToggle(categoryId, isOn)}
             icon={
               <LinkGlyph
                 colour={category.color}
                 dashed={!!category.dash}
-                // LinkGlyph still draws direction as an arrowhead; the canvas
-                // draws it as a bracket at the target end.
+                // The canvas draws direction as a bracket; LinkGlyph only offers an arrowhead.
                 arrow={category.directed !== false}
                 width={category.width * 1.05}
-                muted={!linkOn[k]}
+                muted={!linkOn[categoryId]}
               />
             }
             label={category.label}

@@ -16,7 +16,6 @@ import { linkCategory, nodeCategory } from "./taxonomy.js";
 
 export interface InspectorDrawerProps {
   selected: GraphNodeSnapshot | null;
-  /** False for a selection made with the graph's keyboard navigation. */
   isModal: boolean;
   onClose: () => void;
   isolate: number | null;
@@ -25,17 +24,9 @@ export interface InspectorDrawerProps {
   onGoTo: (id: number) => void;
 }
 
-/**
- * The node inspector. Positioned `absolute` within the page's own full-bleed
- * root rather than the real <Drawer> component's `fixed` viewport anchoring:
- * this console sits below the site's sticky header, so a viewport-fixed drawer
- * would render partway behind it. Reuses useFocusTrap directly to get the same
- * focus-trap/Escape/restore behaviour as <Drawer> without its positioning.
- */
+/** `absolute`, not <Drawer>'s `fixed`: a viewport-fixed drawer would sit partway behind the sticky header. */
 export function InspectorDrawer({ selected, isModal, onClose, ...body }: InspectorDrawerProps) {
-  // A selection made from the graph's keyboard navigation must leave focus in
-  // the graph, or the reader loses their place mid-walk, so the drawer only
-  // traps focus (and is modal) for the others.
+  // A keyboard selection must leave focus in the graph, so only the others trap it.
   const trapRef = useFocusTrap<HTMLDivElement>(!!selected && isModal, onClose);
   const titleId = useId();
   return (
@@ -181,13 +172,13 @@ function DrawerBody({
         }}
       >
         <SectionHeading>/// relation profile</SectionHeading>
-        {selected.groups.map((g) => (
+        {selected.groups.map((group) => (
           <MeterRow
-            key={g.categoryId}
-            label={linkCategory(g.categoryId).label}
-            value={g.rows.length}
+            key={group.categoryId}
+            label={linkCategory(group.categoryId).label}
+            value={group.rows.length}
             total={selected.degree}
-            colour={linkCategory(g.categoryId).color}
+            colour={linkCategory(group.categoryId).color}
           />
         ))}
       </div>
@@ -201,25 +192,25 @@ function DrawerBody({
         }}
       >
         <SectionHeading>/// adjacency [{selected.degree}]</SectionHeading>
-        {selected.groups.map((g) => (
-          <div key={g.categoryId} style={{ marginBottom: "var(--nx-space-3)" }}>
+        {selected.groups.map((group) => (
+          <div key={group.categoryId} style={{ marginBottom: "var(--nx-space-3)" }}>
             <div
               style={{
-                color: linkCategory(g.categoryId).color,
+                color: linkCategory(group.categoryId).color,
                 fontSize: "var(--nx-text-2xs)",
                 letterSpacing: "var(--nx-track-wider)",
                 opacity: 0.75,
                 margin: "var(--nx-space-2) 0",
               }}
             >
-              {linkCategory(g.categoryId).label}
+              {linkCategory(group.categoryId).label}
             </div>
-            {g.rows.map((r) => (
+            {group.rows.map((row) => (
               <button
-                key={String(r.id)}
+                key={String(row.id)}
                 type="button"
                 className="nx-row"
-                onClick={() => onGoTo(r.id as number)}
+                onClick={() => onGoTo(row.id as number)}
                 style={{
                   width: "100%",
                   background: "none",
@@ -231,22 +222,22 @@ function DrawerBody({
                 <span
                   aria-hidden="true"
                   style={{
-                    color: linkCategory(g.categoryId).color,
+                    color: linkCategory(group.categoryId).color,
                     width: 8,
                     flexShrink: 0,
                   }}
                 >
-                  {r.out ? "▸" : "◂"}
+                  {row.out ? "▸" : "◂"}
                 </span>
                 <Glyph
-                  shape={GLYPH_SHAPES[nodeCategory(r.categoryId).shape]}
-                  colour={nodeCategory(r.categoryId).color}
+                  shape={GLYPH_SHAPES[nodeCategory(row.categoryId).shape]}
+                  colour={nodeCategory(row.categoryId).color}
                   size={10}
                 />
                 <span
                   style={{
                     flex: 1,
-                    color: nodeCategory(r.categoryId).color,
+                    color: nodeCategory(row.categoryId).color,
                     textTransform: "uppercase",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
@@ -254,7 +245,7 @@ function DrawerBody({
                     letterSpacing: "var(--nx-track-tight)",
                   }}
                 >
-                  {r.label}
+                  {row.label}
                 </span>
                 <span
                   style={{
@@ -263,7 +254,7 @@ function DrawerBody({
                     flexShrink: 0,
                   }}
                 >
-                  {nodeCategory(r.categoryId).code}
+                  {nodeCategory(row.categoryId).code}
                 </span>
               </button>
             ))}
@@ -283,7 +274,6 @@ function DrawerBody({
         <Button style={{ flex: 1 }} onClick={onFocus}>
           Focus
         </Button>
-        {/* A real toggle, so one name: "Isolate", pressed while it holds. */}
         <Button style={{ flex: 1 }} active={isolate === selected.id} onClick={onIsolate}>
           Isolate
         </Button>

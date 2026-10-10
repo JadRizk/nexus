@@ -1,17 +1,7 @@
-// The package's own generator, so "the same data on every load" uses the
-// one implementation the layout seeds from: the screenshot baselines and a
-// reader's sense of where things are both hold still.
 import { mulberry32 } from "@nexus-cyberdeck/graph";
 import type { GraphEdge, GraphNode } from "@nexus-cyberdeck/graph";
 
-/* ============================================================================
-   Sample data for the Graph page — the random corpus drawn over the taxonomy
-   in taxonomy.ts. One demo's sample data, same status as
-   apps/showcase/src/data.ts and home-data.ts; @nexus-cyberdeck/graph itself
-   is domain-agnostic.
-   ========================================================================== */
-
-const W_A = [
+const ADJECTIVES = [
   "liminal",
   "recursive",
   "brittle",
@@ -28,7 +18,7 @@ const W_A = [
   "latent",
   "static",
 ];
-const W_B = [
+const NOUNS = [
   "threshold",
   "protocol",
   "grammar",
@@ -61,8 +51,16 @@ const AGENTS = [
   "MARCHETTI",
   "ADEYEMI",
 ];
-const SRC = ["ARXIV", "DUMP", "INTERCEPT", "FIELDLOG", "TRANSCRIPT", "DATASET", "ARCHIVE", "LEAK"];
-/** The seed the showcase's sample graph is generated from. */
+const SOURCES = [
+  "ARXIV",
+  "DUMP",
+  "INTERCEPT",
+  "FIELDLOG",
+  "TRANSCRIPT",
+  "DATASET",
+  "ARCHIVE",
+  "LEAK",
+];
 export const SAMPLE_SEED = 0x6e657875; // "nexu"
 
 export interface SampleGraph {
@@ -73,7 +71,6 @@ export interface SampleGraph {
 type Random = () => number;
 type Link = (a: number, b: number, categoryId: string, absentEnd?: "a" | "b") => void;
 
-/** The generated node ids, by category. */
 interface Corpus {
   nodes: GraphNode[];
   mocs: number[];
@@ -84,16 +81,14 @@ interface Corpus {
   notes: number[];
 }
 
-/** A corpus being linked: its nodes, the shared draw and the edge sink. */
 interface Build extends Corpus {
-  /** The size asked for; `nodes` can run over it for a very small corpus. */
+  /** The size asked for; `nodes` can exceed it for a very small corpus. */
   total: number;
   random: Random;
   link: Link;
 }
 
-// Every step below draws from one `random` in a fixed order, so reordering a
-// draw reshuffles the whole graph and moves every screenshot baseline.
+// One `random`, drawn in a fixed order: reordering a draw moves every screenshot baseline.
 
 function pickFrom<T>(random: Random, list: readonly T[]): T {
   const item = list[(random() * list.length) | 0];
@@ -119,24 +114,30 @@ function createNodes(total: number, random: Random): Corpus {
       });
       return nodes.length - 1;
     });
-  const nMoc = Math.max(3, Math.round(total * 0.032));
-  const nTag = Math.max(4, Math.round(total * 0.075));
-  const nPerson = Math.max(3, Math.round(total * 0.06));
-  const nSource = Math.max(4, Math.round(total * 0.115));
-  const nQ = Math.max(2, Math.round(total * 0.05));
-  const nNote = Math.max(10, total - nMoc - nTag - nPerson - nSource - nQ);
+  const mocCount = Math.max(3, Math.round(total * 0.032));
+  const tagCount = Math.max(4, Math.round(total * 0.075));
+  const personCount = Math.max(3, Math.round(total * 0.06));
+  const sourceCount = Math.max(4, Math.round(total * 0.115));
+  const questionCount = Math.max(2, Math.round(total * 0.05));
+  const noteCount = Math.max(
+    10,
+    total - mocCount - tagCount - personCount - sourceCount - questionCount,
+  );
   return {
     nodes,
-    mocs: addAll(nMoc, "moc", () => pick(W_B).toUpperCase() + "//ATLAS"),
-    tags: addAll(nTag, "tag", () => "#" + pick(W_A)),
-    people: addAll(nPerson, "person", () => pick(AGENTS)),
-    sources: addAll(nSource, "source", () => pick(SRC) + "-" + (100 + ((random() * 899) | 0))),
-    questions: addAll(nQ, "question", () => "?" + pick(W_A) + "_" + pick(W_B)),
-    notes: addAll(nNote, "note", () => pick(W_A) + "_" + pick(W_B)),
+    mocs: addAll(mocCount, "moc", () => pick(NOUNS).toUpperCase() + "//ATLAS"),
+    tags: addAll(tagCount, "tag", () => "#" + pick(ADJECTIVES)),
+    people: addAll(personCount, "person", () => pick(AGENTS)),
+    sources: addAll(
+      sourceCount,
+      "source",
+      () => pick(SOURCES) + "-" + (100 + ((random() * 899) | 0)),
+    ),
+    questions: addAll(questionCount, "question", () => "?" + pick(ADJECTIVES) + "_" + pick(NOUNS)),
+    notes: addAll(noteCount, "note", () => pick(ADJECTIVES) + "_" + pick(NOUNS)),
   };
 }
 
-/** Hangs each note off an atlas, and some off a second. Returns each note's home. */
 function linkAtlases({ mocs, notes, random, link }: Build): Map<number, number> {
   const mocOf = new Map<number, number>();
   for (const id of notes) {
@@ -150,7 +151,7 @@ function linkAtlases({ mocs, notes, random, link }: Build): Map<number, number> 
 
 function linkSiblings({ notes, random, link }: Build, mocOf: Map<number, number>): void {
   for (const id of notes) {
-    const siblings = notes.filter((o) => mocOf.get(o) === mocOf.get(id));
+    const siblings = notes.filter((other) => mocOf.get(other) === mocOf.get(id));
     const times = 1 + ((random() * 2.4) | 0);
     if (siblings.length > 1) repeat(times, () => link(id, pickFrom(random, siblings), "refs"));
   }
@@ -161,19 +162,17 @@ function linkClaims({ tags, people, sources, questions, notes, random, link }: B
     const times = random() < 0.55 ? 1 : random() < 0.8 ? 2 : 0;
     repeat(times, () => link(id, pickFrom(random, tags), "tagged"));
   }
-  for (const q of questions) link(q, pickFrom(random, tags), "tagged");
-  for (const s of sources) {
-    repeat(1 + ((random() * 3) | 0), () => link(pickFrom(random, notes), s, "cites"));
+  for (const question of questions) link(question, pickFrom(random, tags), "tagged");
+  for (const source of sources) {
+    repeat(1 + ((random() * 3) | 0), () => link(pickFrom(random, notes), source, "cites"));
   }
-  for (const p of people) {
-    repeat(1 + ((random() * 3.5) | 0), () => link(pickFrom(random, notes), p, "mentions"));
-    if (random() < 0.5) link(p, pickFrom(random, sources), "cites");
+  for (const person of people) {
+    repeat(1 + ((random() * 3.5) | 0), () => link(pickFrom(random, notes), person, "mentions"));
+    if (random() < 0.5) link(person, pickFrom(random, sources), "cites");
   }
-  // A note pointing at an unresolved question points at something with
-  // nothing behind it yet: the trace frays out toward the question and lands
-  // on no pad (GraphEdge.absentEnd).
-  for (const q of questions) {
-    repeat(1 + ((random() * 2) | 0), () => link(pickFrom(random, notes), q, "refs", "b"));
+  // An unresolved question has nothing behind it yet, so its end is absent.
+  for (const question of questions) {
+    repeat(1 + ((random() * 2) | 0), () => link(pickFrom(random, notes), question, "refs", "b"));
   }
 }
 
