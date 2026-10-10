@@ -4,6 +4,7 @@ import { CommandPalette, useHotkey, useNexus } from "@nexus-cyberdeck/react";
 import type { PaletteItem } from "@nexus-cyberdeck/react";
 import { DOC_GROUPS } from "../site.js";
 import type { DocGroup } from "../site.js";
+import { useIsPhone } from "../phone.js";
 
 /* ============================================================================
    showcase — SitePalette
@@ -12,7 +13,9 @@ import type { DocGroup } from "../site.js";
    CommandPalette, so the site's own search is also its best live demo.
 
    Each kind of result carries its own glyph silhouette as well as its colour
-   and code, so the kind never rests on colour alone.
+   and code, so the kind never rests on colour alone. On a phone the labs are
+   left out, as they are from the header and Home: they are docked desktop
+   consoles with no phone layout.
    ========================================================================== */
 
 interface SiteItem extends PaletteItem {
@@ -48,9 +51,31 @@ function pages(groups: readonly DocGroup[]): SiteItem[] {
   ]);
 }
 
+const labs: SiteItem[] = [
+  {
+    id: "labs/graph",
+    label: "Graph",
+    code: "LAB",
+    shape: "ring",
+    colour: "var(--nx-fg-cat-violet)",
+    weight: 6,
+    run: go("labs/graph"),
+  },
+  {
+    id: "labs/glitch",
+    label: "Glitch Lab",
+    code: "LAB",
+    shape: "ring",
+    colour: "var(--nx-fg-cat-violet)",
+    weight: 6,
+    run: go("labs/glitch"),
+  },
+];
+
 export function SitePalette({ path, children }: { path: string; children: ReactNode }) {
   const { theme, setTheme, crt, setCrt } = useNexus();
   const [open, setOpen] = useState(false);
+  const isPhone = useIsPhone();
 
   useHotkey("mod+k", () => {
     if (path !== OWNS_SHORTCUTS) setOpen((v) => !v);
@@ -84,26 +109,9 @@ export function SitePalette({ path, children }: { path: string; children: ReactN
         run: go(""),
       },
       ...pages(DOC_GROUPS),
-      {
-        id: "labs/graph",
-        label: "Graph",
-        code: "LAB",
-        shape: "ring",
-        colour: "var(--nx-fg-cat-violet)",
-        weight: 6,
-        run: go("labs/graph"),
-      },
-      {
-        id: "labs/glitch",
-        label: "Glitch Lab",
-        code: "LAB",
-        shape: "ring",
-        colour: "var(--nx-fg-cat-violet)",
-        weight: 6,
-        run: go("labs/glitch"),
-      },
+      ...(isPhone ? [] : labs),
     ];
-  }, [theme, setTheme, crt, setCrt]);
+  }, [theme, setTheme, crt, setCrt, isPhone]);
 
   const ctx = useMemo(() => ({ open: () => setOpen(true) }), []);
 

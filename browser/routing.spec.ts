@@ -60,6 +60,39 @@ test("a phone is not offered the labs, which have no phone layout", async ({ pag
   await expect(nav(page).getByRole("link", { name: "Docs" })).toBeVisible();
   // The header still fits one row: nothing pushes the page sideways.
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
+
+  // Nor does Search offer them, and they come back at desktop width: the
+  // control, so the absence is not just a query that matches nothing.
+  await banner(page)
+    .getByRole("button", { name: /Search/ })
+    .click();
+  const search = page.getByRole("dialog");
+  await search.getByRole("combobox").fill("lab");
+  const glitchLab = search.getByRole("option").filter({ hasText: "Glitch Lab" });
+  await expect(glitchLab).toHaveCount(0);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await expect(glitchLab).toHaveCount(1);
+});
+
+test("a lab reached on a phone says it is built for a desktop, and opens anyway on request", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await gotoPage(page, "labs/graph");
+  await expect(page.getByRole("heading", { name: "Graph is built for a desktop" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Browse the docs" })).toHaveAttribute(
+    "href",
+    "#/start",
+  );
+  await page.getByRole("button", { name: "Open it anyway" }).click();
+  await expect(page.getByRole("heading", { name: /built for a desktop/ })).toHaveCount(0);
+  await expect(page.locator("main canvas").first()).toBeAttached();
+
+  // Opening one lab anyway does not open the other.
+  await page.evaluate(() => (window.location.hash = "#/labs/glitch"));
+  await expect(
+    page.getByRole("heading", { name: "Glitch Lab is built for a desktop" }),
+  ).toBeVisible();
 });
 
 test("on a phone the docs sidebar folds behind a toggle and closes on a choice", async ({
