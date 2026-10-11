@@ -51,7 +51,7 @@ function makeView(
     radii,
     depth,
     tier,
-    label: (index) => labels[index]!,
+    label: (index) => labels[index],
     zoom: 1,
     cx: 0,
     cy: 0,
@@ -151,11 +151,11 @@ describe("createLabelPlacer / opacity tiers", () => {
       { x: -400, y: 0, tier: 0, depth: -1 },
       { x: -200, y: 0, tier: 3, depth: -1 },
     ];
-    const resting = place([nodes[2]!, nodes[3]!], { mode: "all" as LabelMode });
+    const resting = place([nodes[2], nodes[3]], { mode: "all" as LabelMode });
     expect(resting.out.get(0)?.[2]).toBeCloseTo(0.82);
     expect(resting.out.get(1)?.[2]).toBeCloseTo(0.52);
 
-    const focused = place([nodes[0]!, nodes[1]!], { mode: "all" as LabelMode, selIdx: 0 });
+    const focused = place([nodes[0], nodes[1]], { mode: "all" as LabelMode, selIdx: 0 });
     expect(focused.out.get(0)?.[2]).toBeCloseTo(1);
     expect(focused.out.get(1)?.[2]).toBeCloseTo(0.92);
   });

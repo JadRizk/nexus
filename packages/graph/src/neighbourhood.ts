@@ -35,12 +35,12 @@ export function computeNeighbourhood(
   const queue = [index];
   outDepth[index] = 0;
   for (let head = 0; head < queue.length; head++) {
-    const node = queue[head]!,
-      depth = outDepth[node]!;
+    const node = queue[head],
+      depth = outDepth[node];
     if (depth >= 3) continue;
-    for (const connection of inc[node]!) {
+    for (const connection of inc[node]) {
       if (
-        outDepth[connection.other]! < -0.5 &&
+        outDepth[connection.other] < -0.5 &&
         hidden[connection.other] === 0 &&
         !edgeHidden?.(connection.edge)
       ) {
@@ -49,12 +49,12 @@ export function computeNeighbourhood(
       }
     }
   }
-  for (const connection of inc[index]!) outTier[connection.edge] = 1;
+  for (const connection of inc[index]) outTier[connection.edge] = 1;
   // `<=`, not `===`: an edge between two immediate neighbours has depth 1 at both ends.
   for (let e = 0; e < edgeCount; e++) {
     if (outTier[e] === 1) continue;
-    const depthA = outDepth[eA[e]!]!,
-      depthB = outDepth[eB[e]!]!;
+    const depthA = outDepth[eA[e]],
+      depthB = outDepth[eB[e]];
     if (depthA >= 0 && depthB >= 0 && Math.max(depthA, depthB) <= NEARBY_DEPTH) {
       outTier[e] = TIER_NEARBY;
     }
@@ -66,8 +66,8 @@ export function isolationSet(isolated: number, eA: Int32Array, eB: Int32Array): 
   if (isolated < 0) return null;
   const keep = new Set([isolated]);
   for (let e = 0; e < eA.length; e++) {
-    if (eA[e] === isolated) keep.add(eB[e]!);
-    if (eB[e] === isolated) keep.add(eA[e]!);
+    if (eA[e] === isolated) keep.add(eB[e]);
+    if (eB[e] === isolated) keep.add(eA[e]);
   }
   return keep;
 }

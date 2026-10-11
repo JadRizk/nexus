@@ -132,6 +132,7 @@ describe("GraphCanvas node data", () => {
       );
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- the ref is attached once the render above commits, and the id is one of the rendered nodes
     const a = controller.current!.getNode("a")!;
     expect(a.data).toBe(alpha);
     // Typed through the controller: this line is a compile error if `data`
@@ -139,6 +140,7 @@ describe("GraphCanvas node data", () => {
     const weight: number | undefined = a.data?.weight;
     expect(weight).toBe(3);
 
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- the ref is attached once the render above commits, and the id is one of the rendered nodes
     const b = controller.current!.getNode("b")!;
     expect(b.data).toBeUndefined();
   });
@@ -166,11 +168,14 @@ describe("GraphCanvas node data", () => {
       );
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- the render above mounted GraphCanvas, which appends its canvas
     const canvas = container.querySelector("canvas")!;
     canvas.dispatchEvent(new MouseEvent("click", { bubbles: true, clientX: 0, clientY: 0 }));
 
     expect(selected).toBeTruthy();
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- the toBeTruthy() assertion above fails the test first if onSelect never ran
     expect(selected!.id).toBe("solo");
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- the toBeTruthy() assertion above fails the test first if onSelect never ran
     expect(selected!.data).toBe(only);
   });
 });

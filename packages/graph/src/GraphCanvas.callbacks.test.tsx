@@ -126,6 +126,7 @@ describe("GraphCanvas callback refs", () => {
     render(second);
     expect(rendererInstances).toBe(1);
 
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- the render above mounted GraphCanvas, which appends its canvas
     const canvas = container.querySelector("canvas")!;
     canvas.dispatchEvent(new MouseEvent("click", { bubbles: true, clientX: 0, clientY: 0 }));
 

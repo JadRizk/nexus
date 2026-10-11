@@ -19,7 +19,7 @@ function boundsOf(indices?: readonly number[]): Bounds | null {
     x1 = -Infinity,
     y1 = -Infinity;
   for (const i of ids) {
-    const [x, y] = positions[i]!;
+    const [x, y] = positions[i];
     x0 = Math.min(x0, x);
     y0 = Math.min(y0, y);
     x1 = Math.max(x1, x);
@@ -41,7 +41,7 @@ beforeEach(() => {
   inset = { top: 0, right: 0, bottom: 0, left: 0 };
   rig = createCameraRig({
     bounds: boundsOf,
-    position: (i) => positions[i]!,
+    position: (i) => positions[i],
     viewport: () => ({ width: WIDTH, height: HEIGHT }),
     inset: () => inset,
   });
@@ -153,17 +153,17 @@ describe("focus", () => {
     expect(rig.autoFit).toBe(false);
     expect(rig.target.zoom).toBeGreaterThanOrEqual(FOCUS_ZOOM);
     // On screen, the node lands at the free box's centre: (800 - 200) / 2.
-    const screenX = WIDTH / 2 + (positions[3]![0] - rig.target.x) * rig.target.zoom;
+    const screenX = WIDTH / 2 + (positions[3][0] - rig.target.x) * rig.target.zoom;
     expect(screenX).toBeCloseTo(300);
   });
 
   it("rides along with the node while the layout moves, then lets go once it settles", () => {
     rig.intro(true);
     rig.focus(3);
-    const dx = rig.target.x - positions[3]![0];
+    const dx = rig.target.x - positions[3][0];
     positions[3] = [500, 400];
     rig.tick(STEP);
-    expect(rig.target.x - positions[3]![0]).toBeCloseTo(dx);
+    expect(rig.target.x - positions[3][0]).toBeCloseTo(dx);
     rig.tick(SETTLED);
     expect(rig.follow).toBe(-1);
     positions[3] = [900, 900];
@@ -288,7 +288,7 @@ describe("reveal", () => {
     positions.push([rig.target.x - (WIDTH / 2 - 20) / zoom, rig.target.y]);
     inset = { top: 0, right: 0, bottom: 0, left: 300 };
     rig.reveal(4);
-    const screenX = WIDTH / 2 + (positions[4]![0] - rig.target.x) * rig.target.zoom;
+    const screenX = WIDTH / 2 + (positions[4][0] - rig.target.x) * rig.target.zoom;
     expect(screenX).toBeCloseTo(300 + (WIDTH - 300) / 2);
   });
 });

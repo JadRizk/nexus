@@ -170,8 +170,8 @@ function padGeometryFor(attributes: EdgeAttributes, edgeCount: number) {
   for (let end = 0; end < 2; end++) {
     const base = end * 4;
     for (let c = 0; c < 4; c++) {
-      padVertices[(base + c) * 3] = corners[c]![0];
-      padVertices[(base + c) * 3 + 1] = corners[c]![1];
+      padVertices[(base + c) * 3] = corners[c][0];
+      padVertices[(base + c) * 3 + 1] = corners[c][1];
       padVertices[(base + c) * 3 + 2] = end;
     }
     padIndices.push(base, base + 1, base + 2, base + 2, base + 1, base + 3);
@@ -235,19 +235,19 @@ function nodeAttributes(input: NodeInput) {
   const nodeParams0 = new Float32Array(nodeCount * 4),
     nodeParams1 = new Float32Array(nodeCount * 4);
   for (let i = 0; i < nodeCount; i++) {
-    nodeParams0[i * 4] = nodeRadii[i]!;
-    nodeParams0[i * 4 + 1] = nodeShapes[i]!;
-    nodeParams0[i * 4 + 2] = nodeSeeds[i]!;
-    nodeParams1[i * 4] = nodeStates[i]!;
+    nodeParams0[i * 4] = nodeRadii[i];
+    nodeParams0[i * 4 + 1] = nodeShapes[i];
+    nodeParams0[i * 4 + 2] = nodeSeeds[i];
+    nodeParams1[i * 4] = nodeStates[i];
   }
   const positionAttribute = dynamicAttribute(positions, 2),
     nodeParams0Attribute = dynamicAttribute(nodeParams0, 4),
     nodeParams1Attribute = dynamicAttribute(nodeParams1, 4);
   function syncNodes() {
     for (let i = 0; i < nodeCount; i++) {
-      nodeParams0[i * 4 + 3] = nodeDepths[i]!;
-      nodeParams1[i * 4 + 1] = nodeMarks[i]!;
-      nodeParams1[i * 4 + 2] = nodeHidden[i]!;
+      nodeParams0[i * 4 + 3] = nodeDepths[i];
+      nodeParams1[i * 4 + 1] = nodeMarks[i];
+      nodeParams1[i * 4 + 2] = nodeHidden[i];
     }
     nodeParams0Attribute.needsUpdate = true;
     nodeParams1Attribute.needsUpdate = true;

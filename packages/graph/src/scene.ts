@@ -227,8 +227,8 @@ export function resize(
     bloomHeight = Math.max(2, (bufferHeight / 3) | 0);
   bloomA.setSize(bloomWidth, bloomHeight);
   bloomB.setSize(bloomWidth, bloomHeight);
-  compositeMaterial.uniforms.uRes!.value.set(bufferWidth, bufferHeight);
-  blurMaterial.uniforms.uTexel!.value.set(1 / bloomWidth, 1 / bloomHeight);
+  compositeMaterial.uniforms.uRes.value.set(bufferWidth, bufferHeight);
+  blurMaterial.uniforms.uTexel.value.set(1 / bloomWidth, 1 / bloomHeight);
   renderer.setRenderTarget(sceneTarget);
   renderer.clear();
   renderer.setRenderTarget(null);

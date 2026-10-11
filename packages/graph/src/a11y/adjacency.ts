@@ -29,7 +29,7 @@ export function defaultRank(
   return (a, b) =>
     b.strength - a.strength ||
     (order.get(a.categoryId) ?? 0) - (order.get(b.categoryId) ?? 0) ||
-    labels[a.other]!.localeCompare(labels[b.other]!);
+    labels[a.other].localeCompare(labels[b.other]);
 }
 
 /** Every node's connections, ranked; a self-loop appears once. Visibility is applied on read, so filtering never rebuilds it. */
@@ -43,13 +43,13 @@ export function buildConnections(
 ): NavConnection[][] {
   const lists: NavConnection[][] = Array.from({ length: nodeCount }, () => []);
   for (let e = 0; e < eA.length; e++) {
-    const a = eA[e]!,
-      b = eB[e]!;
-    const categoryId = edgeCategoryIds[e]!;
-    const category = linkCategories[categoryId]!;
+    const a = eA[e],
+      b = eB[e];
+    const categoryId = edgeCategoryIds[e];
+    const category = linkCategories[categoryId];
     const directed = category.directed ?? true;
     const strength = Math.abs(category.gain ?? 1) * category.strength;
-    lists[a]!.push({
+    lists[a].push({
       edge: e,
       other: b,
       categoryId,
@@ -58,7 +58,7 @@ export function buildConnections(
       strength,
     });
     if (a !== b)
-      lists[b]!.push({
+      lists[b].push({
         edge: e,
         other: a,
         categoryId,

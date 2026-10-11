@@ -34,6 +34,7 @@ function createLabelPool(labelEl: HTMLElement): HTMLDivElement[] {
 }
 
 function createMeasuredPlacer(): LabelPlacer {
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- a fresh canvas with no other context mode always returns its 2d context
   const measureContext = document.createElement("canvas").getContext("2d")!;
   return createLabelPlacer({
     poolSize: LABEL_POOL_SIZE,

@@ -24,7 +24,9 @@ afterEach(() => {
   container.remove();
 });
 
+// eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- createNavOverlay always appends its button to the container
 const button = () => container.querySelector("button")!;
+// eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- createNavOverlay always appends its live region to the container
 const live = () => container.querySelector("[aria-live]")!;
 const hints = () => container.querySelector('[aria-hidden="true"]') as HTMLElement;
 const press = (key: string, init: KeyboardEventInit = {}) => {
@@ -137,7 +139,7 @@ describe("the live region", () => {
     const first = live().textContent;
     overlay.announce("Start of path");
     expect(live().textContent).not.toBe(first);
-    expect(live().textContent!.replace(/\u200b/g, "")).toBe("Start of path");
+    expect(live().textContent.replace(/\u200b/g, "")).toBe("Start of path");
   });
 });
 

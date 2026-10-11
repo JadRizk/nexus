@@ -87,9 +87,9 @@ export function packNodes(input: PackNodesInput): NodeBuffers {
   const nodeTiers = new Float32Array(nodeCount);
   const scratchColor = new Color();
   for (let i = 0; i < nodeCount; i++) {
-    const category = nodeCategories[nodeCategoryIds[i]!]!;
+    const category = nodeCategories[nodeCategoryIds[i]];
     nodeRadii[i] =
-      (nodes[i]!.size ?? category.size) * (1 + Math.min(1.4, Math.log2(1 + degree[i]!) * 0.16));
+      (nodes[i].size ?? category.size) * (1 + Math.min(1.4, Math.log2(1 + degree[i]) * 0.16));
     nodeShapes[i] = category.shape;
     scratchColor.set(category.color);
     nodeColors[i * 3] = scratchColor.r;
@@ -123,7 +123,7 @@ export function packEdges(input: PackEdgesInput): EdgeBuffers {
   const edgeParams2 = new Float32Array(edgeCount * EDGE_ATTRS.iP2);
   const scratchColor = new Color();
   for (let e = 0; e < edgeCount; e++) {
-    const category = linkCategories[edgeCategoryIds[e]!]!;
+    const category = linkCategories[edgeCategoryIds[e]];
     scratchColor.set(category.color);
     edgeColors[e * 3] = scratchColor.r;
     edgeColors[e * 3 + 1] = scratchColor.g;
@@ -138,10 +138,10 @@ export function packEdges(input: PackEdgesInput): EdgeBuffers {
     edgeParams0[e * 4 + 3] = encodeGain(category.gain ?? 1, category.directed ?? true);
     edgeParams1[e * 4] = category.flow ?? 0;
     edgeParams1[e * 4 + 1] = visualRandom();
-    edgeParams1[e * 4 + 2] = nodeRadii[edgeEndA[e]!]! * EDGE_END_TRIM;
-    edgeParams1[e * 4 + 3] = nodeRadii[edgeEndB[e]!]! * EDGE_END_TRIM;
+    edgeParams1[e * 4 + 2] = nodeRadii[edgeEndA[e]] * EDGE_END_TRIM;
+    edgeParams1[e * 4 + 3] = nodeRadii[edgeEndB[e]] * EDGE_END_TRIM;
     edgeParams2[e * 4 + A_JIT] = category.jit ?? 0;
-    const absent = liveEdges[e]!.absentEnd;
+    const absent = liveEdges[e].absentEnd;
     edgeParams2[e * 4 + A_FRAY] = absent === "b" ? 1 : absent === "a" ? 2 : 0;
   }
   return { edgeAPositions, edgeBPositions, edgeColors, edgeParams0, edgeParams1, edgeParams2 };

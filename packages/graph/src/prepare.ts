@@ -60,12 +60,12 @@ export function prepareGraph(input: PrepareGraphInput): PreparedGraph {
   const edgeCategoryIds = liveEdges.map((edge) => edge.categoryId);
   const linkCategoryIds = Object.keys(linkCategories);
   const degree = computeDegree(
-    Array.from({ length: edgeCount }, (_, e) => ({ a: edgeEndA[e]!, b: edgeEndB[e]! })),
+    Array.from({ length: edgeCount }, (_, e) => ({ a: edgeEndA[e], b: edgeEndB[e] })),
     nodeCount,
   );
   const nodeStates = new Uint8Array(nodeCount);
   for (let i = 0; i < nodeCount; i++)
-    nodeStates[i] = degree[i] === 0 ? ORPHAN_STATE : (nodes[i]!.state ?? 1);
+    nodeStates[i] = degree[i] === 0 ? ORPHAN_STATE : (nodes[i].state ?? 1);
 
   const layoutSeed =
     seed === null ? undefined : (seed ?? seedFromIds(nodes.map((node) => node.id)));
@@ -111,7 +111,7 @@ export function buildPhysicsGraph(input: PhysicsGraphInput): PhysicsGraph {
   const { nodes, nodeCategories, linkCategories, edgeCategoryIds, edgeEndA, edgeEndB } = input;
   return {
     nodes: nodes.map((node) => {
-      const category = nodeCategories[node.categoryId]!;
+      const category = nodeCategories[node.categoryId];
       // Spread only when defined: under exactOptionalPropertyTypes `undefined` isn't absent.
       const sectorAngle = node.sectorAngle ?? category.sectorAngle;
       const radiusTarget = node.radiusTarget ?? category.radiusTarget;
@@ -123,10 +123,10 @@ export function buildPhysicsGraph(input: PhysicsGraphInput): PhysicsGraph {
       };
     }),
     edges: Array.from({ length: edgeCategoryIds.length }, (_, e) => {
-      const category = linkCategories[edgeCategoryIds[e]!]!;
+      const category = linkCategories[edgeCategoryIds[e]];
       return {
-        a: edgeEndA[e]!,
-        b: edgeEndB[e]!,
+        a: edgeEndA[e],
+        b: edgeEndB[e],
         dist: category.dist,
         strength: category.strength,
       };
