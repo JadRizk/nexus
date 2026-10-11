@@ -5,6 +5,8 @@ import { createPhysics } from "./physics.js";
 import { mulberry32 } from "./random.js";
 import { prepareGraph } from "./prepare.js";
 import { A_HIDE, A_TIER, packBuffers } from "./buffers.js";
+import { createRenderer, FALLBACK_BG } from "./scene.js";
+import type { Track } from "./scene.js";
 import { glyphRadiusPx, project, unproject, ZOOM_MAX, ZOOM_MIN } from "./camera.js";
 import { createCameraRig } from "./camera-rig.js";
 import type { FitInset } from "./camera.js";
@@ -55,7 +57,6 @@ import type {
 } from "./types.js";
 
 // Not from @nexus-cyberdeck/tokens: this package can't assume `--nx-*` properties exist.
-const FALLBACK_BG = "#08090A";
 const FALLBACK_FG = "#DFF5C7";
 const FALLBACK_CRITICAL = "#FF2E63";
 const MONO = 'ui-monospace,"SF Mono",Menlo,Consolas,monospace';
@@ -305,6 +306,9 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
       if (!mount || !labelLayer) return;
       // Registered as each resource is built, so a throw mid-boot releases what exists; drained in reverse.
       const disposables: Array<() => void> = [];
+      const track: Track = (release) => {
+        disposables.push(release);
+      };
       const dispose = () => {
         while (disposables.length > 0) {
           try {
@@ -368,27 +372,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
         simulation.setParams(physicsConfig);
         const positions = simulation.pos;
 
-        const renderer = new THREE.WebGLRenderer({
-          antialias: true,
-          alpha: false,
-          powerPreference: "high-performance",
-        });
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, MAX_DPR));
-        renderer.setClearColor(new THREE.Color(FALLBACK_BG), 1);
-        renderer.autoClear = false;
-        mountEl.appendChild(renderer.domElement);
-        renderer.domElement.style.cssText =
-          "display:block;touch-action:none;width:100%;height:100%";
-        disposables.push(() => {
-          renderer.dispose();
-          // Frees the context now; under StrictMode or HMR waiting for GC hits the browser's context cap.
-          renderer.forceContextLoss();
-          renderer.domElement.remove();
-        });
-
-        const scene = new THREE.Scene();
-        const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, -10, 10);
-        camera.position.z = 5;
+        const { renderer, scene, camera } = createRenderer(mountEl, track);
 
         // After the Scene and Camera: unseeded, their uuids draw from the same Math.random.
         const {
