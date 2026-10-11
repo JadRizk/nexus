@@ -64,16 +64,14 @@ function compositeOver(fg: RGB, alpha: number, bg: RGB): RGB {
 // this file measures the colour that actually ships: reinstating #6B7F61 (or
 // any other value) in showTip() fails the floor assertion below instead of
 // leaving a test that only ever checked its own constants.
-const SOURCE = readFileSync(
-  join(dirname(fileURLToPath(import.meta.url)), "GraphCanvas.tsx"),
-  "utf8",
-);
+const readSource = (file: string) =>
+  readFileSync(join(dirname(fileURLToPath(import.meta.url)), file), "utf8");
 
-function literal(re: RegExp, what: string): string {
-  const m = SOURCE.match(re);
+function literal(re: RegExp, what: string, file = "GraphCanvas.tsx"): string {
+  const m = readSource(file).match(re);
   if (!m?.[1])
     throw new Error(
-      `${what} not found in GraphCanvas.tsx — the regex in this test needs updating alongside showTip()`,
+      `${what} not found in ${file} — the regex in this test needs updating alongside showTip()`,
     );
   return m[1];
 }
@@ -84,10 +82,11 @@ const SHIPPED_TEXT_HEX = literal(
   "tooltip secondary-text colour",
 );
 
-// The tooltip panel's own background, from `tip.style.cssText`: rgba(r,g,b,a).
+// The tooltip panel's own background, from `tooltip.style.cssText` in label-layer.ts: rgba(r,g,b,a).
 const [, r, g, b, a] = literal(
   /tip\.style\.cssText =[\s\S]*?background:(rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*[\d.]+\s*\))/,
   "tooltip background",
+  "label-layer.ts",
 ).match(/rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\)/)!;
 const TOOLTIP_BG: RGB = [Number(r), Number(g), Number(b)];
 const TOOLTIP_ALPHA = Number(a);

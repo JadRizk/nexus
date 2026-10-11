@@ -1,16 +1,18 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import type { ReactElement, RefAttributes } from "react";
-import * as THREE from "three";
 import { createPhysics } from "./physics.js";
 import { mulberry32 } from "./random.js";
 import { prepareGraph } from "./prepare.js";
 import { A_HIDE, A_TIER, packBuffers } from "./buffers.js";
+import { createRenderer, createScene, resize as resizeScene } from "./scene.js";
+import { FALLBACK_BG } from "./scene-meshes.js";
+import type { Track } from "./scene.js";
 import { glyphRadiusPx, project, unproject, ZOOM_MAX, ZOOM_MIN } from "./camera.js";
 import { createCameraRig } from "./camera-rig.js";
 import type { FitInset } from "./camera.js";
 import { computeNeighbourhood, isolationSet, TIER_NEARBY } from "./neighbourhood.js";
 import { pickNode } from "./picking.js";
-import { createLabelPlacer } from "./labels.js";
+import { createLabelLayer, LABEL_POOL_SIZE, MONO } from "./label-layer.js";
 import type { LabelView, PlacedLabel } from "./labels.js";
 import { buildConnections, defaultRank, visibleConnections } from "./a11y/adjacency.js";
 import { initialNavState, lastVisible, navigate } from "./a11y/navigator.js";
@@ -28,20 +30,6 @@ import {
   summaryText,
 } from "./describe.js";
 import type { Viewport } from "./camera.js";
-import {
-  NODE_VS,
-  NODE_FS,
-  EDGE_VS,
-  EDGE_FS,
-  PAD_VS,
-  PAD_FS,
-  EDGE_ATTRS,
-  FADE_VS,
-  FADE_FS,
-  POST_VS,
-  BLUR_FS,
-  COMPOSITE_FS,
-} from "./shaders.js";
 import { STATE_LABEL } from "./types.js";
 import type {
   GraphCanvasProps,
@@ -55,10 +43,8 @@ import type {
 } from "./types.js";
 
 // Not from @nexus-cyberdeck/tokens: this package can't assume `--nx-*` properties exist.
-const FALLBACK_BG = "#08090A";
 const FALLBACK_FG = "#DFF5C7";
 const FALLBACK_CRITICAL = "#FF2E63";
-const MONO = 'ui-monospace,"SF Mono",Menlo,Consolas,monospace';
 
 /** What `physics` is merged over. */
 export const DEFAULT_PHYSICS: Readonly<PhysicsConfig> = {
@@ -84,14 +70,6 @@ export const DEFAULT_OPTICS: Readonly<OpticsConfig> = {
   grain: 0.45,
   bloom: 0.85,
   glitch: 0.5,
-};
-
-// Four full-screen passes at dpr 2 cost a lot of fill the CRT grain hides anyway.
-const MAX_DPR = 1.6;
-
-// Vertices are placed in the shader, so three would compute a NaN bounding sphere from the attributes.
-const unbounded = (geometry: THREE.BufferGeometry): void => {
-  geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), Infinity);
 };
 
 // Not @types/node: the package runs in browsers.
@@ -305,6 +283,9 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
       if (!mount || !labelLayer) return;
       // Registered as each resource is built, so a throw mid-boot releases what exists; drained in reverse.
       const disposables: Array<() => void> = [];
+      const track: Track = (release) => {
+        disposables.push(release);
+      };
       const dispose = () => {
         while (disposables.length > 0) {
           try {
@@ -368,45 +349,11 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
         simulation.setParams(physicsConfig);
         const positions = simulation.pos;
 
-        const renderer = new THREE.WebGLRenderer({
-          antialias: true,
-          alpha: false,
-          powerPreference: "high-performance",
-        });
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, MAX_DPR));
-        renderer.setClearColor(new THREE.Color(FALLBACK_BG), 1);
-        renderer.autoClear = false;
-        mountEl.appendChild(renderer.domElement);
-        renderer.domElement.style.cssText =
-          "display:block;touch-action:none;width:100%;height:100%";
-        disposables.push(() => {
-          renderer.dispose();
-          // Frees the context now; under StrictMode or HMR waiting for GC hits the browser's context cap.
-          renderer.forceContextLoss();
-          renderer.domElement.remove();
-        });
-
-        const scene = new THREE.Scene();
-        const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, -10, 10);
-        camera.position.z = 5;
+        const stage = createRenderer(mountEl, track);
+        const { renderer, scene, camera } = stage;
 
         // After the Scene and Camera: unseeded, their uuids draw from the same Math.random.
-        const {
-          nodeRadii,
-          nodeShapes,
-          nodeColors,
-          nodeSeeds,
-          nodeDepths,
-          nodeMarks,
-          nodeHidden,
-          nodeTiers,
-          edgeAPositions,
-          edgeBPositions,
-          edgeColors,
-          edgeParams0,
-          edgeParams1,
-          edgeParams2,
-        } = packBuffers({
+        const buffers = packBuffers({
           nodes,
           nodeCategories,
           nodeCategoryIds,
@@ -418,349 +365,52 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           edgeEndB,
           visualRandom,
         });
-        const dynamicAttribute = (values: Float32Array, size: number) => {
-          const attribute = new THREE.InstancedBufferAttribute(values, size);
-          attribute.setUsage(THREE.DynamicDrawUsage);
-          return attribute;
-        };
-        const staticAttribute = (values: Float32Array, size: number) =>
-          new THREE.InstancedBufferAttribute(values, size);
-
-        const RIBBON_SEGMENTS = 24;
-        const ribbonVertices = new Float32Array((RIBBON_SEGMENTS + 1) * 4);
-        const ribbonIndices: number[] = [];
-        for (let s = 0; s <= RIBBON_SEGMENTS; s++) {
-          const t = s / RIBBON_SEGMENTS;
-          ribbonVertices[s * 4] = t;
-          ribbonVertices[s * 4 + 1] = -1;
-          ribbonVertices[s * 4 + 2] = t;
-          ribbonVertices[s * 4 + 3] = 1;
-        }
-        for (let s = 0; s < RIBBON_SEGMENTS; s++) {
-          const base = s * 2;
-          ribbonIndices.push(base, base + 1, base + 2, base + 2, base + 1, base + 3);
-        }
-        const edgeGeometry = new THREE.InstancedBufferGeometry();
-        edgeGeometry.setAttribute("position", new THREE.BufferAttribute(ribbonVertices, 2));
-        edgeGeometry.setIndex(ribbonIndices);
-        const edgeAAttribute = dynamicAttribute(edgeAPositions, 2),
-          edgeBAttribute = dynamicAttribute(edgeBPositions, 2),
-          edgeParams2Attribute = dynamicAttribute(edgeParams2, EDGE_ATTRS.iP2);
-        const edgeParams0Attribute = staticAttribute(edgeParams0, EDGE_ATTRS.iP0),
-          edgeParams1Attribute = staticAttribute(edgeParams1, EDGE_ATTRS.iP1),
-          edgeColorAttribute = staticAttribute(edgeColors, 3);
-        edgeGeometry.setAttribute("iA", edgeAAttribute);
-        edgeGeometry.setAttribute("iB", edgeBAttribute);
-        edgeGeometry.setAttribute("iColor", edgeColorAttribute);
-        edgeGeometry.setAttribute("iP0", edgeParams0Attribute);
-        edgeGeometry.setAttribute("iP1", edgeParams1Attribute);
-        edgeGeometry.setAttribute("iP2", edgeParams2Attribute);
-        edgeGeometry.instanceCount = edgeCount;
-        unbounded(edgeGeometry);
-        const edgeUniforms = (pass: number) => ({
-          uPx: { value: 1 },
-          uWidth: { value: opticsConfig.edgeWidth },
-          uTime: { value: 0 },
-          uOpacity: { value: opticsConfig.edgeOpacity },
-          uFlowSpeed: { value: opticsConfig.flowSpeed },
-          uFocus: { value: 0 },
-          uSignal: { value: 1 },
-          uPass: { value: pass },
-          uReduced: { value: 0 },
+        const {
+          nodeRadii,
+          nodeDepths,
+          nodeMarks,
+          nodeHidden,
+          nodeTiers,
+          edgeAPositions,
+          edgeBPositions,
+          edgeParams2,
+        } = buffers;
+        const sceneParts = createScene({
+          scene,
+          buffers,
+          nodeStates,
+          positions,
+          nodeCount,
+          edgeCount,
+          optics: opticsConfig,
+          track,
         });
-        // Resting edges composite so crossings don't sum to white; live edges stay additive to bloom.
-        // DoubleSide: the ribbon's winding flips with the bow's direction.
-        const edgeMaterial = new THREE.RawShaderMaterial({
-          vertexShader: EDGE_VS,
-          fragmentShader: EDGE_FS,
-          side: THREE.DoubleSide,
-          transparent: true,
-          depthTest: false,
-          depthWrite: false,
-          premultipliedAlpha: true,
-          blending: THREE.CustomBlending,
-          blendEquation: THREE.AddEquation,
-          blendSrc: THREE.OneFactor,
-          blendDst: THREE.OneMinusSrcAlphaFactor,
-          uniforms: edgeUniforms(0),
-        });
-        const edgeMesh = new THREE.Mesh(edgeGeometry, edgeMaterial);
-        edgeMesh.frustumCulled = false;
-        edgeMesh.renderOrder = 0;
-        scene.add(edgeMesh);
-        const edgeLiveMaterial = new THREE.RawShaderMaterial({
-          vertexShader: EDGE_VS,
-          fragmentShader: EDGE_FS,
-          side: THREE.DoubleSide,
-          transparent: true,
-          depthTest: false,
-          depthWrite: false,
-          blending: THREE.CustomBlending,
-          blendEquation: THREE.AddEquation,
-          blendSrc: THREE.OneFactor,
-          blendDst: THREE.OneFactor,
-          uniforms: edgeUniforms(1),
-        });
-        const edgeLiveMesh = new THREE.Mesh(edgeGeometry, edgeLiveMaterial);
-        edgeLiveMesh.frustumCulled = false;
-        edgeLiveMesh.renderOrder = 2;
-        scene.add(edgeLiveMesh);
+        const {
+          nodeMaterial,
+          edgeMaterial,
+          edgeLiveMaterial,
+          padMaterial,
+          fadeMaterial,
+          blurMaterial,
+          compositeMaterial,
+          sceneTarget,
+          bloomA,
+          bloomB,
+          screenQuad,
+          postScene,
+          postCamera,
+          edgeAAttribute,
+          edgeBAttribute,
+          edgeParams2Attribute,
+          positionAttribute,
+          syncNodes,
+        } = sceneParts;
 
-        const padGeometry = new THREE.InstancedBufferGeometry();
-        const padVertices = new Float32Array(8 * 3);
-        const padIndices: number[] = [];
-        const corners = [
-          [-1, -1],
-          [1, -1],
-          [-1, 1],
-          [1, 1],
-        ] as const;
-        for (let end = 0; end < 2; end++) {
-          const base = end * 4;
-          for (let c = 0; c < 4; c++) {
-            padVertices[(base + c) * 3] = corners[c]![0];
-            padVertices[(base + c) * 3 + 1] = corners[c]![1];
-            padVertices[(base + c) * 3 + 2] = end;
-          }
-          padIndices.push(base, base + 1, base + 2, base + 2, base + 1, base + 3);
-        }
-        padGeometry.setAttribute("aPad", new THREE.BufferAttribute(padVertices, 3));
-        padGeometry.setIndex(padIndices);
-        padGeometry.setAttribute("iA", edgeAAttribute);
-        padGeometry.setAttribute("iB", edgeBAttribute);
-        padGeometry.setAttribute("iColor", edgeColorAttribute);
-        padGeometry.setAttribute("iP0", edgeParams0Attribute);
-        padGeometry.setAttribute("iP1", edgeParams1Attribute);
-        padGeometry.setAttribute("iP2", edgeParams2Attribute);
-        padGeometry.instanceCount = edgeCount;
-        unbounded(padGeometry);
-        const padMaterial = new THREE.RawShaderMaterial({
-          vertexShader: PAD_VS,
-          fragmentShader: PAD_FS,
-          side: THREE.DoubleSide,
-          transparent: true,
-          depthTest: false,
-          depthWrite: false,
-          premultipliedAlpha: true,
-          blending: THREE.CustomBlending,
-          blendEquation: THREE.AddEquation,
-          blendSrc: THREE.OneFactor,
-          blendDst: THREE.OneMinusSrcAlphaFactor,
-          uniforms: {
-            uPx: { value: 1 },
-            uWidth: { value: opticsConfig.edgeWidth },
-            uOpacity: { value: opticsConfig.edgeOpacity },
-            uFocus: { value: 0 },
-          },
-        });
-        const padMesh = new THREE.Mesh(padGeometry, padMaterial);
-        padMesh.frustumCulled = false;
-        padMesh.renderOrder = 1;
-        scene.add(padMesh); // fade -10 < edges 0 < pads 1 < live edges 2 < nodes 3
-
-        const nodeGeometry = new THREE.InstancedBufferGeometry();
-        nodeGeometry.setAttribute(
-          "position",
-          new THREE.BufferAttribute(new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), 2),
-        );
-        nodeGeometry.setIndex([0, 1, 2, 2, 1, 3]);
-        const nodeParams0 = new Float32Array(nodeCount * 4),
-          nodeParams1 = new Float32Array(nodeCount * 4);
-        for (let i = 0; i < nodeCount; i++) {
-          nodeParams0[i * 4] = nodeRadii[i]!;
-          nodeParams0[i * 4 + 1] = nodeShapes[i]!;
-          nodeParams0[i * 4 + 2] = nodeSeeds[i]!;
-          nodeParams1[i * 4] = nodeStates[i]!;
-        }
-        const positionAttribute = dynamicAttribute(positions, 2),
-          nodeParams0Attribute = dynamicAttribute(nodeParams0, 4),
-          nodeParams1Attribute = dynamicAttribute(nodeParams1, 4);
-        function syncNodes() {
-          for (let i = 0; i < nodeCount; i++) {
-            nodeParams0[i * 4 + 3] = nodeDepths[i]!;
-            nodeParams1[i * 4 + 1] = nodeMarks[i]!;
-            nodeParams1[i * 4 + 2] = nodeHidden[i]!;
-          }
-          nodeParams0Attribute.needsUpdate = true;
-          nodeParams1Attribute.needsUpdate = true;
-        }
-        syncNodes();
-        nodeGeometry.setAttribute("iPos", positionAttribute);
-        nodeGeometry.setAttribute("iColor", staticAttribute(nodeColors, 3));
-        nodeGeometry.setAttribute("iN0", nodeParams0Attribute);
-        nodeGeometry.setAttribute("iN1", nodeParams1Attribute);
-        nodeGeometry.instanceCount = nodeCount;
-        unbounded(nodeGeometry);
-        const nodeMaterial = new THREE.RawShaderMaterial({
-          vertexShader: NODE_VS,
-          fragmentShader: NODE_FS,
-          transparent: true,
-          depthTest: false,
-          depthWrite: false,
-          blending: THREE.CustomBlending,
-          blendEquation: THREE.AddEquation,
-          blendSrc: THREE.OneFactor,
-          blendDst: THREE.OneFactor,
-          uniforms: {
-            uTime: { value: 0 },
-            uPx: { value: 1 },
-            uHlStart: { value: -999 },
-            uGlow: { value: opticsConfig.glow },
-            uFocus: { value: 0 },
-            uReduced: { value: 0 },
-          },
-        });
-        const nodeMesh = new THREE.Mesh(nodeGeometry, nodeMaterial);
-        nodeMesh.frustumCulled = false;
-        nodeMesh.renderOrder = 3;
-        scene.add(nodeMesh);
-
-        const backgroundColor = new THREE.Color(FALLBACK_BG);
-        const fadeGeometry = new THREE.BufferGeometry();
-        fadeGeometry.setAttribute(
-          "position",
-          new THREE.BufferAttribute(new Float32Array([-1, -1, 3, -1, -1, 3]), 2),
-        );
-        unbounded(fadeGeometry);
-        const fadeMaterial = new THREE.RawShaderMaterial({
-          vertexShader: FADE_VS,
-          fragmentShader: FADE_FS,
-          transparent: true,
-          depthTest: false,
-          depthWrite: false,
-          uniforms: {
-            uColor: {
-              value: new THREE.Vector3(backgroundColor.r, backgroundColor.g, backgroundColor.b),
-            },
-            uAlpha: { value: 1 },
-            uReduced: { value: 0 },
-          },
-        });
-        const fadeMesh = new THREE.Mesh(fadeGeometry, fadeMaterial);
-        fadeMesh.frustumCulled = false;
-        fadeMesh.renderOrder = -10;
-        scene.add(fadeMesh);
-
-        const renderTargetOptions = {
-          minFilter: THREE.LinearFilter,
-          magFilter: THREE.LinearFilter,
-          format: THREE.RGBAFormat,
-          depthBuffer: false,
-          stencilBuffer: false,
-        };
-        const sceneTarget = new THREE.WebGLRenderTarget(2, 2, renderTargetOptions);
-        const bloomA = new THREE.WebGLRenderTarget(2, 2, renderTargetOptions);
-        const bloomB = new THREE.WebGLRenderTarget(2, 2, renderTargetOptions);
-
-        const screenGeometry = new THREE.BufferGeometry();
-        screenGeometry.setAttribute(
-          "position",
-          new THREE.BufferAttribute(new Float32Array([-1, -1, 3, -1, -1, 3]), 2),
-        );
-        screenGeometry.setAttribute(
-          "uv",
-          new THREE.BufferAttribute(new Float32Array([0, 0, 2, 0, 0, 2]), 2),
-        );
-        const blurMaterial = new THREE.RawShaderMaterial({
-          vertexShader: POST_VS,
-          fragmentShader: BLUR_FS,
-          depthTest: false,
-          depthWrite: false,
-          uniforms: {
-            uTex: { value: null },
-            uTexel: { value: new THREE.Vector2() },
-            uDir: { value: new THREE.Vector2(1, 0) },
-            uThresh: { value: 0.34 },
-          },
-        });
-        const compositeMaterial = new THREE.RawShaderMaterial({
-          vertexShader: POST_VS,
-          fragmentShader: COMPOSITE_FS,
-          depthTest: false,
-          depthWrite: false,
-          uniforms: {
-            uScene: { value: null },
-            uBloom: { value: null },
-            uRes: { value: new THREE.Vector2(1, 1) },
-            uTime: { value: 0 },
-            uScan: { value: opticsConfig.scan },
-            uAberr: { value: opticsConfig.aberr },
-            uCurve: { value: opticsConfig.curve },
-            uGrain: { value: opticsConfig.grain },
-            uBloomAmt: { value: opticsConfig.bloom },
-            uGlitch: { value: 0 },
-            uReduced: { value: 0 },
-          },
-        });
-        unbounded(screenGeometry);
-        const screenQuad = new THREE.Mesh(screenGeometry, compositeMaterial);
-        screenQuad.frustumCulled = false;
-        const postScene = new THREE.Scene();
-        postScene.add(screenQuad);
-        const postCamera = new THREE.Camera();
-        disposables.push(() => [sceneTarget, bloomA, bloomB].forEach((target) => target.dispose()));
-        disposables.push(() =>
-          [
-            nodeMaterial,
-            edgeMaterial,
-            edgeLiveMaterial,
-            padMaterial,
-            fadeMaterial,
-            blurMaterial,
-            compositeMaterial,
-          ].forEach((material) => material.dispose()),
-        );
-        disposables.push(() =>
-          [nodeGeometry, edgeGeometry, padGeometry, fadeGeometry, screenGeometry].forEach(
-            (geometry) => geometry.dispose(),
-          ),
-        );
-
-        const POOL = 60;
-        const labels: HTMLDivElement[] = [],
-          owner = new Int32Array(POOL).fill(-1);
-        for (let i = 0; i < POOL; i++) {
-          const label = document.createElement("div");
-          label.style.cssText =
-            "position:absolute;left:0;top:0;pointer-events:none;white-space:nowrap;" +
-            `font:600 9.5px/1 ${MONO};letter-spacing:.09em;text-transform:uppercase;` +
-            "text-shadow:1px 0 rgba(255,46,99,.4),-1px 0 rgba(23,226,229,.4),0 0 7px rgba(0,0,0,.98);" +
-            "transform:translate3d(-9999px,-9999px,0);will-change:transform;opacity:0;transition:opacity .1s";
-          label.setAttribute("aria-hidden", "true");
-          labelEl.appendChild(label);
-          labels.push(label);
-        }
-        disposables.push(() => labels.forEach((label) => label.remove()));
-        const LABEL_HEIGHT = 11;
-
-        const measureContext = document.createElement("canvas").getContext("2d")!;
-        const labelPlacer = createLabelPlacer({
-          poolSize: POOL,
-          labelHeight: LABEL_HEIGHT,
-          measure: (text, font) => {
-            measureContext.font = font;
-            return measureContext.measureText(text).width;
-          },
-        });
-
-        // Imperative: React state here re-rendered the tree on every pointermove.
-        const tooltip = document.createElement("div");
-        tooltip.style.cssText =
-          "position:absolute;left:0;top:0;pointer-events:none;white-space:nowrap;max-width:270px;" +
-          "overflow:hidden;text-overflow:ellipsis;background:rgba(8,10,9,.95);border:1px solid #1B2318;" +
-          "border-left-width:2px;padding:4px 7px;font:600 9px/1.4 " +
-          MONO +
-          ";letter-spacing:.11em;" +
-          "text-transform:uppercase;opacity:0;transition:opacity .1s;" +
-          "transform:translate3d(-9999px,-9999px,0);will-change:transform;z-index:5";
-        tooltip.setAttribute("aria-hidden", "true");
-        labelEl.appendChild(tooltip);
-        disposables.push(() => tooltip.remove());
+        const { labels, owner, labelPlacer, tooltip } = createLabelLayer(labelEl, track);
 
         let viewWidth = 1,
           viewHeight = 1,
           pixelSize = 1;
-        const bufferSize = new THREE.Vector2();
         const rig = createCameraRig({
           bounds: (indices) => computeBounds(indices),
           position: (i) => [positions[i * 2]!, positions[i * 2 + 1]!],
@@ -789,28 +439,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           viewHeight = mountEl.clientHeight || 1;
           viewport.width = viewWidth;
           viewport.height = viewHeight;
-          // devicePixelRatio changes with zoom or a move to another display.
-          renderer.setPixelRatio(Math.min(window.devicePixelRatio, MAX_DPR));
-          // updateStyle must stay on, or the canvas lays out at viewWidth*dpr and overlays misalign.
-          renderer.setSize(viewWidth, viewHeight);
-          camera.left = -viewWidth / 2;
-          camera.right = viewWidth / 2;
-          camera.top = viewHeight / 2;
-          camera.bottom = -viewHeight / 2;
-          camera.updateProjectionMatrix();
-          renderer.getDrawingBufferSize(bufferSize);
-          const bufferWidth = Math.max(2, bufferSize.x | 0),
-            bufferHeight = Math.max(2, bufferSize.y | 0);
-          sceneTarget.setSize(bufferWidth, bufferHeight);
-          const bloomWidth = Math.max(2, (bufferWidth / 3) | 0),
-            bloomHeight = Math.max(2, (bufferHeight / 3) | 0);
-          bloomA.setSize(bloomWidth, bloomHeight);
-          bloomB.setSize(bloomWidth, bloomHeight);
-          compositeMaterial.uniforms.uRes!.value.set(bufferWidth, bufferHeight);
-          blurMaterial.uniforms.uTexel!.value.set(1 / bloomWidth, 1 / bloomHeight);
-          renderer.setRenderTarget(sceneTarget);
-          renderer.clear();
-          renderer.setRenderTarget(null);
+          resizeScene(stage, sceneParts, viewWidth, viewHeight);
         }
         resize();
         const resizeObserver = new ResizeObserver(resize);
@@ -1654,19 +1283,19 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
               glyphRadiusPx(nodeRadii[current]!, zoom) * 2,
             );
           }
-          for (let k = 0; k < POOL; k++) {
+          for (let k = 0; k < LABEL_POOL_SIZE; k++) {
             if (owner[k]! >= 0 && !screenPositions.has(owner[k]!)) {
               owner[k] = -1;
               labels[k]!.style.opacity = "0";
             }
           }
           const held = new Set<number>();
-          for (let k = 0; k < POOL; k++) if (owner[k]! >= 0) held.add(owner[k]!);
+          for (let k = 0; k < LABEL_POOL_SIZE; k++) if (owner[k]! >= 0) held.add(owner[k]!);
           let free = 0;
           for (const id of screenPositions.keys()) {
             if (held.has(id)) continue;
-            while (free < POOL && owner[free]! >= 0) free++;
-            if (free >= POOL) break;
+            while (free < LABEL_POOL_SIZE && owner[free]! >= 0) free++;
+            if (free >= LABEL_POOL_SIZE) break;
             owner[free] = id;
             const category = nodeCategories[nodeCategoryIds[id]!]!;
             const poolLabel = labels[free]!;
@@ -1677,7 +1306,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
             poolLabel.style.letterSpacing = category.tier === 0 ? ".16em" : ".08em";
             held.add(id);
           }
-          for (let k = 0; k < POOL; k++) {
+          for (let k = 0; k < LABEL_POOL_SIZE; k++) {
             const id = owner[k]!;
             if (id < 0) continue;
             const placed = screenPositions.get(id)!;
