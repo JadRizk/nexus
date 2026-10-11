@@ -12,7 +12,7 @@ import { createCameraRig } from "./camera-rig.js";
 import type { FitInset } from "./camera.js";
 import { computeNeighbourhood, isolationSet, TIER_NEARBY } from "./neighbourhood.js";
 import { pickNode } from "./picking.js";
-import { createLabelPlacer } from "./labels.js";
+import { createLabelLayer, LABEL_POOL_SIZE, MONO } from "./label-layer.js";
 import type { LabelView, PlacedLabel } from "./labels.js";
 import { buildConnections, defaultRank, visibleConnections } from "./a11y/adjacency.js";
 import { initialNavState, lastVisible, navigate } from "./a11y/navigator.js";
@@ -45,7 +45,6 @@ import type {
 // Not from @nexus-cyberdeck/tokens: this package can't assume `--nx-*` properties exist.
 const FALLBACK_FG = "#DFF5C7";
 const FALLBACK_CRITICAL = "#FF2E63";
-const MONO = 'ui-monospace,"SF Mono",Menlo,Consolas,monospace';
 
 /** What `physics` is merged over. */
 export const DEFAULT_PHYSICS: Readonly<PhysicsConfig> = {
@@ -407,46 +406,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           syncNodes,
         } = sceneParts;
 
-        const POOL = 60;
-        const labels: HTMLDivElement[] = [],
-          owner = new Int32Array(POOL).fill(-1);
-        for (let i = 0; i < POOL; i++) {
-          const label = document.createElement("div");
-          label.style.cssText =
-            "position:absolute;left:0;top:0;pointer-events:none;white-space:nowrap;" +
-            `font:600 9.5px/1 ${MONO};letter-spacing:.09em;text-transform:uppercase;` +
-            "text-shadow:1px 0 rgba(255,46,99,.4),-1px 0 rgba(23,226,229,.4),0 0 7px rgba(0,0,0,.98);" +
-            "transform:translate3d(-9999px,-9999px,0);will-change:transform;opacity:0;transition:opacity .1s";
-          label.setAttribute("aria-hidden", "true");
-          labelEl.appendChild(label);
-          labels.push(label);
-        }
-        disposables.push(() => labels.forEach((label) => label.remove()));
-        const LABEL_HEIGHT = 11;
-
-        const measureContext = document.createElement("canvas").getContext("2d")!;
-        const labelPlacer = createLabelPlacer({
-          poolSize: POOL,
-          labelHeight: LABEL_HEIGHT,
-          measure: (text, font) => {
-            measureContext.font = font;
-            return measureContext.measureText(text).width;
-          },
-        });
-
-        // Imperative: React state here re-rendered the tree on every pointermove.
-        const tooltip = document.createElement("div");
-        tooltip.style.cssText =
-          "position:absolute;left:0;top:0;pointer-events:none;white-space:nowrap;max-width:270px;" +
-          "overflow:hidden;text-overflow:ellipsis;background:rgba(8,10,9,.95);border:1px solid #1B2318;" +
-          "border-left-width:2px;padding:4px 7px;font:600 9px/1.4 " +
-          MONO +
-          ";letter-spacing:.11em;" +
-          "text-transform:uppercase;opacity:0;transition:opacity .1s;" +
-          "transform:translate3d(-9999px,-9999px,0);will-change:transform;z-index:5";
-        tooltip.setAttribute("aria-hidden", "true");
-        labelEl.appendChild(tooltip);
-        disposables.push(() => tooltip.remove());
+        const { labels, owner, labelPlacer, tooltip } = createLabelLayer(labelEl, track);
 
         let viewWidth = 1,
           viewHeight = 1,
@@ -1323,19 +1283,19 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
               glyphRadiusPx(nodeRadii[current]!, zoom) * 2,
             );
           }
-          for (let k = 0; k < POOL; k++) {
+          for (let k = 0; k < LABEL_POOL_SIZE; k++) {
             if (owner[k]! >= 0 && !screenPositions.has(owner[k]!)) {
               owner[k] = -1;
               labels[k]!.style.opacity = "0";
             }
           }
           const held = new Set<number>();
-          for (let k = 0; k < POOL; k++) if (owner[k]! >= 0) held.add(owner[k]!);
+          for (let k = 0; k < LABEL_POOL_SIZE; k++) if (owner[k]! >= 0) held.add(owner[k]!);
           let free = 0;
           for (const id of screenPositions.keys()) {
             if (held.has(id)) continue;
-            while (free < POOL && owner[free]! >= 0) free++;
-            if (free >= POOL) break;
+            while (free < LABEL_POOL_SIZE && owner[free]! >= 0) free++;
+            if (free >= LABEL_POOL_SIZE) break;
             owner[free] = id;
             const category = nodeCategories[nodeCategoryIds[id]!]!;
             const poolLabel = labels[free]!;
@@ -1346,7 +1306,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
             poolLabel.style.letterSpacing = category.tier === 0 ? ".16em" : ".08em";
             held.add(id);
           }
-          for (let k = 0; k < POOL; k++) {
+          for (let k = 0; k < LABEL_POOL_SIZE; k++) {
             const id = owner[k]!;
             if (id < 0) continue;
             const placed = screenPositions.get(id)!;
