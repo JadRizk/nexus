@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { A_FRAY, A_JIT, EDGE_END_TRIM, packBuffers, packEdges, packNodes } from "./buffers.js";
+import {
+  A_FRAY,
+  A_HIDE,
+  A_JIT,
+  A_TIER,
+  EDGE_END_TRIM,
+  packBuffers,
+  packEdges,
+  packNodes,
+} from "./buffers.js";
 import type { PackEdgesInput } from "./buffers.js";
 import { DEFAULT_ARC_BOW, encodeGain } from "./shaders.js";
 import type { GraphEdge, GraphNode, LinkCategory, NodeCategory } from "./types.js";
@@ -86,10 +95,34 @@ describe("packNodes", () => {
     expect(packNodesOf([node("a", { size: 10 })], [0]).nodeRadii[0]).toBe(10);
   });
 
-  it("copies the category's shape, tier and colour", () => {
-    const packed = packNodesOf([node("a")], [0]);
-    expect([packed.nodeShapes[0], packed.nodeTiers[0]]).toEqual([2, 3]);
-    expect([...packed.nodeColors]).toEqual([1, 0, 0]);
+  it("copies the category's shape", () => {
+    expect(packNodesOf([node("a")], [0]).nodeShapes[0]).toBe(2);
+  });
+
+  it("copies the category's tier", () => {
+    expect(packNodesOf([node("a")], [0]).nodeTiers[0]).toBe(3);
+  });
+
+  it("copies the category's colour", () => {
+    expect([...packNodesOf([node("a")], [0]).nodeColors]).toEqual([1, 0, 0]);
+  });
+
+  it("looks each node's category up by id, not by position", () => {
+    // Listed in the opposite order to the nodes that use them.
+    const packed = packNodes({
+      nodes: [node("a", { categoryId: "second" }), node("b", { categoryId: "first" })],
+      nodeCategories: {
+        first: { ...NODE_CATEGORY, shape: 1, tier: 1, color: "#00ff00", size: 5 },
+        second: { ...NODE_CATEGORY, shape: 4, tier: 2, color: "#0000ff", size: 7 },
+      },
+      nodeCategoryIds: ["second", "first"],
+      degree: Uint16Array.from([0, 0]),
+      visualRandom: counter(),
+    });
+    expect([...packed.nodeShapes]).toEqual([4, 1]);
+    expect([...packed.nodeTiers]).toEqual([2, 1]);
+    expect([...packed.nodeRadii]).toEqual([7, 5]);
+    expect([...packed.nodeColors]).toEqual([0, 0, 1, 0, 1, 0]);
   });
 
   it("draws one seed per node, in order", () => {
@@ -128,11 +161,13 @@ describe("packEdges", () => {
     expect(slot(edgeParams0, 0, 1)).toBe(Math.fround(DEFAULT_ARC_BOW));
   });
 
-  it("encodes gain with direction, defaulting to directed at gain 1", () => {
-    const directed = packEdgesOf([edge()]).edgeParams0;
-    const undirected = packEdgesOf([edge()], { ...LINK_CATEGORY, gain: 2, directed: false });
-    expect(slot(directed, 0, 3)).toBe(encodeGain(1, true));
-    expect(slot(undirected.edgeParams0, 0, 3)).toBe(encodeGain(2, false));
+  it("defaults gain to 1, directed", () => {
+    expect(slot(packEdgesOf([edge()]).edgeParams0, 0, 3)).toBe(encodeGain(1, true));
+  });
+
+  it("encodes the category's gain and direction", () => {
+    const { edgeParams0 } = packEdgesOf([edge()], { ...LINK_CATEGORY, gain: 2, directed: false });
+    expect(slot(edgeParams0, 0, 3)).toBe(encodeGain(2, false));
   });
 
   it("defaults dash, flow and jitter to 0", () => {
@@ -140,6 +175,16 @@ describe("packEdges", () => {
     expect(slot(packed.edgeParams0, 0, 2)).toBe(0);
     expect(slot(packed.edgeParams1, 0, 0)).toBe(0);
     expect(slot(packed.edgeParams2, 0, A_JIT)).toBe(0);
+  });
+
+  it("stops edges 1.15 node radii short of each centre", () => {
+    const { edgeParams1 } = packEdgesOf([edge()]);
+    expect(slot(edgeParams1, 0, 2)).toBe(Math.fround(2 * 1.15));
+    expect(slot(edgeParams1, 0, 3)).toBe(Math.fround(3 * 1.15));
+  });
+
+  it("lays out the iP2 slots as tier, hide, jit, fray", () => {
+    expect([A_TIER, A_HIDE, A_JIT, A_FRAY]).toEqual([0, 1, 2, 3]);
   });
 
   it("trims each end by its node's radius", () => {
