@@ -31,7 +31,7 @@
     "test:browser": "node scripts/browser-tests.mjs",
     "test:browser:update": "node scripts/browser-tests.mjs --update-snapshots",
     "test:visual": "node scripts/browser-tests.mjs browser/components.spec.ts browser/states.spec.ts",
-    "test:a11y": "node scripts/browser-tests.mjs browser/a11y.spec.ts",
+    "test:a11y": "node scripts/browser-tests.mjs browser/a11y.spec.ts browser/a11y-claims.spec.ts",
     "build:styles": "npm run build:styles -w packages/react"
   },
   "devDependencies": {
@@ -47,6 +47,7 @@
     "eslint": "^10.12.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-sonarjs": "^4.2.2",
     "globals": "^17.11.0",
     "prettier": "^3.9.9",
     "stylelint": "^17.14.1",

@@ -1,0 +1,1046 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`VOICES > with Math.random falling > boot schedules the same calls 1`] = `
+[
+  [
+    "noise",
+    2,
+    0.02,
+    {
+      "attack": 0.0005,
+      "f0": 3000,
+      "gain": 0.5,
+      "q": 0.5,
+    },
+  ],
+  [
+    "tone",
+    2.05,
+    0.9,
+    {
+      "attack": 0.2,
+      "f0": 400,
+      "f1": 15734,
+      "gain": 0.05,
+      "type": "sine",
+    },
+  ],
+  [
+    "noise",
+    2.06,
+    0.7,
+    {
+      "attack": 0.1,
+      "f0": 200,
+      "f1": 1800,
+      "gain": 0.18,
+      "q": 0.8,
+    },
+  ],
+  [
+    "tone",
+    2.55,
+    0.85,
+    {
+      "attack": 0.006,
+      "f0": 150,
+      "f1": 38,
+      "gain": 0.55,
+      "lp": 420,
+      "q": 9,
+      "type": "sine",
+    },
+  ],
+  [
+    "tone",
+    2.5599999999999996,
+    0.6,
+    {
+      "f0": 300,
+      "f1": 76,
+      "gain": 0.16,
+      "lp": 600,
+      "q": 4,
+      "type": "triangle",
+    },
+  ],
+  [
+    "noise",
+    2.55,
+    0.2,
+    {
+      "attack": 0.01,
+      "f0": 120,
+      "f1": 60,
+      "gain": 0.1,
+      "q": 4,
+    },
+  ],
+]
+`;
+
+exports[`VOICES > with Math.random falling > corrupt schedules the same calls 1`] = `
+[
+  [
+    "tone",
+    2,
+    0.024,
+    {
+      "attack": 0.0005,
+      "f0": 880,
+      "gain": 0.14,
+      "type": "square",
+    },
+  ],
+  [
+    "noise",
+    2,
+    0.02,
+    {
+      "attack": 0.0005,
+      "f0": 5600,
+      "gain": 0.18,
+    },
+  ],
+  [
+    "tone",
+    2.028,
+    0.024,
+    {
+      "attack": 0.0005,
+      "f0": 440,
+      "gain": 0.14,
+      "type": "square",
+    },
+  ],
+  [
+    "tone",
+    2.056,
+    0.024,
+    {
+      "attack": 0.0005,
+      "f0": 330,
+      "gain": 0.14,
+      "type": "square",
+    },
+  ],
+  [
+    "tone",
+    2.084,
+    0.024,
+    {
+      "attack": 0.0005,
+      "f0": 220,
+      "gain": 0.14,
+      "type": "square",
+    },
+  ],
+  [
+    "tone",
+    2.112,
+    0.024,
+    {
+      "attack": 0.0005,
+      "f0": 1320,
+      "gain": 0.14,
+      "type": "square",
+    },
+  ],
+  [
+    "noise",
+    2.112,
+    0.02,
+    {
+      "attack": 0.0005,
+      "f0": 6000,
+      "gain": 0.18,
+    },
+  ],
+  [
+    "tone",
+    2.14,
+    0.024,
+    {
+      "attack": 0.0005,
+      "f0": 587,
+      "gain": 0.14,
+      "type": "square",
+    },
+  ],
+  [
+    "tone",
+    2.168,
+    0.024,
+    {
+      "attack": 0.0005,
+      "f0": 440,
+      "gain": 0.14,
+      "type": "square",
+    },
+  ],
+  [
+    "tone",
+    2.196,
+    0.024,
+    {
+      "attack": 0.0005,
+      "f0": 220,
+      "gain": 0.14,
+      "type": "square",
+    },
+  ],
+  [
+    "tone",
+    2.224,
+    0.024,
+    {
+      "attack": 0.0005,
+      "f0": 110,
+      "gain": 0.14,
+      "type": "square",
+    },
+  ],
+  [
+    "noise",
+    2.224,
+    0.02,
+    {
+      "attack": 0.0005,
+      "f0": 6400,
+      "gain": 0.18,
+    },
+  ],
+  [
+    "tone",
+    2.252,
+    0.024,
+    {
+      "attack": 0.0005,
+      "f0": 880,
+      "gain": 0.14,
+      "type": "square",
+    },
+  ],
+  [
+    "noise",
+    2.252,
+    0.02,
+    {
+      "attack": 0.0005,
+      "f0": 5200,
+      "gain": 0.18,
+    },
+  ],
+  [
+    "tone",
+    2.2800000000000002,
+    0.024,
+    {
+      "attack": 0.0005,
+      "f0": 440,
+      "gain": 0.14,
+      "type": "square",
+    },
+  ],
+  [
+    "noise",
+    2,
+    0.05,
+    {
+      "attack": 0.001,
+      "f0": 180,
+      "gain": 0.35,
+      "q": 3,
+    },
+  ],
+]
+`;
+
+exports[`VOICES > with Math.random falling > crash schedules the same calls 1`] = `
+[
+  [
+    "tone",
+    2,
+    0.35,
+    {
+      "attack": 0.001,
+      "f0": 90,
+      "f1": 32,
+      "gain": 0.5,
+      "lp": 300,
+      "type": "sine",
+    },
+  ],
+  [
+    "noise",
+    2,
+    0.42,
+    {
+      "attack": 0.002,
+      "f0": 400,
+      "f1": 2600,
+      "gain": 0.42,
+      "q": 0.6,
+    },
+  ],
+  [
+    "tone",
+    2.04,
+    0.3,
+    {
+      "f0": 700,
+      "f1": 4200,
+      "gain": 0.12,
+      "lp": 5000,
+      "q": 8,
+      "type": "sawtooth",
+    },
+  ],
+  [
+    "noise",
+    2.18,
+    0.3,
+    {
+      "f0": 6000,
+      "f1": 900,
+      "gain": 0.25,
+      "q": 1.5,
+    },
+  ],
+]
+`;
+
+exports[`VOICES > with Math.random falling > degauss schedules the same calls 1`] = `
+[
+  [
+    "tone",
+    2,
+    0.85,
+    {
+      "attack": 0.006,
+      "f0": 150,
+      "f1": 38,
+      "gain": 0.55,
+      "lp": 420,
+      "q": 9,
+      "type": "sine",
+    },
+  ],
+  [
+    "tone",
+    2.01,
+    0.6,
+    {
+      "f0": 300,
+      "f1": 76,
+      "gain": 0.16,
+      "lp": 600,
+      "q": 4,
+      "type": "triangle",
+    },
+  ],
+  [
+    "noise",
+    2,
+    0.2,
+    {
+      "attack": 0.01,
+      "f0": 120,
+      "f1": 60,
+      "gain": 0.1,
+      "q": 4,
+    },
+  ],
+]
+`;
+
+exports[`VOICES > with Math.random falling > dropout schedules the same calls 1`] = `
+[
+  [
+    "noise",
+    2,
+    0.045,
+    {
+      "attack": 0.001,
+      "f0": 4120,
+      "gain": 0.55,
+      "q": 0.8,
+    },
+  ],
+  [
+    "noise",
+    2.012,
+    0.14,
+    {
+      "f0": 1325,
+      "f1": 400,
+      "gain": 0.22,
+      "q": 2.5,
+    },
+  ],
+  [
+    "noise",
+    2.0825,
+    0.03,
+    {
+      "f0": 5200,
+      "gain": 0.3,
+    },
+  ],
+]
+`;
+
+exports[`VOICES > with Math.random falling > interference schedules the same calls 1`] = `
+[
+  [
+    "tone",
+    2,
+    1.7,
+    {
+      "attack": 0.15,
+      "f0": 60,
+      "gain": 0.1,
+      "lp": 400,
+      "q": 3,
+      "type": "sawtooth",
+    },
+  ],
+  [
+    "tone",
+    2.05,
+    1.5,
+    {
+      "attack": 0.2,
+      "f0": 121.5,
+      "gain": 0.06,
+      "type": "sine",
+    },
+  ],
+  [
+    "noise",
+    2.15,
+    0.12,
+    {
+      "f0": 3320,
+      "gain": 0.1,
+      "q": 2,
+    },
+  ],
+  [
+    "noise",
+    2.57,
+    0.12,
+    {
+      "f0": 3160,
+      "gain": 0.1,
+      "q": 2,
+    },
+  ],
+  [
+    "noise",
+    2.9899999999999998,
+    0.12,
+    {
+      "f0": 3000,
+      "gain": 0.1,
+      "q": 2,
+    },
+  ],
+  [
+    "noise",
+    3.41,
+    0.12,
+    {
+      "f0": 2840,
+      "gain": 0.1,
+      "q": 2,
+    },
+  ],
+]
+`;
+
+exports[`VOICES > with Math.random falling > scrub schedules the same calls 1`] = `
+[
+  [
+    "noise",
+    2,
+    0.55,
+    {
+      "attack": 0.01,
+      "f0": 500,
+      "f1": 2400,
+      "gain": 0.28,
+      "q": 3.5,
+    },
+  ],
+  [
+    "noise",
+    2.1,
+    0.45,
+    {
+      "attack": 0.01,
+      "f0": 2200,
+      "f1": 700,
+      "gain": 0.2,
+      "q": 3,
+    },
+  ],
+  [
+    "tone",
+    2,
+    0.5,
+    {
+      "f0": 240,
+      "f1": 900,
+      "gain": 0.07,
+      "lp": 2500,
+      "q": 5,
+      "type": "sawtooth",
+    },
+  ],
+]
+`;
+
+exports[`VOICES > with Math.random falling > signal schedules the same calls 1`] = `
+[
+  [
+    "tone",
+    2,
+    0.55,
+    {
+      "f0": 60,
+      "f1": 27,
+      "gain": 0.16,
+      "lp": 800,
+      "q": 6,
+      "type": "sawtooth",
+    },
+  ],
+  [
+    "noise",
+    2.02,
+    0.85,
+    {
+      "attack": 0.06,
+      "f0": 1200,
+      "f1": 5000,
+      "gain": 0.3,
+      "q": 0.4,
+      "type": "highpass",
+    },
+  ],
+  [
+    "noise",
+    2.3,
+    0.5,
+    {
+      "f0": 300,
+      "gain": 0.14,
+      "q": 1.2,
+    },
+  ],
+  [
+    "tone",
+    2.62,
+    0.28,
+    {
+      "f0": 30,
+      "f1": 60,
+      "gain": 0.1,
+      "lp": 500,
+      "type": "square",
+    },
+  ],
+]
+`;
+
+exports[`VOICES > with Math.random rising > boot schedules the same calls 1`] = `
+[
+  [
+    "noise",
+    2,
+    0.02,
+    {
+      "attack": 0.0005,
+      "f0": 3000,
+      "gain": 0.5,
+      "q": 0.5,
+    },
+  ],
+  [
+    "tone",
+    2.05,
+    0.9,
+    {
+      "attack": 0.2,
+      "f0": 400,
+      "f1": 15734,
+      "gain": 0.05,
+      "type": "sine",
+    },
+  ],
+  [
+    "noise",
+    2.06,
+    0.7,
+    {
+      "attack": 0.1,
+      "f0": 200,
+      "f1": 1800,
+      "gain": 0.18,
+      "q": 0.8,
+    },
+  ],
+  [
+    "tone",
+    2.55,
+    0.85,
+    {
+      "attack": 0.006,
+      "f0": 150,
+      "f1": 38,
+      "gain": 0.55,
+      "lp": 420,
+      "q": 9,
+      "type": "sine",
+    },
+  ],
+  [
+    "tone",
+    2.5599999999999996,
+    0.6,
+    {
+      "f0": 300,
+      "f1": 76,
+      "gain": 0.16,
+      "lp": 600,
+      "q": 4,
+      "type": "triangle",
+    },
+  ],
+  [
+    "noise",
+    2.55,
+    0.2,
+    {
+      "attack": 0.01,
+      "f0": 120,
+      "f1": 60,
+      "gain": 0.1,
+      "q": 4,
+    },
+  ],
+]
+`;
+
+exports[`VOICES > with Math.random rising > corrupt schedules the same calls 1`] = `
+[
+  [
+    "tone",
+    2,
+    0.024,
+    {
+      "attack": 0.0005,
+      "f0": 220,
+      "gain": 0.14,
+      "type": "square",
+    },
+  ],
+  [
+    "tone",
+    2.028,
+    0.024,
+    {
+      "attack": 0.0005,
+      "f0": 330,
+      "gain": 0.14,
+      "type": "square",
+    },
+  ],
+  [
+    "tone",
+    2.056,
+    0.024,
+    {
+      "attack": 0.0005,
+      "f0": 440,
+      "gain": 0.14,
+      "type": "square",
+    },
+  ],
+  [
+    "noise",
+    2.056,
+    0.02,
+    {
+      "attack": 0.0005,
+      "f0": 6000,
+      "gain": 0.18,
+    },
+  ],
+  [
+    "tone",
+    2.084,
+    0.024,
+    {
+      "attack": 0.0005,
+      "f0": 880,
+      "gain": 0.14,
+      "type": "square",
+    },
+  ],
+  [
+    "noise",
+    2.084,
+    0.02,
+    {
+      "attack": 0.0005,
+      "f0": 3200,
+      "gain": 0.18,
+    },
+  ],
+  [
+    "tone",
+    2.112,
+    0.024,
+    {
+      "attack": 0.0005,
+      "f0": 220,
+      "gain": 0.14,
+      "type": "square",
+    },
+  ],
+  [
+    "tone",
+    2.14,
+    0.024,
+    {
+      "attack": 0.0005,
+      "f0": 330,
+      "gain": 0.14,
+      "type": "square",
+    },
+  ],
+  [
+    "tone",
+    2.168,
+    0.024,
+    {
+      "attack": 0.0005,
+      "f0": 440,
+      "gain": 0.14,
+      "type": "square",
+    },
+  ],
+  [
+    "noise",
+    2.168,
+    0.02,
+    {
+      "attack": 0.0005,
+      "f0": 6000,
+      "gain": 0.18,
+    },
+  ],
+  [
+    "noise",
+    2,
+    0.05,
+    {
+      "attack": 0.001,
+      "f0": 180,
+      "gain": 0.35,
+      "q": 3,
+    },
+  ],
+]
+`;
+
+exports[`VOICES > with Math.random rising > crash schedules the same calls 1`] = `
+[
+  [
+    "tone",
+    2,
+    0.35,
+    {
+      "attack": 0.001,
+      "f0": 90,
+      "f1": 32,
+      "gain": 0.5,
+      "lp": 300,
+      "type": "sine",
+    },
+  ],
+  [
+    "noise",
+    2,
+    0.42,
+    {
+      "attack": 0.002,
+      "f0": 400,
+      "f1": 2600,
+      "gain": 0.42,
+      "q": 0.6,
+    },
+  ],
+  [
+    "tone",
+    2.04,
+    0.3,
+    {
+      "f0": 700,
+      "f1": 4200,
+      "gain": 0.12,
+      "lp": 5000,
+      "q": 8,
+      "type": "sawtooth",
+    },
+  ],
+  [
+    "noise",
+    2.18,
+    0.3,
+    {
+      "f0": 6000,
+      "f1": 900,
+      "gain": 0.25,
+      "q": 1.5,
+    },
+  ],
+]
+`;
+
+exports[`VOICES > with Math.random rising > degauss schedules the same calls 1`] = `
+[
+  [
+    "tone",
+    2,
+    0.85,
+    {
+      "attack": 0.006,
+      "f0": 150,
+      "f1": 38,
+      "gain": 0.55,
+      "lp": 420,
+      "q": 9,
+      "type": "sine",
+    },
+  ],
+  [
+    "tone",
+    2.01,
+    0.6,
+    {
+      "f0": 300,
+      "f1": 76,
+      "gain": 0.16,
+      "lp": 600,
+      "q": 4,
+      "type": "triangle",
+    },
+  ],
+  [
+    "noise",
+    2,
+    0.2,
+    {
+      "attack": 0.01,
+      "f0": 120,
+      "f1": 60,
+      "gain": 0.1,
+      "q": 4,
+    },
+  ],
+]
+`;
+
+exports[`VOICES > with Math.random rising > dropout schedules the same calls 1`] = `
+[
+  [
+    "noise",
+    2,
+    0.045,
+    {
+      "attack": 0.001,
+      "f0": 2680,
+      "gain": 0.55,
+      "q": 0.8,
+    },
+  ],
+  [
+    "noise",
+    2.012,
+    0.14,
+    {
+      "f0": 975,
+      "f1": 400,
+      "gain": 0.22,
+      "q": 2.5,
+    },
+  ],
+]
+`;
+
+exports[`VOICES > with Math.random rising > interference schedules the same calls 1`] = `
+[
+  [
+    "tone",
+    2,
+    1.7,
+    {
+      "attack": 0.15,
+      "f0": 60,
+      "gain": 0.1,
+      "lp": 400,
+      "q": 3,
+      "type": "sawtooth",
+    },
+  ],
+  [
+    "tone",
+    2.05,
+    1.5,
+    {
+      "attack": 0.2,
+      "f0": 121.5,
+      "gain": 0.06,
+      "type": "sine",
+    },
+  ],
+  [
+    "noise",
+    2.15,
+    0.12,
+    {
+      "f0": 1880,
+      "gain": 0.1,
+      "q": 2,
+    },
+  ],
+  [
+    "noise",
+    2.57,
+    0.12,
+    {
+      "f0": 2040,
+      "gain": 0.1,
+      "q": 2,
+    },
+  ],
+  [
+    "noise",
+    2.9899999999999998,
+    0.12,
+    {
+      "f0": 2200,
+      "gain": 0.1,
+      "q": 2,
+    },
+  ],
+  [
+    "noise",
+    3.41,
+    0.12,
+    {
+      "f0": 2360,
+      "gain": 0.1,
+      "q": 2,
+    },
+  ],
+]
+`;
+
+exports[`VOICES > with Math.random rising > scrub schedules the same calls 1`] = `
+[
+  [
+    "noise",
+    2,
+    0.55,
+    {
+      "attack": 0.01,
+      "f0": 500,
+      "f1": 2400,
+      "gain": 0.28,
+      "q": 3.5,
+    },
+  ],
+  [
+    "noise",
+    2.1,
+    0.45,
+    {
+      "attack": 0.01,
+      "f0": 2200,
+      "f1": 700,
+      "gain": 0.2,
+      "q": 3,
+    },
+  ],
+  [
+    "tone",
+    2,
+    0.5,
+    {
+      "f0": 240,
+      "f1": 900,
+      "gain": 0.07,
+      "lp": 2500,
+      "q": 5,
+      "type": "sawtooth",
+    },
+  ],
+]
+`;
+
+exports[`VOICES > with Math.random rising > signal schedules the same calls 1`] = `
+[
+  [
+    "tone",
+    2,
+    0.55,
+    {
+      "f0": 60,
+      "f1": 27,
+      "gain": 0.16,
+      "lp": 800,
+      "q": 6,
+      "type": "sawtooth",
+    },
+  ],
+  [
+    "noise",
+    2.02,
+    0.85,
+    {
+      "attack": 0.06,
+      "f0": 1200,
+      "f1": 5000,
+      "gain": 0.3,
+      "q": 0.4,
+      "type": "highpass",
+    },
+  ],
+  [
+    "noise",
+    2.3,
+    0.5,
+    {
+      "f0": 300,
+      "gain": 0.14,
+      "q": 1.2,
+    },
+  ],
+  [
+    "tone",
+    2.62,
+    0.28,
+    {
+      "f0": 30,
+      "f1": 60,
+      "gain": 0.1,
+      "lp": 500,
+      "type": "square",
+    },
+  ],
+]
+`;

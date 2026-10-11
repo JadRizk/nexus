@@ -3,6 +3,7 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 import reactHooks from "eslint-plugin-react-hooks";
 import prettier from "eslint-config-prettier";
+import sonarjs from "eslint-plugin-sonarjs";
 
 /* ============================================================================
    Nexus — lint configuration
@@ -55,6 +56,30 @@ const noPrimitiveTokens = {
     },
   ],
 };
+
+/** Not held to the code-style rules (docs/code-style.md): .design-sync is
+ *  tooling output. */
+const NOT_YET_STYLED = [".design-sync/**"];
+
+const TEST_FILES = ["**/*.test.{ts,tsx,js,jsx,mjs}", "**/*.spec.ts"];
+
+/** What `strict` and `stylistic` add beyond `recommended`, at warn. Rules
+ *  `recommended` already sets keep their severity and options. */
+const recommendedRules = Object.assign(
+  {},
+  ...tseslint.configs.recommended.map((config) => config.rules),
+);
+const stricterRules = Object.fromEntries(
+  [...tseslint.configs.strict, ...tseslint.configs.stylistic]
+    .flatMap((config) => Object.entries(config.rules ?? {}))
+    .filter(([rule]) => !(rule in recommendedRules))
+    .map(([rule, setting]) => {
+      // Core rules the TS versions replace stay off.
+      if (setting === "off") return [rule, setting];
+      const options = Array.isArray(setting) ? setting.slice(1) : [];
+      return [rule, ["warn", ...options]];
+    }),
+);
 
 export default tseslint.config(
   {
@@ -139,6 +164,81 @@ export default tseslint.config(
   {
     files: ["**/*.test.{ts,tsx}", "**/vitest.setup.ts"],
     rules: { "@typescript-eslint/no-explicit-any": "off" },
+  },
+
+  // Code style, all at warn until a package reaches zero (the ratchet in
+  // docs/code-style.md).
+  {
+    ignores: NOT_YET_STYLED,
+    rules: stricterRules,
+  },
+
+  {
+    files: ["**/*.{ts,tsx,js,jsx,mjs}"],
+    ignores: NOT_YET_STYLED,
+    plugins: { sonarjs },
+    rules: {
+      "sonarjs/cognitive-complexity": ["warn", 12],
+      "max-lines-per-function": ["warn", { max: 60, skipBlankLines: true, skipComments: true }],
+      "max-lines": ["warn", { max: 300, skipBlankLines: true, skipComments: true }],
+      "max-depth": ["warn", 3],
+      "max-params": ["warn", 4],
+    },
+  },
+
+  // Type-aware, so only where a tsconfig covers the file. Properties are
+  // left alone so public props keep their names.
+  {
+    files: ["{packages/react,packages/tokens,apps/showcase}/src/**/*.{ts,tsx}"],
+    languageOptions: {
+      parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
+    },
+    rules: {
+      "@typescript-eslint/naming-convention": [
+        "warn",
+        {
+          selector: ["variable", "parameter"],
+          types: ["boolean"],
+          format: null,
+          leadingUnderscore: "allow",
+          prefix: ["is", "has", "can", "should", "did"],
+        },
+        {
+          selector: ["variable", "parameter"],
+          modifiers: ["destructured"],
+          types: ["boolean"],
+          format: null,
+        },
+        {
+          selector: "parameter",
+          filter: { regex: "^.$", match: true },
+          types: ["boolean"],
+          format: null,
+        },
+        {
+          selector: "parameter",
+          modifiers: ["unused"],
+          types: ["boolean"],
+          format: null,
+        },
+      ],
+    },
+  },
+
+  // Promotions go above this point; exemptions stay last so a promotion can't re-enable them.
+
+  // The extension is the closest stand-in for "React component", and
+  // cognitive complexity already catches the components that need splitting.
+  {
+    files: ["**/*.{tsx,jsx}", ...TEST_FILES],
+    ignores: NOT_YET_STYLED,
+    rules: { "max-lines-per-function": "off" },
+  },
+
+  {
+    files: TEST_FILES,
+    ignores: NOT_YET_STYLED,
+    rules: { "@typescript-eslint/no-empty-function": "off" },
   },
 
   prettier,

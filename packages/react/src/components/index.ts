@@ -11,6 +11,7 @@ export * from "./Button/index.js";
 export * from "./CommandPalette/index.js";
 export * from "./Drawer/index.js";
 export * from "./Glyph/index.js";
+export * from "./GraphOutline/index.js";
 export * from "./HazardRule/index.js";
 export * from "./KeyValue/index.js";
 export * from "./Legend/index.js";

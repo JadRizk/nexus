@@ -9,6 +9,12 @@
 // both halves of the peer range are exercised by real renders and a real
 // compile, not by a type check alone.
 //
+// It covers the published packages only, because only they make that promise.
+// The showcase is a private app pinned to React 19 (it uses 19-only APIs such
+// as useEffectEvent), so it is left out of the copy entirely: kept in, its own
+// React 19 would sit beside the pinned 18 and the single-React check below
+// would fail for a reason that says nothing about the packages.
+//
 // It works in a scratch COPY of the tracked files, never in the working tree:
 // it rewrites package.json files and installs, which must not touch a
 // contributor's checkout or lockfile.
@@ -56,8 +62,10 @@ if (!PINS) {
 }
 const REACT = PINS.react;
 
-// Only the workspaces that depend on React; tokens has no React at all.
-const WORKSPACES = ["packages/react", "packages/graph", "apps/showcase"];
+// The published workspaces that depend on React; tokens has no React at all,
+// and the showcase is a private React 19 app (see the header).
+const WORKSPACES = ["packages/react", "packages/graph"];
+const EXCLUDED = ["browser/__screenshots__/", "apps/showcase/"];
 
 const run = (cmd, args, cwd) => execFileSync(cmd, args, { cwd, stdio: "inherit" });
 
@@ -65,10 +73,11 @@ const dir = mkdtempSync(join(tmpdir(), `nx-react${major}-tests-`));
 
 try {
   // Tracked files only: no node_modules, no build output, no stray local state.
-  // The screenshots are the one large thing the unit tests never read.
+  // The screenshots are the one large thing the unit tests never read, and the
+  // showcase is out of scope (see the header).
   const tracked = execFileSync("git", ["ls-files", "-z"], { cwd: root, encoding: "utf8" })
     .split("\0")
-    .filter((file) => file && !file.startsWith("browser/__screenshots__/"));
+    .filter((file) => file && !EXCLUDED.some((prefix) => file.startsWith(prefix)));
   for (const file of tracked) {
     mkdirSync(dirname(join(dir, file)), { recursive: true });
     cpSync(join(root, file), join(dir, file));
@@ -77,8 +86,9 @@ try {
   for (const workspace of WORKSPACES) {
     const path = join(dir, workspace, "package.json");
     const manifest = JSON.parse(readFileSync(path, "utf8"));
-    // The showcase lists react and react-dom under `dependencies`, the packages
-    // under `devDependencies`; missing either section leaves the other React behind.
+    // The packages list React under `devDependencies` (the peer range stays as
+    // is); `dependencies` is rewritten too, since a section missed here would
+    // leave the other React behind.
     for (const section of ["dependencies", "devDependencies"]) {
       for (const [name, version] of Object.entries(PINS)) {
         if (manifest[section]?.[name]) manifest[section][name] = version;

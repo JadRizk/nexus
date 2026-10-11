@@ -2,7 +2,7 @@
   "name": "@nexus-cyberdeck/graph",
   "version": "1.1.0",
   "license": "MIT",
-  "description": "Force-directed WebGL graph canvas for React, built on Three.js, with SDF glyph nodes, curved links, and an optional CRT post-process. Companion to the Nexus Cyberdeck design system.",
+  "description": "Force-directed WebGL graph canvas for React, built on Three.js, that keyboard and screen-reader users can travel too: SDF glyph nodes, links that carry kind in form and direction in their ends, a text outline, and an optional CRT post-process. Companion to the Nexus Cyberdeck design system.",
   "keywords": [
     "react",
     "graph",

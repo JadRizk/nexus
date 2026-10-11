@@ -89,6 +89,8 @@ The rules that lint enforces, so you find out before CI does:
 - **Class names are `nx-block` or `nx-block__element`**, and custom properties
   are `--nx-*`.
 
+Comments, naming, size, hooks and types follow [docs/code-style.md](docs/code-style.md).
+
 New tokens go in `packages/tokens/src/tokens.json` only. If a token is
 theme-sensitive, give it a `nexus.themeOverrides` extension; if it is a colour
 with a contrast floor, the build will tell you when it fails.

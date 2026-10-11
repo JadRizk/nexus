@@ -383,12 +383,12 @@ function semanticBlock() {
   return block.join("\n");
 }
 
-function buildCss(table) {
-  const out = [];
-
-  out.push(GENERATED("src/tokens.json"));
-  out.push("");
-  out.push(`/* ${tokens.$description.split(". ")[0]}.
+/** The generated-file banner and the usage note, one line per theme. */
+function cssHeader() {
+  return [
+    GENERATED("src/tokens.json"),
+    "",
+    `/* ${tokens.$description.split(". ")[0]}.
 
    Zero dependencies. Works with React, Vue, Svelte, plain HTML, or a Tailwind
    preset generated from the same tokens.json.
@@ -400,23 +400,13 @@ ${THEMES.filter((t) => t !== DEFAULT_THEME)
   .join("\n")}
 
    Every semantic name exists in every theme, so swapping never touches
-   component code. */`);
-  out.push("");
+   component code. */`,
+    "",
+  ].join("\n");
+}
 
-  /* ---- primitives (theme-invariant only) ---- */
-  out.push(`/* ============================================================================
-   PRIMITIVES
-   Never referenced from a component — use the semantic layer. Contrast figures
-   are computed against --nx-bg-surface (${SURFACE}) at build time, not typed in.
-   ========================================================================== */`);
-  out.push(":root {");
-  // Both shipped themes are dark. Without this, a native control (scrollbar,
-  // <select>, form field) renders with the light UA palette and clashes with
-  // everything around it, because the browser has no other signal that this
-  // page never offers a light appearance.
-  out.push("  color-scheme: dark;");
-  out.push("");
-
+/** Each primitive group's theme-invariant tokens; themed ones go in the theme blocks. */
+function primitiveSections() {
   const groups = [
     ["primitive.colour", "surfaces + signature palette"],
     ["primitive.font", "typography"],
@@ -431,67 +421,75 @@ ${THEMES.filter((t) => t !== DEFAULT_THEME)
     ["primitive.effect", "elevation + scrim"],
     ["primitive.crt", "CRT layer"],
   ];
+  return groups
+    .map(([prefix, label]) => ({ label, prefix, entries: primitiveEntries(prefix) }))
+    .filter((s) => s.entries.length);
+}
 
-  const sections = [];
-  for (const [prefix, label] of groups) {
-    const entries = [];
-    for (const [path, node] of byPath) {
-      if (!path.startsWith(prefix + ".")) continue;
-      if (isThemed(path)) continue; // emitted per theme below
+/** One group's declarations, each colour annotated with its ratio against the surface. */
+function primitiveEntries(prefix) {
+  return [...byPath]
+    .filter(([path]) => path.startsWith(prefix + ".") && !isThemed(path))
+    .map(([path, node]) => {
       const name = path.split(".").pop();
       const value = resolveValue(path, DEFAULT_THEME);
       const comment =
         isOpaqueHex(value) && !NOT_FOREGROUND.has(name)
           ? `${ratio2(value, SURFACE).toFixed(2)}:1`
           : null;
-      entries.push([cssName(path), toCssValue(node, path), comment]);
-    }
-    if (!entries.length) continue;
-    sections.push({ label, entries, prefix });
-  }
+      return [cssName(path), toCssValue(node, path), comment];
+    });
+}
 
-  for (const [i, s] of sections.entries()) {
-    if (i) out.push("");
-    if (s.label) out.push(`  /* ${s.label} */`);
-    // The restricted colour keeps its warning inline — it is the one token
-    // whose $description is a rule rather than a note.
-    const alarm = byPath.get("primitive.colour.alarm");
-    if (s.prefix === "primitive.colour" && alarm) {
-      const idx = s.entries.findIndex(([n]) => n === "--nx-alarm");
-      const head = declBlock(s.entries.slice(0, idx));
-      out.push(head);
-      out.push("");
-      out.push(
-        `  /* ${alarm.$description.replace(/\s+/g, " ").replace(/(.{68}) /g, "$1\n     ")} */`,
-      );
-      out.push(declBlock(s.entries.slice(idx)));
-    } else {
-      out.push(declBlock(s.entries));
-    }
-  }
-  out.push("}");
-  out.push("");
+/**
+ * The colour group, with the restricted colour's warning inline: it is the one
+ * token whose $description is a rule rather than a note.
+ */
+function colourSection(entries) {
+  const alarm = byPath.get("primitive.colour.alarm");
+  if (!alarm) return declBlock(entries);
+  const idx = entries.findIndex(([n]) => n === "--nx-alarm");
+  return [
+    declBlock(entries.slice(0, idx)),
+    "",
+    `  /* ${alarm.$description.replace(/\s+/g, " ").replace(/(.{68}) /g, "$1\n     ")} */`,
+    declBlock(entries.slice(idx)),
+  ].join("\n");
+}
 
-  /* ---- semantic (defaults) ----
-     Emitted before the theme blocks on purpose: when the theme attribute sits
-     on the same element as :root, both selectors match at equal specificity
-     and the later declaration wins. The theme has to be the later one. */
-  out.push(semanticBlock());
+function primitivesBlock() {
+  const sections = primitiveSections().map((s) => {
+    const body = s.prefix === "primitive.colour" ? colourSection(s.entries) : declBlock(s.entries);
+    return s.label ? `  /* ${s.label} */\n${body}` : body;
+  });
+  return [
+    `/* ============================================================================
+   PRIMITIVES
+   Never referenced from a component — use the semantic layer. Contrast figures
+   are computed against --nx-bg-surface (${SURFACE}) at build time, not typed in.
+   ========================================================================== */`,
+    ":root {",
+    // Both shipped themes are dark, and the browser has no other signal that
+    // this page never offers a light appearance; without it, native controls
+    // (scrollbar, <select>, form fields) render in the light UA palette.
+    "  color-scheme: dark;",
+    "",
+    ...(sections.length ? [sections.join("\n\n")] : []),
+    "}",
+    "",
+  ].join("\n");
+}
 
-  /* ---- per-theme blocks ---- */
-  const themed = [...byPath.keys()].filter(isThemed);
-  const sensitive = [...byPath.keys()].filter((p) => isThemeSensitive(p) && !isThemed(p));
-  for (const theme of THEMES) {
-    const meta = tokens.theme[theme];
-    const isDefault = theme === DEFAULT_THEME;
-    const ratios = themed
-      .map((p) => table[theme][p.split(".").pop()])
-      .filter((r) => r !== undefined);
-    const range = ratios.length
-      ? `${Math.min(...ratios).toFixed(2)}–${Math.max(...ratios).toFixed(2)}:1`
-      : "";
+/** The lowest and highest themed ratio in one theme, e.g. "4.61–7.02:1". */
+function mutedRange(themed, ratios) {
+  const found = themed.map((p) => ratios[p.split(".").pop()]).filter((r) => r !== undefined);
+  return found.length ? `${Math.min(...found).toFixed(2)}–${Math.max(...found).toFixed(2)}:1` : "";
+}
 
-    out.push(`/* ============================================================================
+function themeBanner(theme, range) {
+  const meta = tokens.theme[theme];
+  const isDefault = theme === DEFAULT_THEME;
+  return `/* ============================================================================
    THEME: ${theme}${isDefault ? " (default)" : ""} — ${meta.label}.${
      meta.wcag
        ? ` Signature colours untouched; only the
@@ -499,47 +497,69 @@ ${THEMES.filter((t) => t !== DEFAULT_THEME)
        : `
    ${wrap(`${meta.note} Muted range ${range}.`)}`
    }
-   ========================================================================== */`);
-    out.push(isDefault ? `:root,\n[data-nx-theme="${theme}"] {` : `[data-nx-theme="${theme}"] {`);
+   ========================================================================== */`;
+}
 
-    const entries = themed.map((path) => {
-      const name = path.split(".").pop();
-      const value = resolveValue(path, theme);
-      const r = table[theme][name];
-      let comment = r !== undefined ? `${r.toFixed(2)}:1` : null;
-      // A description like "target 7.0 — AAA body text" is a statement about
-      // the theme that was solved for those targets. Repeating it in a theme
-      // that misses them by half would be actively misleading, so descriptions
-      // only travel with the theme that declares WCAG targets of its own.
-      const desc = meta.wcag ? byPath.get(path).$description : null;
-      if (comment && desc) comment += `  ${desc.replace(/\.$/, "")}`;
-      return [cssName(path), value, comment];
-    });
-    out.push(declBlock(entries));
+/**
+ * One themed primitive, annotated with its ratio. Descriptions such as
+ * "target 7.0 — AAA body text" state what a theme was solved for, so they
+ * only travel with a theme that declares WCAG targets of its own.
+ */
+function themedDecl(path, theme, ratios, wcag) {
+  const r = ratios[path.split(".").pop()];
+  let comment = r !== undefined ? `${r.toFixed(2)}:1` : null;
+  const desc = wcag ? byPath.get(path).$description : null;
+  if (comment && desc) comment += `  ${desc.replace(/\.$/, "")}`;
+  return [cssName(path), resolveValue(path, theme), comment];
+}
 
-    // Everything downstream of a themed primitive, re-resolved in this scope.
-    if (sensitive.length) {
-      out.push("");
-      out.push("  /* re-resolved here so the theme works on any element, not only :root */");
-      out.push(declBlock(sensitive.map((p) => [cssName(p), toCssValue(byPath.get(p), p), null])));
-    }
-    out.push("}");
-    out.push("");
-  }
+/** One theme's scope: its themed primitives, then everything downstream of them. */
+function themeBlock({ theme, table, themed, sensitive }) {
+  const ratios = table[theme];
+  const { wcag } = tokens.theme[theme];
+  return [
+    themeBanner(theme, mutedRange(themed, ratios)),
+    theme === DEFAULT_THEME
+      ? `:root,\n[data-nx-theme="${theme}"] {`
+      : `[data-nx-theme="${theme}"] {`,
+    declBlock(themed.map((path) => themedDecl(path, theme, ratios, wcag))),
+    ...(sensitive.length
+      ? [
+          "",
+          "  /* re-resolved here so the theme works on any element, not only :root */",
+          declBlock(sensitive.map((p) => [cssName(p), toCssValue(byPath.get(p), p), null])),
+        ]
+      : []),
+    "}",
+    "",
+  ].join("\n");
+}
 
-  /* ---- hand-authored base layer ---- */
+/** The hand-authored base layer, copied from base.css from its BASE banner on. */
+function baseLayer() {
   const base = readFileSync(src("base.css"), "utf8");
-  out.push(
-    base
-      .slice(
-        base.indexOf(
-          "/* ============================================================================\n   BASE",
-        ),
-      )
-      .trimEnd(),
-  );
+  return base
+    .slice(
+      base.indexOf(
+        "/* ============================================================================\n   BASE",
+      ),
+    )
+    .trimEnd();
+}
 
-  return out.join("\n") + "\n";
+function buildCss(table) {
+  const themed = [...byPath.keys()].filter(isThemed);
+  const sensitive = [...byPath.keys()].filter((p) => isThemeSensitive(p) && !isThemed(p));
+  const blocks = [
+    cssHeader(),
+    primitivesBlock(),
+    // The semantic defaults precede the themes: on an element that is both
+    // :root and themed, equal specificity lets the later block win.
+    semanticBlock(),
+    ...THEMES.map((theme) => themeBlock({ theme, table, themed, sensitive })),
+    baseLayer(),
+  ];
+  return blocks.join("\n") + "\n";
 }
 
 /* ---------------------------------------------------------------- TS output */

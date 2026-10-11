@@ -29,14 +29,58 @@ test("a deep link opens its page and marks it current in both navs", async ({ pa
   );
 });
 
-test("the header nav is links with real hrefs, and Home is the bare URL", async ({ page }) => {
+test("the header nav is links with real hrefs, and the wordmark is Home", async ({ page }) => {
   await gotoPage(page, "home");
-  await expect(nav(page).getByRole("link", { name: "Home" })).toHaveAttribute("href", "#/");
+  const home = banner(page).getByRole("link", { name: "Nexus, home" });
+  await expect(home).toHaveAttribute("href", "#/");
+  await expect(home).toHaveAttribute("aria-current", "page");
+  await expect(nav(page).getByRole("link", { name: "Home" })).toHaveCount(0);
   await expect(nav(page).getByRole("link", { name: "Docs" })).toHaveAttribute("href", "#/start");
   await expect(nav(page).getByRole("link", { name: "Graph" })).toHaveAttribute(
     "href",
     "#/labs/graph",
   );
+});
+
+test("the header links the repository to star", async ({ page }) => {
+  await gotoPage(page, "home");
+  await expect(banner(page).getByRole("link", { name: "Star Nexus on GitHub" })).toHaveAttribute(
+    "href",
+    "https://github.com/JadRizk/nexus",
+  );
+});
+
+test("a phone is not offered the labs, which have no phone layout", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await gotoPage(page, "home");
+  for (const name of ["Graph", "Glitch Lab"]) {
+    await expect(nav(page).getByRole("link", { name })).toBeHidden();
+    await expect(page.locator(".sc-route", { hasText: name })).toBeHidden();
+  }
+  await expect(nav(page).getByRole("link", { name: "Docs" })).toBeVisible();
+  // The header still fits one row: nothing pushes the page sideways.
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
+});
+
+test("on a phone the docs sidebar folds behind a toggle and closes on a choice", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await gotoPage(page, "components/button");
+  const toggle = page.getByRole("button", { name: /Pages/ });
+  const sidebar = page.getByRole("navigation", { name: "Documentation" });
+  await expect(toggle).toContainText("Button");
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await expect(sidebar).toBeHidden();
+
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await sidebar.getByRole("link", { name: "Slider" }).click();
+  await expect(page).toHaveURL(/#\/components\/slider$/);
+  await expect(toggle).toContainText("Slider");
+  await expect(sidebar).toBeHidden();
+  // The page has the width the sidebar used to take.
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
 });
 
 test("the sidebar lists exactly the pages the suite tests", async ({ page }) => {

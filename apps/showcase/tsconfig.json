@@ -2,6 +2,7 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "types": ["vite/client"],
+    // For src/brand.test.ts and src/tokens/model.test.ts, which import scripts/*.mjs.
     "allowJs": true
   },
   "include": ["src"]

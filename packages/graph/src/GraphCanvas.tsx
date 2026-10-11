@@ -2,115 +2,135 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "re
 import type { ReactElement, RefAttributes } from "react";
 import * as THREE from "three";
 import { createPhysics, computeDegree } from "./physics.js";
-import { project, unproject, glyphRadiusPx } from "./camera.js";
+import { mulberry32, seedFromIds } from "./random.js";
+import { glyphRadiusPx, project, unproject, ZOOM_MAX, ZOOM_MIN } from "./camera.js";
+import { createCameraRig } from "./camera-rig.js";
+import type { FitInset } from "./camera.js";
+import { computeNeighbourhood, isolationSet, TIER_NEARBY } from "./neighbourhood.js";
+import { pickNode } from "./picking.js";
+import { createLabelPlacer } from "./labels.js";
+import type { LabelView, PlacedLabel } from "./labels.js";
+import { validateGraph } from "./validate.js";
+import { buildConnections, defaultRank, visibleConnections } from "./a11y/adjacency.js";
+import { initialNavState, lastVisible, navigate } from "./a11y/navigator.js";
+import type { NavAction, NavContext, NavState } from "./a11y/navigator.js";
+import { createNavOverlay } from "./a11y/overlay.js";
+import type { NavOverlay } from "./a11y/overlay.js";
+import type { NavConnection } from "./a11y/adjacency.js";
+import {
+  HELP_TEXT,
+  connectionText,
+  defaultNodeText,
+  detailText,
+  filterText,
+  relationText,
+  summaryText,
+} from "./describe.js";
 import type { Viewport } from "./camera.js";
 import {
   NODE_VS,
   NODE_FS,
   EDGE_VS,
   EDGE_FS,
+  PAD_VS,
+  PAD_FS,
+  EDGE_ATTRS,
+  DEFAULT_ARC_BOW,
+  encodeGain,
+  encodeRouting,
   FADE_VS,
   FADE_FS,
   POST_VS,
   BLUR_FS,
   COMPOSITE_FS,
 } from "./shaders.js";
-import { STATE_LABEL, ORPHAN_STATE, TIER_ZOOM } from "./types.js";
+import { STATE_LABEL, ORPHAN_STATE } from "./types.js";
 import type {
   GraphCanvasProps,
   GraphController,
   GraphNodeSnapshot,
+  FrameGeometry,
   GraphStats,
   PhysicsConfig,
   OpticsConfig,
+  SelectSource,
 } from "./types.js";
 
-/* ============================================================================
-   GraphCanvas
-
-   Ported from the prototype's `boot()` function — the physics/shader setup,
-   render loop, interaction handlers, label pool and tooltip are structurally
-   unchanged. What changed is exactly what had to: every lookup that used to
-   read the module-global `NODE_TYPES`/`LINK_TYPES` tables now reads the
-   `nodeCategories`/`linkCategories` props instead, node/edge `id`s (now
-   arbitrary, caller-supplied) get resolved to dense internal indices once
-   per graph, and the imperative `nodeOn`/`linkOn`/`isolate`/`selected`
-   state the prototype's parent component owned directly are now controlled
-   props flowing in through refs, the same pattern the prototype already used
-   for `cfg`/`running`/`labelMode`.
-   ========================================================================== */
-
-// Deliberately not sourced from @nexus-cyberdeck/tokens — this package has no
-// dependency on the rest of Nexus, so its one self-contained failure state
-// can't assume `var(--nx-*)` custom properties exist.
+// Not from @nexus-cyberdeck/tokens: this package can't assume `--nx-*` properties exist.
 const FALLBACK_BG = "#08090A";
 const FALLBACK_FG = "#DFF5C7";
 const FALLBACK_CRITICAL = "#FF2E63";
 const MONO = 'ui-monospace,"SF Mono",Menlo,Consolas,monospace';
 
-const DEFAULT_PHYSICS: PhysicsConfig = {
+/** What `physics` is merged over. */
+export const DEFAULT_PHYSICS: Readonly<PhysicsConfig> = {
   repulsion: 900,
   linkDistance: 78,
   gravity: 0.028,
   damping: 0.62,
   cursorForce: 0,
+  sectorForce: 0,
+  radiusForce: 0,
   settle: 0,
 };
-const DEFAULT_OPTICS: OpticsConfig = {
+/** What `optics` is merged over. */
+export const DEFAULT_OPTICS: Readonly<OpticsConfig> = {
   glow: 0.8,
   trails: 0.16,
-  edgeOpacity: 0.5,
-  edgeWidth: 2.4,
+  edgeOpacity: 0.4,
+  edgeWidth: 1.3,
   flowSpeed: 0.24,
   scan: 0.55,
-  aberr: 1.0,
+  aberr: 0.5,
   curve: 0.55,
   grain: 0.45,
   bloom: 0.85,
   glitch: 0.5,
 };
 
-/** Device-pixel-ratio ceiling for the CRT pass; see the note where it is applied. */
+// Where edges stop short of a node's centre, in node radii; the same at both ends.
+const EDGE_END_TRIM = 1.15;
+
+// Four full-screen passes at dpr 2 cost a lot of fill the CRT grain hides anyway.
 const MAX_DPR = 1.6;
 
-/**
- * Gives a geometry a hand-set, unbounded sphere. These meshes are drawn with
- * `frustumCulled = false` because their vertices are positioned in the vertex
- * shader, so the attribute data says nothing about where they land on screen —
- * but three still reads `boundingSphere` while projecting the scene to
- * depth-sort, and computes it lazily from a 2-component `position` attribute
- * as NaN (logging an error each time). Draw order here comes from
- * `renderOrder`, with depth testing off, so the sphere only has to be valid.
- */
+// Vertices are placed in the shader, so three would compute a NaN bounding sphere from the attributes.
 const unbounded = (geometry: THREE.BufferGeometry): void => {
   geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), Infinity);
 };
+
+// Not @types/node: the package runs in browsers.
+declare const process: { env: { NODE_ENV?: string } };
+
+// The literal `process.env.NODE_ENV` is what bundlers replace; unbundled, `process` is missing.
+function isDevelopment(): boolean {
+  try {
+    return process.env.NODE_ENV !== "production";
+  } catch {
+    return true;
+  }
+}
 
 const hex4 = (i: number): string =>
   (((i * 2654435761) >>> 0) % 65536).toString(16).toUpperCase().padStart(4, "0");
 
 interface InternalController {
-  params?: (p: Partial<PhysicsConfig>) => void;
+  params?: (physics: Partial<PhysicsConfig>) => void;
   refilterInternal?: () => void;
   applySelectionInternal?: (index: number) => void;
   fit?: () => void;
   focus?: (index: number) => void;
-  reheat?: (v: number) => void;
+  reheat?: (energy: number) => void;
+  reseed?: () => void;
+  /** Re-runs the whole-graph fit, but only while the auto-fit still owns the camera. */
+  reframe?: () => void;
   getNodeByIndex?: (index: number) => GraphNodeSnapshot | null;
+  back?: () => void;
+  canGoBack?: () => boolean;
+  focusNode?: (index: number) => void;
 }
 
-// Generic over the node `data` type at the boundary only: the cast at the end
-// of this declaration gives callers `GraphCanvasProps<T>`, `onSelect` with a
-// `GraphNodeSnapshot<T>`, and a `ref` typed `GraphController<T>`, so the
-// payload comes back typed. forwardRef's own type is not generic, hence the
-// cast — the same pattern as @nexus-cyberdeck/react's CommandPalette. The body
-// works in `unknown` because it never reads `data`; describe() copies the
-// reference from `nodes[i]` onto the snapshot and nothing else touches it, so
-// whatever `T` the caller's nodes carry is what comes back. `T` defaults to
-// `unknown`, which is what every caller that never names it already had. The
-// cast's `displayName?` is not set here; it keeps the member the old
-// ForwardRefExoticComponent type declared, so code that reads or assigns
-// `GraphCanvas.displayName` still compiles.
+// forwardRef isn't generic, so the cast at the end types `data` for callers.
 export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
   function GraphCanvas(props, ref) {
     const {
@@ -123,27 +143,42 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
       labelMode = "auto",
       hiddenNodeCategories,
       hiddenLinkCategories,
+      selectionScopedLinkCategories,
       isolateId = null,
       selectedId = null,
       running = true,
+      seed,
+      fitInset,
+      followSelection = true,
       onSelect,
       onStats,
+      onFrame,
       onFatal,
+      onWarning,
+      invalidEdges = "error",
       ariaLabel,
+      keyboardNavigation = true,
+      keyHints = true,
+      describeNode,
+      rankConnections,
+      onNavigate,
       className,
       style,
     } = props;
 
     const mountRef = useRef<HTMLDivElement>(null);
     const labelRef = useRef<HTMLDivElement>(null);
+    const navigationRef = useRef<HTMLDivElement>(null);
+    const rootRef = useRef<HTMLDivElement>(null);
     const api = useRef<InternalController>({});
     const [fatal, setFatal] = useState<string | null>(null);
 
-    const physicsCfg: PhysicsConfig = { ...DEFAULT_PHYSICS, ...physicsProp };
-    const opticsCfg: OpticsConfig = { ...DEFAULT_OPTICS, ...opticsProp };
+    const physicsConfig: PhysicsConfig = { ...DEFAULT_PHYSICS, ...physicsProp };
+    const opticsConfig: OpticsConfig = { ...DEFAULT_OPTICS, ...opticsProp };
 
-    const opticsRef = useRef(opticsCfg);
-    opticsRef.current = opticsCfg;
+    // Ref mirrors, not useEffectEvent: that needs React 19 and this package supports 18.3.
+    const opticsRef = useRef(opticsConfig);
+    opticsRef.current = opticsConfig;
     const runRef = useRef(running);
     runRef.current = running;
     const labelModeRef = useRef(labelMode);
@@ -152,205 +187,225 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
     hiddenNodeRef.current = hiddenNodeCategories;
     const hiddenLinkRef = useRef(hiddenLinkCategories);
     hiddenLinkRef.current = hiddenLinkCategories;
+    const scopedLinkRef = useRef(selectionScopedLinkCategories);
+    scopedLinkRef.current = selectionScopedLinkCategories;
     const isolateRef = useRef(isolateId);
     isolateRef.current = isolateId;
+    const followSelectionRef = useRef(followSelection);
+    followSelectionRef.current = followSelection;
+    const insetTop = fitInset?.top ?? 0,
+      insetRight = fitInset?.right ?? 0,
+      insetBottom = fitInset?.bottom ?? 0,
+      insetLeft = fitInset?.left ?? 0;
+    const fitInsetRef = useRef<FitInset>({ top: 0, right: 0, bottom: 0, left: 0 });
+    fitInsetRef.current = {
+      top: insetTop,
+      right: insetRight,
+      bottom: insetBottom,
+      left: insetLeft,
+    };
 
-    // onSelect/onStats/onFatal are read inside the mount effect's boot(), which
-    // only re-runs when the graph data changes (see the comment on that effect's
-    // dependency array below) — so they have to come from refs kept current in
-    // their own effect, not from the closure, or a handler that closes over
-    // state sees the first render's callback forever.
     const onSelectRef = useRef(onSelect);
     const onStatsRef = useRef(onStats);
     const onFatalRef = useRef(onFatal);
+    const onFrameRef = useRef(onFrame);
+    const onWarningRef = useRef(onWarning);
+    const onNavigateRef = useRef(onNavigate);
+    const describeNodeRef = useRef(describeNode);
     useEffect(() => {
       onSelectRef.current = onSelect;
       onStatsRef.current = onStats;
       onFatalRef.current = onFatal;
-    }, [onSelect, onStats, onFatal]);
+      onFrameRef.current = onFrame;
+      onWarningRef.current = onWarning;
+      onNavigateRef.current = onNavigate;
+      describeNodeRef.current = describeNode;
+    }, [onSelect, onStats, onFatal, onFrame, onWarning, onNavigate, describeNode]);
+    const rankConnectionsRef = useRef(rankConnections);
+    rankConnectionsRef.current = rankConnections;
+    const keyHintsRef = useRef(keyHints);
+    keyHintsRef.current = keyHints;
+
+    const hasName = Boolean(ariaLabel);
+    useEffect(() => {
+      if (keyboardNavigation && !hasName && isDevelopment())
+        console.warn(
+          "GraphCanvas: keyboard navigation is on but no ariaLabel was given — screen readers will announce an unnamed group.",
+        );
+    }, [keyboardNavigation, hasName]);
 
     useImperativeHandle(
       ref,
       () => ({
         fit: () => api.current.fit?.(),
         focus: (id) => {
-          const idx = idToIndexRef.current.get(id);
-          if (idx !== undefined) api.current.focus?.(idx);
+          const index = idToIndexRef.current.get(id);
+          if (index !== undefined) api.current.focus?.(index);
         },
-        reheat: (v = 1.0) => api.current.reheat?.(v),
+        reheat: (energy = 1.0) => api.current.reheat?.(energy),
+        focusNode: (id) => {
+          const index = idToIndexRef.current.get(id);
+          if (index !== undefined) api.current.focusNode?.(index);
+        },
+        back: () => api.current.back?.(),
+        get canGoBack() {
+          return api.current.canGoBack?.() ?? false;
+        },
+        reseed: () => api.current.reseed?.(),
         getNode: (id) => {
-          const idx = idToIndexRef.current.get(id);
-          return idx !== undefined ? (api.current.getNodeByIndex?.(idx) ?? null) : null;
+          const index = idToIndexRef.current.get(id);
+          return index !== undefined ? (api.current.getNodeByIndex?.(index) ?? null) : null;
         },
       }),
       [],
     );
 
-    // Populated fresh by the mount effect below; read by the imperative handle
-    // above between mounts, so it has to live outside the effect's closure.
     const idToIndexRef = useRef<Map<unknown, number>>(new Map());
 
-    // Forwards every field of PhysicsConfig, not a subset: gravity and damping
-    // are documented props too, and omitting them here left them permanently
-    // pinned to the solver's own defaults. Depends on the fields rather than on
-    // physicsCfg, which is a fresh object every render. On first mount this is
-    // still a no-op — api.current.params does not exist until the mount effect
-    // below has run — so boot() applies the initial config itself.
+    // Depends on the fields: physicsConfig is a new object every render.
     useEffect(() => {
       api.current.params?.({
-        repulsion: physicsCfg.repulsion,
-        linkDistance: physicsCfg.linkDistance,
-        gravity: physicsCfg.gravity,
-        damping: physicsCfg.damping,
-        cursorForce: physicsCfg.cursorForce,
-        settle: physicsCfg.settle,
+        repulsion: physicsConfig.repulsion,
+        linkDistance: physicsConfig.linkDistance,
+        gravity: physicsConfig.gravity,
+        damping: physicsConfig.damping,
+        cursorForce: physicsConfig.cursorForce,
+        sectorForce: physicsConfig.sectorForce,
+        radiusForce: physicsConfig.radiusForce,
+        settle: physicsConfig.settle,
       });
     }, [
-      physicsCfg.repulsion,
-      physicsCfg.linkDistance,
-      physicsCfg.gravity,
-      physicsCfg.damping,
-      physicsCfg.cursorForce,
-      physicsCfg.settle,
+      physicsConfig.repulsion,
+      physicsConfig.linkDistance,
+      physicsConfig.gravity,
+      physicsConfig.damping,
+      physicsConfig.cursorForce,
+      physicsConfig.sectorForce,
+      physicsConfig.radiusForce,
+      physicsConfig.settle,
     ]);
 
-    // Compared by content, not by identity. `hiddenNodeCategories={["tag"]}`
-    // written inline — the obvious way to write it — is a new array on every
-    // render, and an identity comparison would refilter and fire the glitch
-    // kick on every single one, including renders that have nothing to do with
-    // the graph. The refs above are refreshed every render regardless, so the
-    // refilter that does run always reads the current arrays. Absent and empty
-    // mean the same thing, so they hash the same.
+    // By content: an inline `["tag"]` is a new array every render.
     const hiddenNodeKey = JSON.stringify(hiddenNodeCategories ?? []);
     const hiddenLinkKey = JSON.stringify(hiddenLinkCategories ?? []);
+    const scopedLinkKey = JSON.stringify(selectionScopedLinkCategories ?? []);
     useEffect(() => {
       api.current.refilterInternal?.();
-    }, [hiddenNodeKey, hiddenLinkKey, isolateId]);
+    }, [hiddenNodeKey, hiddenLinkKey, scopedLinkKey, isolateId]);
 
     useEffect(() => {
-      const idx = selectedId === null ? -1 : (idToIndexRef.current.get(selectedId) ?? -1);
-      api.current.applySelectionInternal?.(idx);
+      api.current.reframe?.();
+    }, [insetTop, insetRight, insetBottom, insetLeft]);
+
+    useEffect(() => {
+      const index = selectedId === null ? -1 : (idToIndexRef.current.get(selectedId) ?? -1);
+      api.current.applySelectionInternal?.(index);
     }, [selectedId]);
 
     useEffect(() => {
       const mount = mountRef.current,
-        lab = labelRef.current;
-      if (!mount || !lab) return;
-      // Everything boot() creates registers its teardown here the moment it
-      // exists, so a throw part-way through setup — after the renderer, its
-      // canvas, the label pool and the ResizeObserver are live — releases what
-      // was already built instead of leaving it alive until GC. A completed
-      // boot hands the same list to the effect's cleanup; drained in reverse
-      // so later resources (the frame loop, listeners) go before the renderer
-      // they draw through.
+        labelLayer = labelRef.current,
+        navigationLayer = navigationRef.current,
+        root = rootRef.current;
+      if (!mount || !labelLayer) return;
+      // Registered as each resource is built, so a throw mid-boot releases what exists; drained in reverse.
       const disposables: Array<() => void> = [];
       const dispose = () => {
         while (disposables.length > 0) {
           try {
             disposables.pop()!();
-          } catch (e) {
-            console.error(e);
+          } catch (error) {
+            console.error(error);
           }
         }
         api.current = {};
       };
       try {
-        boot(mount, lab);
-      } catch (err) {
+        boot(mount, labelLayer, navigationLayer, root);
+      } catch (error) {
         dispose();
-        const message = String((err as Error)?.message ?? err);
-        console.error(err);
+        const message = String((error as Error)?.message ?? error);
+        console.error(error);
         setFatal(message);
         onFatalRef.current?.(message);
       }
       return dispose;
 
-      function boot(mountEl: HTMLDivElement, labelEl: HTMLDivElement) {
-        const n = nodes.length,
-          m = edges.length;
-        // Validated before anything that needs tearing down exists. An edge to
-        // an unknown node used to survive as index -1 until the adjacency
-        // build deep inside setup, where it died as an opaque TypeError with
-        // the renderer, canvas and label pool already live; a category id
-        // missing from the maps died the same way in the solver setup.
-        const show = (id: unknown) => JSON.stringify(id);
-        const idToIndex = new Map<unknown, number>();
-        for (let i = 0; i < n; i++) {
-          const node = nodes[i]!;
-          if (idToIndex.has(node.id))
-            throw new Error(`GraphCanvas: nodes[${i}] duplicates id ${show(node.id)}`);
-          if (nodeCategories[node.categoryId] === undefined) {
-            throw new Error(
-              `GraphCanvas: nodes[${i}] has categoryId ${show(node.categoryId)}, which is not in nodeCategories`,
-            );
-          }
-          idToIndex.set(node.id, i);
-        }
-        const eA = new Int32Array(m),
-          eB = new Int32Array(m);
-        for (let e = 0; e < m; e++) {
-          const edge = edges[e]!;
-          const a = idToIndex.get(edge.a),
-            b = idToIndex.get(edge.b);
-          if (a === undefined)
-            throw new Error(
-              `GraphCanvas: edges[${e}].a references unknown node id ${show(edge.a)}`,
-            );
-          if (b === undefined)
-            throw new Error(
-              `GraphCanvas: edges[${e}].b references unknown node id ${show(edge.b)}`,
-            );
-          if (linkCategories[edge.categoryId] === undefined) {
-            throw new Error(
-              `GraphCanvas: edges[${e}] has categoryId ${show(edge.categoryId)}, which is not in linkCategories`,
-            );
-          }
-          eA[e] = a;
-          eB[e] = b;
-        }
+      function boot(
+        mountEl: HTMLDivElement,
+        labelEl: HTMLDivElement,
+        navigationEl: HTMLDivElement | null,
+        rootEl: HTMLDivElement | null,
+      ) {
+        const {
+          idToIndex,
+          eA: edgeEndA,
+          eB: edgeEndB,
+          edges: liveEdges,
+          dropped,
+        } = validateGraph(nodes, edges, nodeCategories, linkCategories, invalidEdges);
         idToIndexRef.current = idToIndex;
+        const nodeCount = nodes.length,
+          edgeCount = liveEdges.length;
+        if (dropped.length > 0) {
+          const message = `GraphCanvas: dropped ${dropped.length} edge(s) whose endpoint matches no node`;
+          if (onWarningRef.current) onWarningRef.current(message, { dropped });
+          else console.warn(message, dropped);
+        }
 
-        const nCategoryId = nodes.map((node) => node.categoryId);
-        const eCategoryId = edges.map((edge) => edge.categoryId);
+        const nodeCategoryIds = nodes.map((node) => node.categoryId);
+        const denseIds = nodes.map((node) => node.id);
+        const edgeCategoryIds = liveEdges.map((edge) => edge.categoryId);
         const linkCategoryIds = Object.keys(linkCategories);
         const degree = computeDegree(
-          Array.from({ length: m }, (_, e) => ({ a: eA[e]!, b: eB[e]! })),
-          n,
+          Array.from({ length: edgeCount }, (_, e) => ({ a: edgeEndA[e]!, b: edgeEndB[e]! })),
+          nodeCount,
         );
-        // A node with no edges is always ORPHAN, regardless of its declared
-        // state — derived from graph structure the engine already has, not
-        // something the caller needs to remember to set by hand.
-        const nState = new Uint8Array(n);
-        for (let i = 0; i < n; i++)
-          nState[i] = degree[i] === 0 ? ORPHAN_STATE : (nodes[i]!.state ?? 1);
+        const nodeStates = new Uint8Array(nodeCount);
+        for (let i = 0; i < nodeCount; i++)
+          nodeStates[i] = degree[i] === 0 ? ORPHAN_STATE : (nodes[i]!.state ?? 1);
 
-        const sim = createPhysics({
-          nodes: nodes.map((node) => {
-            const cat = nodeCategories[node.categoryId]!;
-            return { charge: cat.charge, mass: cat.mass };
-          }),
-          edges: Array.from({ length: m }, (_, e) => {
-            const cat = linkCategories[eCategoryId[e]!]!;
-            return { a: eA[e]!, b: eB[e]!, dist: cat.dist, strength: cat.strength };
-          }),
-        });
-        // The params effect above cannot reach the solver on the render that
-        // creates it, so the initial `physics` prop has to be applied here or it
-        // never lands. Numerically inert when the prop is absent: physicsCfg is
-        // DEFAULT_PHYSICS, which matches the solver's own starting params, and
-        // setParams' alpha floor of 0.28 is below the alpha of 1 a fresh solver
-        // already has.
-        sim.setParams(physicsCfg);
-        const pos = sim.pos;
+        const layoutSeed =
+          seed === null ? undefined : (seed ?? seedFromIds(nodes.map((node) => node.id)));
+        // A separate stream, so drawing shader seeds never moves a node.
+        const visualRandom =
+          layoutSeed === undefined ? Math.random : mulberry32(layoutSeed ^ 0x5bd1e995);
+
+        const simulation = createPhysics(
+          {
+            nodes: nodes.map((node) => {
+              const category = nodeCategories[node.categoryId]!;
+              // Spread only when defined: under exactOptionalPropertyTypes `undefined` isn't absent.
+              const sectorAngle = node.sectorAngle ?? category.sectorAngle;
+              const radiusTarget = node.radiusTarget ?? category.radiusTarget;
+              return {
+                charge: category.charge,
+                mass: category.mass,
+                ...(sectorAngle === undefined ? {} : { sectorAngle }),
+                ...(radiusTarget === undefined ? {} : { radiusTarget }),
+              };
+            }),
+            edges: Array.from({ length: edgeCount }, (_, e) => {
+              const category = linkCategories[edgeCategoryIds[e]!]!;
+              return {
+                a: edgeEndA[e]!,
+                b: edgeEndB[e]!,
+                dist: category.dist,
+                strength: category.strength,
+              };
+            }),
+          },
+          layoutSeed === undefined ? {} : { seed: layoutSeed },
+        );
+        // The params effect can't reach the solver on the render that creates it.
+        simulation.setParams(physicsConfig);
+        const positions = simulation.pos;
 
         const renderer = new THREE.WebGLRenderer({
           antialias: true,
           alpha: false,
           powerPreference: "high-performance",
         });
-        // Four full-screen passes at dpr 2 is a lot of fill for little gain;
-        // the CRT grille and grain hide the difference anyway. resize() re-reads
-        // devicePixelRatio and re-applies this cap on every observed resize.
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, MAX_DPR));
         renderer.setClearColor(new THREE.Color(FALLBACK_BG), 1);
         renderer.autoClear = false;
@@ -359,10 +414,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           "display:block;touch-action:none;width:100%;height:100%";
         disposables.push(() => {
           renderer.dispose();
-          // dispose() alone leaves the GL context alive until the canvas is
-          // collected; under StrictMode, HMR or a list of graphs that is
-          // enough to hit the browser's context cap. Losing it explicitly
-          // gives it back now.
+          // Frees the context now; under StrictMode or HMR waiting for GC hits the browser's context cap.
           renderer.forceContextLoss();
           renderer.domElement.remove();
         });
@@ -370,90 +422,135 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
         const scene = new THREE.Scene();
         const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, -10, 10);
         camera.position.z = 5;
-        let camZoom = 1;
 
-        const nRadius = new Float32Array(n),
-          nShape = new Float32Array(n);
-        const nColor = new Float32Array(n * 3),
-          nSeed = new Float32Array(n);
-        const nDepth = new Float32Array(n).fill(-1);
-        const nSel = new Float32Array(n),
-          nHide = new Float32Array(n);
-        const tc = new THREE.Color();
-        for (let i = 0; i < n; i++) {
-          const cat = nodeCategories[nCategoryId[i]!]!;
-          nRadius[i] = cat.size * (1 + Math.min(1.4, Math.log2(1 + degree[i]!) * 0.16));
-          nShape[i] = cat.shape;
-          tc.set(cat.color);
-          nColor[i * 3] = tc.r;
-          nColor[i * 3 + 1] = tc.g;
-          nColor[i * 3 + 2] = tc.b;
-          nSeed[i] = Math.random();
+        const nodeRadii = new Float32Array(nodeCount),
+          nodeShapes = new Float32Array(nodeCount);
+        const nodeColors = new Float32Array(nodeCount * 3),
+          nodeSeeds = new Float32Array(nodeCount);
+        const nodeDepths = new Float32Array(nodeCount).fill(-1);
+        const nodeMarks = new Float32Array(nodeCount),
+          nodeHidden = new Float32Array(nodeCount);
+        const nodeTiers = new Float32Array(nodeCount);
+        const scratchColor = new THREE.Color();
+        for (let i = 0; i < nodeCount; i++) {
+          const category = nodeCategories[nodeCategoryIds[i]!]!;
+          nodeRadii[i] =
+            (nodes[i]!.size ?? category.size) *
+            (1 + Math.min(1.4, Math.log2(1 + degree[i]!) * 0.16));
+          nodeShapes[i] = category.shape;
+          scratchColor.set(category.color);
+          nodeColors[i * 3] = scratchColor.r;
+          nodeColors[i * 3 + 1] = scratchColor.g;
+          nodeColors[i * 3 + 2] = scratchColor.b;
+          nodeSeeds[i] = visualRandom();
+          nodeTiers[i] = category.tier;
         }
-        const eAPos = new Float32Array(m * 2),
-          eBPos = new Float32Array(m * 2);
-        const eColor = new Float32Array(m * 3);
-        const eP0 = new Float32Array(m * 4); // width, curve, dash, arrow
-        const eP1 = new Float32Array(m * 4); // flow, seed, radA, radB
-        const eP2 = new Float32Array(m * 3); // active, hide, jitter
-        const A_ACT = 0,
+        const edgeAPositions = new Float32Array(edgeCount * 2),
+          edgeBPositions = new Float32Array(edgeCount * 2);
+        const edgeColors = new Float32Array(edgeCount * 3);
+        const edgeParams0 = new Float32Array(edgeCount * EDGE_ATTRS.iP0); // width, curve, dash, signed gain
+        const edgeParams1 = new Float32Array(edgeCount * EDGE_ATTRS.iP1); // flow, seed, radA, radB
+        const edgeParams2 = new Float32Array(edgeCount * EDGE_ATTRS.iP2); // tier, hide, jit, fray
+        const A_TIER = 0,
           A_HIDE = 1,
-          A_JIT = 2;
-        for (let e = 0; e < m; e++) {
-          const cat = linkCategories[eCategoryId[e]!]!;
-          tc.set(cat.color);
-          eColor[e * 3] = tc.r;
-          eColor[e * 3 + 1] = tc.g;
-          eColor[e * 3 + 2] = tc.b;
-          eP0[e * 4] = cat.width;
-          eP0[e * 4 + 1] = (cat.curve ?? 0) * (e % 2 === 0 ? 1 : -1);
-          eP0[e * 4 + 2] = cat.dash ?? 0;
-          eP0[e * 4 + 3] = cat.arrow ? 1 : 0;
-          eP1[e * 4] = cat.flow ?? 0;
-          eP1[e * 4 + 1] = Math.random();
-          eP1[e * 4 + 2] = nRadius[eA[e]!]! * 1.15;
-          eP1[e * 4 + 3] = nRadius[eB[e]!]! * 1.45;
-          eP2[e * 3 + A_JIT] = cat.jit ?? 0;
+          A_JIT = 2,
+          A_FRAY = 3;
+        for (let e = 0; e < edgeCount; e++) {
+          const category = linkCategories[edgeCategoryIds[e]!]!;
+          scratchColor.set(category.color);
+          edgeColors[e * 3] = scratchColor.r;
+          edgeColors[e * 3 + 1] = scratchColor.g;
+          edgeColors[e * 3 + 2] = scratchColor.b;
+          edgeParams0[e * 4] = category.width;
+          // Alternating sign keeps adjacent arcs from overlapping.
+          edgeParams0[e * 4 + 1] = encodeRouting(
+            category.routing,
+            (category.curve ?? DEFAULT_ARC_BOW) * (e % 2 === 0 ? 1 : -1),
+          );
+          edgeParams0[e * 4 + 2] = category.dash ?? 0;
+          edgeParams0[e * 4 + 3] = encodeGain(category.gain ?? 1, category.directed ?? true);
+          edgeParams1[e * 4] = category.flow ?? 0;
+          edgeParams1[e * 4 + 1] = visualRandom();
+          edgeParams1[e * 4 + 2] = nodeRadii[edgeEndA[e]!]! * EDGE_END_TRIM;
+          edgeParams1[e * 4 + 3] = nodeRadii[edgeEndB[e]!]! * EDGE_END_TRIM;
+          edgeParams2[e * 4 + A_JIT] = category.jit ?? 0;
+          const absent = liveEdges[e]!.absentEnd;
+          edgeParams2[e * 4 + A_FRAY] = absent === "b" ? 1 : absent === "a" ? 2 : 0;
         }
-        const dyn = (arr: Float32Array, size: number) => {
-          const a = new THREE.InstancedBufferAttribute(arr, size);
-          a.setUsage(THREE.DynamicDrawUsage);
-          return a;
+        const dynamicAttribute = (values: Float32Array, size: number) => {
+          const attribute = new THREE.InstancedBufferAttribute(values, size);
+          attribute.setUsage(THREE.DynamicDrawUsage);
+          return attribute;
         };
-        const stat = (arr: Float32Array, size: number) =>
-          new THREE.InstancedBufferAttribute(arr, size);
+        const staticAttribute = (values: Float32Array, size: number) =>
+          new THREE.InstancedBufferAttribute(values, size);
 
-        const SEG = 24;
-        const ev = new Float32Array((SEG + 1) * 4);
-        const ei: number[] = [];
-        for (let s = 0; s <= SEG; s++) {
-          const t = s / SEG;
-          ev[s * 4] = t;
-          ev[s * 4 + 1] = -1;
-          ev[s * 4 + 2] = t;
-          ev[s * 4 + 3] = 1;
+        const RIBBON_SEGMENTS = 24;
+        const ribbonVertices = new Float32Array((RIBBON_SEGMENTS + 1) * 4);
+        const ribbonIndices: number[] = [];
+        for (let s = 0; s <= RIBBON_SEGMENTS; s++) {
+          const t = s / RIBBON_SEGMENTS;
+          ribbonVertices[s * 4] = t;
+          ribbonVertices[s * 4 + 1] = -1;
+          ribbonVertices[s * 4 + 2] = t;
+          ribbonVertices[s * 4 + 3] = 1;
         }
-        for (let s = 0; s < SEG; s++) {
-          const b = s * 2;
-          ei.push(b, b + 1, b + 2, b + 2, b + 1, b + 3);
+        for (let s = 0; s < RIBBON_SEGMENTS; s++) {
+          const base = s * 2;
+          ribbonIndices.push(base, base + 1, base + 2, base + 2, base + 1, base + 3);
         }
-        const edgeGeo = new THREE.InstancedBufferGeometry();
-        edgeGeo.setAttribute("position", new THREE.BufferAttribute(ev, 2));
-        edgeGeo.setIndex(ei);
-        const aEA = dyn(eAPos, 2),
-          aEB = dyn(eBPos, 2),
-          aEP2 = dyn(eP2, 3);
-        edgeGeo.setAttribute("iA", aEA);
-        edgeGeo.setAttribute("iB", aEB);
-        edgeGeo.setAttribute("iColor", stat(eColor, 3));
-        edgeGeo.setAttribute("iP0", stat(eP0, 4));
-        edgeGeo.setAttribute("iP1", stat(eP1, 4));
-        edgeGeo.setAttribute("iP2", aEP2);
-        edgeGeo.instanceCount = m;
-        unbounded(edgeGeo);
-        const edgeMat = new THREE.RawShaderMaterial({
+        const edgeGeometry = new THREE.InstancedBufferGeometry();
+        edgeGeometry.setAttribute("position", new THREE.BufferAttribute(ribbonVertices, 2));
+        edgeGeometry.setIndex(ribbonIndices);
+        const edgeAAttribute = dynamicAttribute(edgeAPositions, 2),
+          edgeBAttribute = dynamicAttribute(edgeBPositions, 2),
+          edgeParams2Attribute = dynamicAttribute(edgeParams2, EDGE_ATTRS.iP2);
+        const edgeParams0Attribute = staticAttribute(edgeParams0, EDGE_ATTRS.iP0),
+          edgeParams1Attribute = staticAttribute(edgeParams1, EDGE_ATTRS.iP1),
+          edgeColorAttribute = staticAttribute(edgeColors, 3);
+        edgeGeometry.setAttribute("iA", edgeAAttribute);
+        edgeGeometry.setAttribute("iB", edgeBAttribute);
+        edgeGeometry.setAttribute("iColor", edgeColorAttribute);
+        edgeGeometry.setAttribute("iP0", edgeParams0Attribute);
+        edgeGeometry.setAttribute("iP1", edgeParams1Attribute);
+        edgeGeometry.setAttribute("iP2", edgeParams2Attribute);
+        edgeGeometry.instanceCount = edgeCount;
+        unbounded(edgeGeometry);
+        const edgeUniforms = (pass: number) => ({
+          uPx: { value: 1 },
+          uWidth: { value: opticsConfig.edgeWidth },
+          uTime: { value: 0 },
+          uOpacity: { value: opticsConfig.edgeOpacity },
+          uFlowSpeed: { value: opticsConfig.flowSpeed },
+          uFocus: { value: 0 },
+          uSignal: { value: 1 },
+          uPass: { value: pass },
+          uReduced: { value: 0 },
+        });
+        // Resting edges composite so crossings don't sum to white; live edges stay additive to bloom.
+        // DoubleSide: the ribbon's winding flips with the bow's direction.
+        const edgeMaterial = new THREE.RawShaderMaterial({
           vertexShader: EDGE_VS,
           fragmentShader: EDGE_FS,
+          side: THREE.DoubleSide,
+          transparent: true,
+          depthTest: false,
+          depthWrite: false,
+          premultipliedAlpha: true,
+          blending: THREE.CustomBlending,
+          blendEquation: THREE.AddEquation,
+          blendSrc: THREE.OneFactor,
+          blendDst: THREE.OneMinusSrcAlphaFactor,
+          uniforms: edgeUniforms(0),
+        });
+        const edgeMesh = new THREE.Mesh(edgeGeometry, edgeMaterial);
+        edgeMesh.frustumCulled = false;
+        edgeMesh.renderOrder = 0;
+        scene.add(edgeMesh);
+        const edgeLiveMaterial = new THREE.RawShaderMaterial({
+          vertexShader: EDGE_VS,
+          fragmentShader: EDGE_FS,
+          side: THREE.DoubleSide,
           transparent: true,
           depthTest: false,
           depthWrite: false,
@@ -461,57 +558,99 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           blendEquation: THREE.AddEquation,
           blendSrc: THREE.OneFactor,
           blendDst: THREE.OneFactor,
+          uniforms: edgeUniforms(1),
+        });
+        const edgeLiveMesh = new THREE.Mesh(edgeGeometry, edgeLiveMaterial);
+        edgeLiveMesh.frustumCulled = false;
+        edgeLiveMesh.renderOrder = 2;
+        scene.add(edgeLiveMesh);
+
+        const padGeometry = new THREE.InstancedBufferGeometry();
+        const padVertices = new Float32Array(8 * 3);
+        const padIndices: number[] = [];
+        const corners = [
+          [-1, -1],
+          [1, -1],
+          [-1, 1],
+          [1, 1],
+        ] as const;
+        for (let end = 0; end < 2; end++) {
+          const base = end * 4;
+          for (let c = 0; c < 4; c++) {
+            padVertices[(base + c) * 3] = corners[c]![0];
+            padVertices[(base + c) * 3 + 1] = corners[c]![1];
+            padVertices[(base + c) * 3 + 2] = end;
+          }
+          padIndices.push(base, base + 1, base + 2, base + 2, base + 1, base + 3);
+        }
+        padGeometry.setAttribute("aPad", new THREE.BufferAttribute(padVertices, 3));
+        padGeometry.setIndex(padIndices);
+        padGeometry.setAttribute("iA", edgeAAttribute);
+        padGeometry.setAttribute("iB", edgeBAttribute);
+        padGeometry.setAttribute("iColor", edgeColorAttribute);
+        padGeometry.setAttribute("iP0", edgeParams0Attribute);
+        padGeometry.setAttribute("iP1", edgeParams1Attribute);
+        padGeometry.setAttribute("iP2", edgeParams2Attribute);
+        padGeometry.instanceCount = edgeCount;
+        unbounded(padGeometry);
+        const padMaterial = new THREE.RawShaderMaterial({
+          vertexShader: PAD_VS,
+          fragmentShader: PAD_FS,
+          side: THREE.DoubleSide,
+          transparent: true,
+          depthTest: false,
+          depthWrite: false,
+          premultipliedAlpha: true,
+          blending: THREE.CustomBlending,
+          blendEquation: THREE.AddEquation,
+          blendSrc: THREE.OneFactor,
+          blendDst: THREE.OneMinusSrcAlphaFactor,
           uniforms: {
             uPx: { value: 1 },
-            uWidth: { value: opticsCfg.edgeWidth },
-            uTime: { value: 0 },
-            uOpacity: { value: opticsCfg.edgeOpacity },
-            uFlowSpeed: { value: opticsCfg.flowSpeed },
+            uWidth: { value: opticsConfig.edgeWidth },
+            uOpacity: { value: opticsConfig.edgeOpacity },
             uFocus: { value: 0 },
-            uReduced: { value: 0 },
           },
         });
-        const edgeMesh = new THREE.Mesh(edgeGeo, edgeMat);
-        edgeMesh.frustumCulled = false;
-        edgeMesh.renderOrder = 0;
-        scene.add(edgeMesh);
+        const padMesh = new THREE.Mesh(padGeometry, padMaterial);
+        padMesh.frustumCulled = false;
+        padMesh.renderOrder = 1;
+        scene.add(padMesh); // fade -10 < edges 0 < pads 1 < live edges 2 < nodes 3
 
-        const nodeGeo = new THREE.InstancedBufferGeometry();
-        nodeGeo.setAttribute(
+        const nodeGeometry = new THREE.InstancedBufferGeometry();
+        nodeGeometry.setAttribute(
           "position",
           new THREE.BufferAttribute(new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), 2),
         );
-        nodeGeo.setIndex([0, 1, 2, 2, 1, 3]);
-        // The JS logic keeps its readable per-node arrays; syncNodes() mirrors
-        // them into the packed GPU buffers so only the upload path changed.
-        const nN0 = new Float32Array(n * 4),
-          nN1 = new Float32Array(n * 4);
-        for (let i = 0; i < n; i++) {
-          nN0[i * 4] = nRadius[i]!;
-          nN0[i * 4 + 1] = nShape[i]!;
-          nN0[i * 4 + 2] = nSeed[i]!;
-          nN1[i * 4] = nState[i]!;
+        nodeGeometry.setIndex([0, 1, 2, 2, 1, 3]);
+        const nodeParams0 = new Float32Array(nodeCount * 4),
+          nodeParams1 = new Float32Array(nodeCount * 4);
+        for (let i = 0; i < nodeCount; i++) {
+          nodeParams0[i * 4] = nodeRadii[i]!;
+          nodeParams0[i * 4 + 1] = nodeShapes[i]!;
+          nodeParams0[i * 4 + 2] = nodeSeeds[i]!;
+          nodeParams1[i * 4] = nodeStates[i]!;
         }
-        const aPos = dyn(pos, 2),
-          aN0 = dyn(nN0, 4),
-          aN1 = dyn(nN1, 4);
+        const positionAttribute = dynamicAttribute(positions, 2),
+          nodeParams0Attribute = dynamicAttribute(nodeParams0, 4),
+          nodeParams1Attribute = dynamicAttribute(nodeParams1, 4);
         function syncNodes() {
-          for (let i = 0; i < n; i++) {
-            nN0[i * 4 + 3] = nDepth[i]!;
-            nN1[i * 4 + 1] = nSel[i]!;
-            nN1[i * 4 + 2] = nHide[i]!;
+          for (let i = 0; i < nodeCount; i++) {
+            nodeParams0[i * 4 + 3] = nodeDepths[i]!;
+            nodeParams1[i * 4 + 1] = nodeMarks[i]!;
+            nodeParams1[i * 4 + 2] = nodeHidden[i]!;
           }
-          aN0.needsUpdate = true;
-          aN1.needsUpdate = true;
+          nodeParams0Attribute.needsUpdate = true;
+          nodeParams1Attribute.needsUpdate = true;
         }
         syncNodes();
-        nodeGeo.setAttribute("iPos", aPos);
-        nodeGeo.setAttribute("iColor", stat(nColor, 3));
-        nodeGeo.setAttribute("iN0", aN0);
-        nodeGeo.setAttribute("iN1", aN1);
-        nodeGeo.instanceCount = n;
-        unbounded(nodeGeo);
-        const nodeMat = new THREE.RawShaderMaterial({
+        nodeGeometry.setAttribute("iPos", positionAttribute);
+        nodeGeometry.setAttribute("iColor", staticAttribute(nodeColors, 3));
+        nodeGeometry.setAttribute("iN0", nodeParams0Attribute);
+        nodeGeometry.setAttribute("iN1", nodeParams1Attribute);
+        nodeGeometry.instanceCount = nodeCount;
+        unbounded(nodeGeometry);
+        const nodeMaterial = new THREE.RawShaderMaterial({
           vertexShader: NODE_VS,
           fragmentShader: NODE_FS,
           transparent: true,
@@ -525,61 +664,63 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
             uTime: { value: 0 },
             uPx: { value: 1 },
             uHlStart: { value: -999 },
-            uGlow: { value: opticsCfg.glow },
+            uGlow: { value: opticsConfig.glow },
             uFocus: { value: 0 },
             uReduced: { value: 0 },
           },
         });
-        const nodeMesh = new THREE.Mesh(nodeGeo, nodeMat);
+        const nodeMesh = new THREE.Mesh(nodeGeometry, nodeMaterial);
         nodeMesh.frustumCulled = false;
-        nodeMesh.renderOrder = 1;
+        nodeMesh.renderOrder = 3;
         scene.add(nodeMesh);
 
-        const vc = new THREE.Color(FALLBACK_BG);
-        const fadeGeo = new THREE.BufferGeometry();
-        fadeGeo.setAttribute(
+        const backgroundColor = new THREE.Color(FALLBACK_BG);
+        const fadeGeometry = new THREE.BufferGeometry();
+        fadeGeometry.setAttribute(
           "position",
           new THREE.BufferAttribute(new Float32Array([-1, -1, 3, -1, -1, 3]), 2),
         );
-        unbounded(fadeGeo);
-        const fadeMat = new THREE.RawShaderMaterial({
+        unbounded(fadeGeometry);
+        const fadeMaterial = new THREE.RawShaderMaterial({
           vertexShader: FADE_VS,
           fragmentShader: FADE_FS,
           transparent: true,
           depthTest: false,
           depthWrite: false,
           uniforms: {
-            uColor: { value: new THREE.Vector3(vc.r, vc.g, vc.b) },
+            uColor: {
+              value: new THREE.Vector3(backgroundColor.r, backgroundColor.g, backgroundColor.b),
+            },
             uAlpha: { value: 1 },
             uReduced: { value: 0 },
           },
         });
-        const fadeMesh = new THREE.Mesh(fadeGeo, fadeMat);
+        const fadeMesh = new THREE.Mesh(fadeGeometry, fadeMaterial);
         fadeMesh.frustumCulled = false;
         fadeMesh.renderOrder = -10;
         scene.add(fadeMesh);
 
-        const rtOpts = {
+        const renderTargetOptions = {
           minFilter: THREE.LinearFilter,
           magFilter: THREE.LinearFilter,
           format: THREE.RGBAFormat,
           depthBuffer: false,
           stencilBuffer: false,
         };
-        const sceneRT = new THREE.WebGLRenderTarget(2, 2, rtOpts);
-        const bloomA = new THREE.WebGLRenderTarget(2, 2, rtOpts);
-        const bloomB = new THREE.WebGLRenderTarget(2, 2, rtOpts);
+        const sceneTarget = new THREE.WebGLRenderTarget(2, 2, renderTargetOptions);
+        const bloomA = new THREE.WebGLRenderTarget(2, 2, renderTargetOptions);
+        const bloomB = new THREE.WebGLRenderTarget(2, 2, renderTargetOptions);
 
-        const fsGeo = new THREE.BufferGeometry();
-        fsGeo.setAttribute(
+        const screenGeometry = new THREE.BufferGeometry();
+        screenGeometry.setAttribute(
           "position",
           new THREE.BufferAttribute(new Float32Array([-1, -1, 3, -1, -1, 3]), 2),
         );
-        fsGeo.setAttribute(
+        screenGeometry.setAttribute(
           "uv",
           new THREE.BufferAttribute(new Float32Array([0, 0, 2, 0, 0, 2]), 2),
         );
-        const blurMat = new THREE.RawShaderMaterial({
+        const blurMaterial = new THREE.RawShaderMaterial({
           vertexShader: POST_VS,
           fragmentShader: BLUR_FS,
           depthTest: false,
@@ -591,7 +732,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
             uThresh: { value: 0.34 },
           },
         });
-        const compMat = new THREE.RawShaderMaterial({
+        const compositeMaterial = new THREE.RawShaderMaterial({
           vertexShader: POST_VS,
           fragmentShader: COMPOSITE_FS,
           depthTest: false,
@@ -601,69 +742,69 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
             uBloom: { value: null },
             uRes: { value: new THREE.Vector2(1, 1) },
             uTime: { value: 0 },
-            uScan: { value: opticsCfg.scan },
-            uAberr: { value: opticsCfg.aberr },
-            uCurve: { value: opticsCfg.curve },
-            uGrain: { value: opticsCfg.grain },
-            uBloomAmt: { value: opticsCfg.bloom },
+            uScan: { value: opticsConfig.scan },
+            uAberr: { value: opticsConfig.aberr },
+            uCurve: { value: opticsConfig.curve },
+            uGrain: { value: opticsConfig.grain },
+            uBloomAmt: { value: opticsConfig.bloom },
             uGlitch: { value: 0 },
             uReduced: { value: 0 },
           },
         });
-        unbounded(fsGeo);
-        const fsQuad = new THREE.Mesh(fsGeo, compMat);
-        fsQuad.frustumCulled = false;
+        unbounded(screenGeometry);
+        const screenQuad = new THREE.Mesh(screenGeometry, compositeMaterial);
+        screenQuad.frustumCulled = false;
         const postScene = new THREE.Scene();
-        postScene.add(fsQuad);
-        const postCam = new THREE.Camera();
-        disposables.push(() => [sceneRT, bloomA, bloomB].forEach((rt) => rt.dispose()));
+        postScene.add(screenQuad);
+        const postCamera = new THREE.Camera();
+        disposables.push(() => [sceneTarget, bloomA, bloomB].forEach((target) => target.dispose()));
         disposables.push(() =>
-          [nodeMat, edgeMat, fadeMat, blurMat, compMat].forEach((mm) => mm.dispose()),
+          [
+            nodeMaterial,
+            edgeMaterial,
+            edgeLiveMaterial,
+            padMaterial,
+            fadeMaterial,
+            blurMaterial,
+            compositeMaterial,
+          ].forEach((material) => material.dispose()),
         );
-        disposables.push(() => [nodeGeo, edgeGeo, fadeGeo, fsGeo].forEach((g) => g.dispose()));
+        disposables.push(() =>
+          [nodeGeometry, edgeGeometry, padGeometry, fadeGeometry, screenGeometry].forEach(
+            (geometry) => geometry.dispose(),
+          ),
+        );
 
-        /* --------------------------------------------------------- label pool */
         const POOL = 60;
         const labels: HTMLDivElement[] = [],
           owner = new Int32Array(POOL).fill(-1);
         for (let i = 0; i < POOL; i++) {
-          const el = document.createElement("div");
-          el.style.cssText =
+          const label = document.createElement("div");
+          label.style.cssText =
             "position:absolute;left:0;top:0;pointer-events:none;white-space:nowrap;" +
             `font:600 9.5px/1 ${MONO};letter-spacing:.09em;text-transform:uppercase;` +
             "text-shadow:1px 0 rgba(255,46,99,.4),-1px 0 rgba(23,226,229,.4),0 0 7px rgba(0,0,0,.98);" +
             "transform:translate3d(-9999px,-9999px,0);will-change:transform;opacity:0;transition:opacity .1s";
-          // The pool is a rotating subset of node names driven straight by
-          // layout math, not by anything a screen reader should announce —
-          // aria-hidden keeps this decorative, same as the tooltip below.
-          el.setAttribute("aria-hidden", "true");
-          labelEl.appendChild(el);
-          labels.push(el);
+          label.setAttribute("aria-hidden", "true");
+          labelEl.appendChild(label);
+          labels.push(label);
         }
-        disposables.push(() => labels.forEach((l) => l.remove()));
-        const LAB_H = 11;
+        disposables.push(() => labels.forEach((label) => label.remove()));
+        const LABEL_HEIGHT = 11;
 
-        // Measure once per node instead of guessing from character count — the
-        // collision test is only as good as the box it is given.
-        const meas = document.createElement("canvas").getContext("2d")!;
-        const wCache = new Float32Array(n).fill(-1);
-        function labelWidth(i: number): number {
-          if (wCache[i]! < 0) {
-            const t = nodes[i]!.label;
-            const key = nodeCategories[nCategoryId[i]!]!.tier === 0;
-            meas.font = key ? `700 10.5px ${MONO}` : `500 9px ${MONO}`;
-            wCache[i] = meas.measureText(t).width + t.length * (key ? 1.47 : 0.72) + 7;
-          }
-          return wCache[i]!;
-        }
+        const measureContext = document.createElement("canvas").getContext("2d")!;
+        const labelPlacer = createLabelPlacer({
+          poolSize: POOL,
+          labelHeight: LABEL_HEIGHT,
+          measure: (text, font) => {
+            measureContext.font = font;
+            return measureContext.measureText(text).width;
+          },
+        });
 
-        // Imperative tooltip. Driving this through React state re-rendered the
-        // whole tree on every pointermove — 60 reconciles a second while hovering.
-        // Its chrome colours (border, secondary text) are hardcoded defaults,
-        // same status as FALLBACK_BG above — this package has no theme system
-        // of its own, only per-category colours the caller already supplies.
-        const tip = document.createElement("div");
-        tip.style.cssText =
+        // Imperative: React state here re-rendered the tree on every pointermove.
+        const tooltip = document.createElement("div");
+        tooltip.style.cssText =
           "position:absolute;left:0;top:0;pointer-events:none;white-space:nowrap;max-width:270px;" +
           "overflow:hidden;text-overflow:ellipsis;background:rgba(8,10,9,.95);border:1px solid #1B2318;" +
           "border-left-width:2px;padding:4px 7px;font:600 9px/1.4 " +
@@ -671,91 +812,115 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           ";letter-spacing:.11em;" +
           "text-transform:uppercase;opacity:0;transition:opacity .1s;" +
           "transform:translate3d(-9999px,-9999px,0);will-change:transform;z-index:5";
-        tip.setAttribute("aria-hidden", "true");
-        labelEl.appendChild(tip);
-        disposables.push(() => tip.remove());
+        tooltip.setAttribute("aria-hidden", "true");
+        labelEl.appendChild(tooltip);
+        disposables.push(() => tooltip.remove());
 
-        let W = 1,
-          H = 1,
-          px = 1;
-        const bufSize = new THREE.Vector2();
-        const camT = { x: 0, y: 0, zoom: 1 };
-        const viewport: Viewport = { width: 1, height: 1, curve: opticsCfg.curve };
+        let viewWidth = 1,
+          viewHeight = 1,
+          pixelSize = 1;
+        const bufferSize = new THREE.Vector2();
+        const rig = createCameraRig({
+          bounds: (indices) => computeBounds(indices),
+          position: (i) => [positions[i * 2]!, positions[i * 2 + 1]!],
+          viewport: () => ({ width: viewWidth, height: viewHeight }),
+          inset: () => fitInsetRef.current,
+        });
+        const viewport: Viewport = { width: 1, height: 1, curve: opticsConfig.curve };
+        const labelView: LabelView = {
+          count: nodeCount,
+          pos: positions,
+          hidden: nodeHidden,
+          radii: nodeRadii,
+          depth: nodeDepths,
+          tier: nodeTiers,
+          label: (i) => nodes[i]!.label,
+          zoom: 1,
+          cx: 0,
+          cy: 0,
+          viewport,
+          mode: "auto",
+          selIdx: -1,
+          hoverIdx: -1,
+        };
         function resize() {
-          W = mountEl.clientWidth || 1;
-          H = mountEl.clientHeight || 1;
-          viewport.width = W;
-          viewport.height = H;
-          // Re-read rather than trusting the value boot() sampled: devicePixelRatio
-          // changes when the window is dragged to a display with a different
-          // density, or when the page is zoomed, and a ResizeObserver callback is
-          // exactly when that shows up. Sampling once at mount left the canvas
-          // rendering at the old density until something remounted it.
+          viewWidth = mountEl.clientWidth || 1;
+          viewHeight = mountEl.clientHeight || 1;
+          viewport.width = viewWidth;
+          viewport.height = viewHeight;
+          // devicePixelRatio changes with zoom or a move to another display.
           renderer.setPixelRatio(Math.min(window.devicePixelRatio, MAX_DPR));
-          // updateStyle must stay on: with it off three sets canvas.width = W*dpr
-          // but no CSS size, so the element lays out at W*dpr and every DOM
-          // overlay is in a coordinate space half the size of the canvas.
-          renderer.setSize(W, H);
-          camera.left = -W / 2;
-          camera.right = W / 2;
-          camera.top = H / 2;
-          camera.bottom = -H / 2;
+          // updateStyle must stay on, or the canvas lays out at viewWidth*dpr and overlays misalign.
+          renderer.setSize(viewWidth, viewHeight);
+          camera.left = -viewWidth / 2;
+          camera.right = viewWidth / 2;
+          camera.top = viewHeight / 2;
+          camera.bottom = -viewHeight / 2;
           camera.updateProjectionMatrix();
-          renderer.getDrawingBufferSize(bufSize);
-          const bw = Math.max(2, bufSize.x | 0),
-            bh = Math.max(2, bufSize.y | 0);
-          sceneRT.setSize(bw, bh);
-          const sw = Math.max(2, (bw / 3) | 0),
-            sh = Math.max(2, (bh / 3) | 0);
-          bloomA.setSize(sw, sh);
-          bloomB.setSize(sw, sh);
-          compMat.uniforms.uRes!.value.set(bw, bh);
-          blurMat.uniforms.uTexel!.value.set(1 / sw, 1 / sh);
-          renderer.setRenderTarget(sceneRT);
+          renderer.getDrawingBufferSize(bufferSize);
+          const bufferWidth = Math.max(2, bufferSize.x | 0),
+            bufferHeight = Math.max(2, bufferSize.y | 0);
+          sceneTarget.setSize(bufferWidth, bufferHeight);
+          const bloomWidth = Math.max(2, (bufferWidth / 3) | 0),
+            bloomHeight = Math.max(2, (bufferHeight / 3) | 0);
+          bloomA.setSize(bloomWidth, bloomHeight);
+          bloomB.setSize(bloomWidth, bloomHeight);
+          compositeMaterial.uniforms.uRes!.value.set(bufferWidth, bufferHeight);
+          blurMaterial.uniforms.uTexel!.value.set(1 / bloomWidth, 1 / bloomHeight);
+          renderer.setRenderTarget(sceneTarget);
           renderer.clear();
           renderer.setRenderTarget(null);
         }
         resize();
-        const ro = new ResizeObserver(resize);
-        ro.observe(mountEl);
-        disposables.push(() => ro.disconnect());
-        // Intro animation: land on the usual density-based framing, but arrive
-        // there from a wide pull-back instead of snapping straight to rest —
-        // this is also what a reseed sees, since that remounts the whole scene.
-        const introZoom = Math.min(2.2, Math.max(0.5, 420 / (Math.sqrt(n) * 14)));
-        camT.zoom = introZoom;
-        camZoom = Math.max(0.12, introZoom * 0.2);
-
-        const OUT: [number, number] = [0, 0];
+        const resizeObserver = new ResizeObserver(resize);
+        resizeObserver.observe(mountEl);
+        disposables.push(() => resizeObserver.disconnect());
         const toWorld = (sx: number, sy: number) => {
           viewport.curve = opticsRef.current.curve;
-          return unproject(sx, sy, camZoom, camera.position.x, camera.position.y, viewport);
+          return unproject(sx, sy, rig.live.zoom, rig.live.x, rig.live.y, viewport);
         };
 
-        const inc: Array<Array<{ e: number; other: number; categoryId: string; out: boolean }>> =
-          Array.from({ length: n }, () => []);
-        for (let e = 0; e < m; e++) {
-          inc[eA[e]!]!.push({ e, other: eB[e]!, categoryId: eCategoryId[e]!, out: true });
-          inc[eB[e]!]!.push({ e, other: eA[e]!, categoryId: eCategoryId[e]!, out: false });
-        }
+        const nodeLabels = nodes.map((node) => node.label);
+        const userRank = rankConnectionsRef.current;
+        const toPublic = (connection: NavConnection) => ({
+          other: nodes[connection.other]!,
+          edge: liveEdges[connection.edge]!,
+          categoryId: connection.categoryId,
+          direction: connection.direction,
+          strength: connection.strength,
+        });
+        const connections = buildConnections(
+          nodeCount,
+          edgeEndA,
+          edgeEndB,
+          edgeCategoryIds,
+          linkCategories,
+          userRank
+            ? (a, b) => userRank(toPublic(a), toPublic(b))
+            : defaultRank(nodeLabels, linkCategoryIds),
+        );
+        const neighbourhoodGraph = {
+          inc: connections,
+          eA: edgeEndA,
+          eB: edgeEndB,
+          hidden: nodeHidden,
+          edgeHidden: (e: number) => edgeParams2[e * 4 + A_HIDE] !== 0,
+        };
+        const edgeTiers = new Float32Array(edgeCount);
 
-        let selIdx = -1,
-          hoverIdx = -1,
+        let selectedIndex = -1,
+          hoveredIndex = -1,
           clock = 0,
           glitchUntil = -1,
-          drawnLinks = m;
+          drawnLinks = edgeCount,
+          drawnNodes = nodeCount,
+          visibilityEpoch = 0;
 
-        const kick = (d: number) => {
-          glitchUntil = clock + d;
+        const kick = (seconds: number) => {
+          glitchUntil = clock + seconds;
         };
 
-        // prefers-reduced-motion. Read once here and tracked live, so flipping
-        // the OS setting while the canvas is up takes effect on the next frame
-        // without a remount. Guarded: jsdom and SSR have no matchMedia, and
-        // Safari before 14 has a MediaQueryList with addListener only. The flag
-        // reaches the GPU as `uReduced` (see shaders.ts for what it gates) and
-        // is mirrored onto the canvas as data-nx-reduced-motion so the state is
-        // observable from outside — the uniforms themselves are not.
+        // Guarded: jsdom and SSR lack matchMedia, Safari < 14 has addListener only.
         const motionQuery =
           typeof window.matchMedia === "function"
             ? window.matchMedia("(prefers-reduced-motion: reduce)")
@@ -764,567 +929,792 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
         const applyReduced = () => {
           renderer.domElement.dataset.nxReducedMotion = String(reduced);
         };
-        const onMotionChange = (ev: MediaQueryListEvent) => {
-          reduced = ev.matches;
+        const handleMotionChange = (event: MediaQueryListEvent) => {
+          reduced = event.matches;
           applyReduced();
         };
         if (motionQuery) {
           if (typeof motionQuery.addEventListener === "function")
-            motionQuery.addEventListener("change", onMotionChange);
-          else motionQuery.addListener(onMotionChange);
+            motionQuery.addEventListener("change", handleMotionChange);
+          else motionQuery.addListener(handleMotionChange);
         }
         applyReduced();
         disposables.push(() => {
           if (!motionQuery) return;
           if (typeof motionQuery.removeEventListener === "function")
-            motionQuery.removeEventListener("change", onMotionChange);
-          else motionQuery.removeListener(onMotionChange);
+            motionQuery.removeEventListener("change", handleMotionChange);
+          else motionQuery.removeListener(handleMotionChange);
         });
 
-        if (!reduced) kick(0.8); // glitch flourish riding along with the intro pull-back
+        if (!reduced) kick(0.8);
 
         function refilter() {
           const hiddenNode = new Set(hiddenNodeRef.current ?? []);
           const hiddenLink = new Set(hiddenLinkRef.current ?? []);
-          const isoId = isolateRef.current;
-          const iso = isoId === null || isoId === undefined ? -1 : (idToIndex.get(isoId) ?? -1);
-          let allow: Set<number> | null = null;
-          if (iso >= 0 && iso < n) {
-            allow = new Set([iso]);
-            for (const it of inc[iso]!) allow.add(it.other);
+          const scopedLink = new Set(scopedLinkRef.current ?? []);
+          const isolatedId = isolateRef.current;
+          const isolatedIndex =
+            isolatedId === null || isolatedId === undefined
+              ? -1
+              : (idToIndex.get(isolatedId) ?? -1);
+          const allow = isolationSet(isolatedIndex, edgeEndA, edgeEndB);
+          let shownNodes = 0;
+          for (let i = 0; i < nodeCount; i++) {
+            nodeHidden[i] =
+              hiddenNode.has(nodeCategoryIds[i]!) || (allow !== null && !allow.has(i)) ? 1 : 0;
+            if (!nodeHidden[i]) shownNodes++;
           }
-          for (let i = 0; i < n; i++) {
-            nHide[i] = hiddenNode.has(nCategoryId[i]!) || (allow !== null && !allow.has(i)) ? 1 : 0;
-          }
+          drawnNodes = shownNodes;
           let shown = 0;
-          for (let e = 0; e < m; e++) {
-            const vis = !hiddenLink.has(eCategoryId[e]!) && !nHide[eA[e]!] && !nHide[eB[e]!];
-            eP2[e * 3 + A_HIDE] = vis ? 0 : 1;
-            if (vis) shown++;
+          for (let e = 0; e < edgeCount; e++) {
+            const categoryId = edgeCategoryIds[e]!;
+            const scopedOut =
+              scopedLink.has(categoryId) &&
+              edgeEndA[e] !== selectedIndex &&
+              edgeEndB[e] !== selectedIndex;
+            const isShown =
+              !hiddenLink.has(categoryId) &&
+              !scopedOut &&
+              !nodeHidden[edgeEndA[e]!] &&
+              !nodeHidden[edgeEndB[e]!];
+            edgeParams2[e * 4 + A_HIDE] = isShown ? 0 : 1;
+            if (isShown) shown++;
           }
           drawnLinks = shown;
+          visibilityEpoch++;
           syncNodes();
-          aEP2.needsUpdate = true;
+          edgeParams2Attribute.needsUpdate = true;
         }
         refilter();
 
-        function fitToIndices(indices: Iterable<number>): boolean {
+        function computeBounds(
+          indices?: readonly number[],
+        ): [number, number, number, number] | null {
           let x0 = Infinity,
             y0 = Infinity,
             x1 = -Infinity,
             y1 = -Infinity,
-            any = false;
-          for (const i of indices) {
-            if (nHide[i]) continue;
-            any = true;
-            const x = pos[i * 2]!,
-              y = pos[i * 2 + 1]!;
+            hasAny = false;
+          const count = indices ? indices.length : nodeCount;
+          for (let k = 0; k < count; k++) {
+            const i = indices ? indices[k]! : k;
+            if (nodeHidden[i]) continue;
+            hasAny = true;
+            const x = positions[i * 2]!,
+              y = positions[i * 2 + 1]!;
             if (x < x0) x0 = x;
             if (x > x1) x1 = x;
             if (y < y0) y0 = y;
             if (y > y1) y1 = y;
           }
-          if (!any) return false;
-          const gw = Math.max(1, x1 - x0),
-            gh = Math.max(1, y1 - y0);
-          camT.x = (x0 + x1) / 2;
-          camT.y = (y0 + y1) / 2;
-          camT.zoom = Math.min(16, Math.max(0.12, Math.min(W / (gw * 1.35), H / (gh * 1.35))));
-          return true;
+          return hasAny ? [x0, y0, x1, y1] : null;
         }
-        function fitAll() {
-          const all: number[] = new Array(n);
-          for (let i = 0; i < n; i++) all[i] = i;
-          fitToIndices(all);
-        }
-        // The selected node plus its direct neighbours — the "local
-        // neighbourhood" the select-zoom reveals, not the deeper depth-3 cone
-        // `highlight()` dims/undims for the flow effect.
-        function fitToNeighborhood(idx: number) {
-          const ids = [idx];
-          for (const it of inc[idx]!) ids.push(it.other);
-          if (!fitToIndices(ids)) fitAll();
-        }
-        // Selecting/deselecting drives the camera automatically, but not for
-        // the initial selectedId application at boot — that would fight the
-        // intro pull-back with a fit computed off the pre-physics scatter.
+        // Off during boot: framing the pre-physics scatter would fight the intro sweep.
         let cameraFollowSelection = false;
 
-        function highlight(idx: number) {
-          nDepth.fill(-1);
-          for (let e = 0; e < m; e++) eP2[e * 3 + A_ACT] = 0;
-          if (idx >= 0) {
-            const q = [idx];
-            nDepth[idx] = 0;
-            for (let h = 0; h < q.length; h++) {
-              const v = q[h]!,
-                d = nDepth[v]!;
-              if (d >= 3) continue;
-              for (const it of inc[v]!) {
-                if (nDepth[it.other]! < -0.5 && !nHide[it.other]) {
-                  nDepth[it.other] = d + 1;
-                  q.push(it.other);
-                }
-              }
-            }
-            for (const it of inc[idx]!) eP2[it.e * 3 + A_ACT] = 1;
-            nodeMat.uniforms.uHlStart!.value = clock;
+        function highlight(index: number) {
+          computeNeighbourhood(neighbourhoodGraph, index, nodeDepths, edgeTiers);
+          for (let e = 0; e < edgeCount; e++) edgeParams2[e * 4 + A_TIER] = edgeTiers[e]!;
+          if (index >= 0) {
+            nodeMaterial.uniforms.uHlStart!.value = clock;
           }
           syncNodes();
-          aEP2.needsUpdate = true;
-          const f = idx >= 0 ? 1 : 0;
-          nodeMat.uniforms.uFocus!.value = f;
-          edgeMat.uniforms.uFocus!.value = f;
+          edgeParams2Attribute.needsUpdate = true;
+          const focus = index >= 0 ? 1 : 0;
+          nodeMaterial.uniforms.uFocus!.value = focus;
+          edgeMaterial.uniforms.uFocus!.value = focus;
+          edgeLiveMaterial.uniforms.uFocus!.value = focus;
+          padMaterial.uniforms.uFocus!.value = focus;
         }
-        function showTip(idx: number, sx: number, sy: number) {
-          if (idx < 0 || idx === selIdx) {
-            tip.style.opacity = "0";
-            tip.dataset.k = "";
+        let tooltipIndex = -1,
+          suppressedTooltip = -1;
+        const TOOLTIP_OUT: [number, number] = [0, 0];
+        function showTooltip(index: number) {
+          if (index < 0 || index === selectedIndex || index === suppressedTooltip) {
+            tooltip.style.opacity = "0";
+            tooltip.dataset.k = "";
+            tooltipIndex = -1;
             return;
           }
-          const cat = nodeCategories[nCategoryId[idx]!]!;
-          if (tip.dataset.k !== String(idx)) {
-            tip.dataset.k = String(idx);
-            tip.textContent = "";
-            const a = document.createElement("span");
-            a.style.color = cat.color;
-            a.textContent = nodes[idx]!.label;
-            const b = document.createElement("span");
-            // The old #3D4C39 measured 2.17:1 against the tooltip ground — see
-            // GraphCanvas.contrast.test.ts. This tooltip's ground is
-            // rgba(8,10,9,.95) composited over whatever the canvas is drawing
-            // underneath it, so the worst case is a bright node colour behind
-            // a translucent panel, not the flat dark background: over a node
-            // as bright as #9EFF3D this literal measures 4.5184:1, clearing
-            // the 4.5 AA floor. Kept as a hardcoded literal rather than a
-            // token name on purpose — this package has no dependency on the
-            // tokens layer (FALLBACK_BG/FALLBACK_FG above are the same story),
-            // so naming a token here would go stale silently if that token's
-            // value ever moved again.
-            b.style.color = "#6F8465";
-            b.textContent = " · " + cat.code + " · " + degree[idx];
-            tip.appendChild(a);
-            tip.appendChild(b);
-            tip.style.borderLeftColor = cat.color;
+          tooltipIndex = index;
+          const category = nodeCategories[nodeCategoryIds[index]!]!;
+          if (tooltip.dataset.k !== String(index)) {
+            tooltip.dataset.k = String(index);
+            tooltip.textContent = "";
+            const name = document.createElement("span");
+            name.style.color = category.color;
+            name.textContent = nodes[index]!.label;
+            const meta = document.createElement("span");
+            // 4.5:1 over the brightest node colour behind the translucent ground.
+            meta.style.color = "#6F8465";
+            meta.textContent = " · " + category.code + " · " + degree[index];
+            tooltip.appendChild(name);
+            tooltip.appendChild(meta);
+            tooltip.style.borderLeftColor = category.color;
           }
-          tip.style.transform =
-            "translate3d(" + ((sx + 16) | 0) + "px," + ((sy + 14) | 0) + "px,0)";
-          tip.style.opacity = "1";
+          // Beside the node, on the side fewer of its edges leave from.
+          const anchor = project(
+            positions[index * 2]!,
+            positions[index * 2 + 1]!,
+            rig.live.zoom,
+            rig.live.x,
+            rig.live.y,
+            viewport,
+            TOOLTIP_OUT,
+          );
+          const radius = glyphRadiusPx(nodeRadii[index]!, rig.live.zoom);
+          const width = tooltip.offsetWidth,
+            height = tooltip.offsetHeight;
+          let toRight = 0,
+            toLeft = 0;
+          for (const connection of connections[index]!) {
+            if (positions[connection.other * 2]! >= positions[index * 2]!) toRight++;
+            else toLeft++;
+          }
+          const inset = fitInsetRef.current;
+          const rightX = anchor[0] + radius + 12,
+            leftX = anchor[0] - radius - 12 - width;
+          let x = toRight <= toLeft ? rightX : leftX;
+          if (x === rightX && x + width > viewWidth - inset.right) x = leftX;
+          else if (x === leftX && x < inset.left) x = rightX;
+          const y = Math.min(
+            Math.max(anchor[1] - height / 2, inset.top + 4),
+            Math.max(inset.top + 4, viewHeight - inset.bottom - height - 4),
+          );
+          tooltip.style.transform = "translate3d(" + (x | 0) + "px," + (y | 0) + "px,0)";
+          tooltip.style.opacity = "1";
         }
 
+        // Shader marks: 1 hovered or browsed, 2 selected, +4 keyboard focus.
         function marks() {
-          nSel.fill(0);
-          if (hoverIdx >= 0) nSel[hoverIdx] = 1;
-          if (selIdx >= 0) nSel[selIdx] = 2;
+          nodeMarks.fill(0);
+          if (hoveredIndex >= 0) nodeMarks[hoveredIndex] = 1;
+          const browsed = cursorConnection();
+          if (browsed) nodeMarks[browsed.other] = Math.max(nodeMarks[browsed.other]!, 1);
+          if (selectedIndex >= 0) nodeMarks[selectedIndex] = 2;
+          const focused = focusedNode();
+          if (focused >= 0) nodeMarks[focused] = nodeMarks[focused]! + 4;
           syncNodes();
         }
-        function applySelection(idx: number) {
-          selIdx = idx;
-          if (idx >= 0) kick(0.22);
-          marks();
-          highlight(idx >= 0 ? idx : hoverIdx);
-          if (idx >= 0 && idx === hoverIdx) showTip(-1, 0, 0);
-          if (cameraFollowSelection) {
-            if (idx >= 0) fitToNeighborhood(idx);
-            else fitAll();
+        function applySelection(index: number) {
+          selectedIndex = index;
+          if (navigation) dispatch({ type: "selected", index });
+          const scoped = Boolean(scopedLinkRef.current?.length);
+          if (scoped) refilterKeepingCursor();
+          if (index >= 0) kick(0.22);
+          refresh(scoped);
+          if (index >= 0 && index === hoveredIndex) showTooltip(-1);
+          if (cameraFollowSelection && followSelectionRef.current) {
+            if (index >= 0)
+              rig.frameAround(
+                index,
+                connections[index]!.map((connection) => connection.other),
+              );
+            else rig.release();
           }
         }
         const describe = (i: number): GraphNodeSnapshot => {
-          // Iterates every declared link category in a fixed order (not
-          // discovery order), then drops the empty ones — so the same
-          // category always appears in the same position across different
-          // nodes' adjacency lists, matching the original's `LINK_KEYS.map()`.
+          // Declared category order, so a category sits in the same place for every node.
           const groups = linkCategoryIds
             .map((categoryId) => ({
               categoryId,
-              rows: inc[i]!.filter((it) => it.categoryId === categoryId)
-                .map((it) => ({
-                  id: nodes[it.other]!.id,
-                  label: nodes[it.other]!.label,
-                  categoryId: nCategoryId[it.other]!,
-                  out: it.out,
-                }))
-                .sort((a, b) => a.label.localeCompare(b.label)),
+              // A self-loop is one connection but a row from each end.
+              rows: connections[i]!.filter((connection) => connection.categoryId === categoryId)
+                .flatMap((connection) =>
+                  connection.other === i
+                    ? [
+                        { connection, out: true },
+                        { connection, out: false },
+                      ]
+                    : [{ connection, out: connection.out }],
+                )
+                .sort(
+                  (first, second) =>
+                    nodeLabels[first.connection.other]!.localeCompare(
+                      nodeLabels[second.connection.other]!,
+                    ) ||
+                    first.connection.edge - second.connection.edge ||
+                    Number(second.out) - Number(first.out),
+                )
+                .map(({ connection, out }) => ({
+                  id: nodes[connection.other]!.id,
+                  label: nodes[connection.other]!.label,
+                  categoryId: nodeCategoryIds[connection.other]!,
+                  out,
+                })),
             }))
-            .filter((g) => g.rows.length > 0);
+            .filter((group) => group.rows.length > 0);
           return {
             id: nodes[i]!.id,
-            categoryId: nCategoryId[i]!,
+            categoryId: nodeCategoryIds[i]!,
             label: nodes[i]!.label,
             hex: hex4(i),
-            state: STATE_LABEL[nState[i]!]!,
+            state: STATE_LABEL[nodeStates[i]!]!,
             degree: degree[i]!,
             groups,
-            // Passed through by reference, never read or copied: the consumer
-            // gets back the exact object it put on the node.
             data: nodes[i]!.data,
           };
         };
 
-        api.current.params = (p) => sim.setParams(p);
-        api.current.refilterInternal = () => {
+        const categoryLabel = (i: number) => nodeCategories[nodeCategoryIds[i]!]!.label;
+        const isVisible = (i: number) => i >= 0 && i < nodeCount && nodeHidden[i] === 0;
+        const isEdgeVisible = (e: number) => edgeParams2[e * 4 + A_HIDE] === 0;
+        const fallback = () => {
+          let best = -1;
+          for (let i = 0; i < nodeCount; i++) {
+            if (!isVisible(i)) continue;
+            if (
+              best < 0 ||
+              degree[i]! > degree[best]! ||
+              (degree[i] === degree[best] && nodeLabels[i]!.localeCompare(nodeLabels[best]!) < 0)
+            )
+              best = i;
+          }
+          return best;
+        };
+        // The count spoken on landing must match the list browsing reads.
+        const reachable = (i: number) =>
+          visibleConnections(connections[i]!, isVisible, isEdgeVisible, "all");
+        const describeContext = (i: number, selected: boolean) => ({
+          categoryLabel: categoryLabel(i),
+          connections: reachable(i).length,
+          selected,
+        });
+        const navigationContext: NavContext = {
+          connections: (i, filter) =>
+            visibleConnections(connections[i]!, isVisible, isEdgeVisible, filter),
+          allConnections: (i) => connections[i]!,
+          isVisible,
+          fallback,
+          text: {
+            summary: () => {
+              let shownNodes = 0;
+              for (let i = 0; i < nodeCount; i++) if (isVisible(i)) shownNodes++;
+              const kinds = new Set<string>();
+              for (let e = 0; e < edgeCount; e++)
+                if (isEdgeVisible(e)) kinds.add(edgeCategoryIds[e]!);
+              return summaryText(shownNodes, drawnLinks, kinds.size);
+            },
+            node: (i, selected) =>
+              describeNodeRef.current
+                ? describeNodeRef.current(nodes[i]!, describeContext(i, selected))
+                : defaultNodeText(nodeLabels[i]!, describeContext(i, selected)),
+            connection: (_i, connection, position, of) =>
+              connectionText(
+                linkCategories[connection.categoryId]!,
+                connection,
+                nodeLabels[connection.other]!,
+                categoryLabel(connection.other),
+                position,
+                of,
+              ),
+            filter: filterText,
+            detail: (i, selected) => {
+              const counts = new Map<string, number>();
+              for (const connection of reachable(i)) {
+                const relation = relationText(
+                  linkCategories[connection.categoryId]!,
+                  connection.direction,
+                );
+                counts.set(relation, (counts.get(relation) ?? 0) + 1);
+              }
+              return detailText(nodeLabels[i]!, describeContext(i, selected), [...counts]);
+            },
+            help: HELP_TEXT,
+          },
+        };
+        let navigation: NavState | null = null;
+        let overlay: NavOverlay | null = null;
+
+        function focusedNode(): number {
+          return overlay?.focused && navigation?.entered ? navigation.current : -1;
+        }
+        function cursorConnection(): NavConnection | undefined {
+          if (!navigation || focusedNode() < 0 || navigation.cursor < 0) return undefined;
+          return navigationContext.connections(navigation.current, navigation.filter)[
+            navigation.cursor
+          ];
+        }
+        // Attention follows keyboard focus, then the selection, then the pointer.
+        let highlightTarget = -2,
+          highlightCursorEdge = -1;
+        // The focus target's name never depends on the pointer, so hover doesn't rebuild it.
+        let labelKey = "",
+          labelDescriber: typeof describeNodeRef.current | null = null;
+        function refresh(force = false) {
+          const focused = focusedNode();
+          const target = focused >= 0 ? focused : selectedIndex >= 0 ? selectedIndex : hoveredIndex;
+          const browsed = focused >= 0 ? cursorConnection() : undefined;
+          const cursorEdge = browsed ? browsed.edge : -1;
+          // highlight() restarts the ripple, so only when its centre changes.
+          if (force || target !== highlightTarget || cursorEdge !== highlightCursorEdge) {
+            highlight(target);
+            if (browsed) {
+              for (const connection of connections[focused]!)
+                edgeParams2[connection.edge * 4 + A_TIER] =
+                  connection.edge === browsed.edge ? 1 : TIER_NEARBY;
+              edgeParams2Attribute.needsUpdate = true;
+            }
+            highlightTarget = target;
+            highlightCursorEdge = cursorEdge;
+          }
+          marks();
+          if (overlay && navigation) {
+            const isSelected =
+              navigation.current >= 0 && navigation.selected === navigation.current;
+            const key = `${navigation.current}|${isSelected}|${visibilityEpoch}`;
+            if (key !== labelKey || describeNodeRef.current !== labelDescriber) {
+              labelKey = key;
+              labelDescriber = describeNodeRef.current;
+              overlay.setNode(
+                navigation.current >= 0
+                  ? navigationContext.text.node(navigation.current, isSelected)
+                  : navigationContext.text.summary(),
+                isSelected,
+              );
+            }
+            overlay.setHints(overlay.focused && keyHintsRef.current, fitInsetRef.current);
+          }
+        }
+        function dispatch(action: NavAction, via: SelectSource = "keyboard") {
+          if (!navigation) return;
+          const [next, effects] = navigate(navigation, action, navigationContext);
+          navigation = next;
+          // A filter change is only news to a reader inside the graph.
+          if (effects.announce && (action.type !== "visibility" || overlay?.focused))
+            overlay?.announce(effects.announce);
+          if (effects.select !== undefined) {
+            onSelectRef.current?.(effects.select >= 0 ? describe(effects.select) : null, via);
+          }
+          if (effects.leave && rootEl) {
+            // Untabbable until focus moves on, or the next Tab lands straight back in.
+            overlay?.setTabbable(false);
+            overlay?.blur();
+            rootEl.focus({ preventScroll: true });
+          } else if (effects.leave) overlay?.blur();
+          if (effects.moved && overlay?.focused && navigation.current >= 0)
+            rig.reveal(navigation.current);
+          if (action.type !== "selected" && action.type !== "visibility")
+            onNavigateRef.current?.({
+              action: action.type,
+              node:
+                navigation.entered && navigation.current >= 0 ? describe(navigation.current) : null,
+              announcement: effects.announce ?? "",
+            });
+          refresh();
+        }
+        function handleEscape() {
+          if (navigation && navigation.selected >= 0) return dispatch({ type: "escape" });
+          if (tooltipIndex >= 0) {
+            suppressedTooltip = tooltipIndex;
+            showTooltip(-1);
+            return;
+          }
+          dispatch({ type: "escape" });
+        }
+        if (navigationEl) {
+          overlay = createNavOverlay({
+            container: navigationEl,
+            onAction: dispatch,
+            onEscape: handleEscape,
+            onFocusChange: (focused) => {
+              if (focused && navigation && !navigation.entered) dispatch({ type: "enter" });
+              else refresh();
+            },
+          });
+          const navOverlay = overlay;
+          disposables.push(() => navOverlay.dispose());
+          if (rootEl) {
+            const handleRootBlur = () => navOverlay.setTabbable(true);
+            rootEl.addEventListener("blur", handleRootBlur);
+            disposables.push(() => rootEl.removeEventListener("blur", handleRootBlur));
+          }
+        }
+        const handleWindowKey = (event: KeyboardEvent) => {
+          if (event.key !== "Escape" || tooltipIndex < 0 || overlay?.focused) return;
+          suppressedTooltip = tooltipIndex;
+          showTooltip(-1);
+          // Lets a page-level Escape see that only the tooltip closed.
+          event.preventDefault();
+        };
+        window.addEventListener("keydown", handleWindowKey);
+        disposables.push(() => window.removeEventListener("keydown", handleWindowKey));
+        api.current.focusNode = (index) => {
+          if (!overlay || !navigation) return;
+          dispatch({ type: "focusNode", index });
+          overlay.focus();
+          if (navigation.current >= 0) rig.reveal(navigation.current);
+        };
+        api.current.back = () => dispatch({ type: "back" }, "controller");
+        api.current.canGoBack = () =>
+          navigation ? lastVisible(navigation.history, navigationContext) >= 0 : false;
+        function refilterKeepingCursor() {
+          // Not cursorConnection(): the cursor outlives a Tab out of the graph.
+          const edge =
+            navigation && navigation.cursor >= 0
+              ? navigationContext.connections(navigation.current, navigation.filter)[
+                  navigation.cursor
+                ]?.edge
+              : undefined;
           refilter();
-          highlight(selIdx >= 0 ? selIdx : hoverIdx);
+          dispatch(edge === undefined ? { type: "visibility" } : { type: "visibility", edge });
+        }
+
+        api.current.params = (physics) => simulation.setParams(physics);
+        api.current.refilterInternal = () => {
+          refilterKeepingCursor();
+          refresh(true);
           kick(0.14);
         };
-        api.current.applySelectionInternal = (i) => applySelection(i);
-        api.current.reheat = (v) => {
-          sim.reheat(v);
+        api.current.applySelectionInternal = (index) => applySelection(index);
+        api.current.reheat = (energy) => {
+          simulation.reheat(energy);
           kick(0.3);
         };
-        api.current.getNodeByIndex = (i) => (i >= 0 && i < n ? describe(i) : null);
-        api.current.fit = fitAll;
-        api.current.focus = (i) => {
-          if (i < 0 || i >= n) return;
-          camT.x = pos[i * 2]!;
-          camT.y = pos[i * 2 + 1]!;
-          camT.zoom = Math.max(camT.zoom, 2.6);
+        api.current.reseed = () => {
+          simulation.reseed();
+          positionAttribute.needsUpdate = true;
+          dirty = true;
+          rig.reseed(reduced);
+          kick(0.3);
         };
-        // hiddenNodeCategories/hiddenLinkCategories/isolateId are already
-        // reflected by the unconditional refilter() call above (the refs it
-        // reads are kept current every render, including the first). Initial
-        // selectedId still needs applying explicitly: unlike the original,
-        // where `selected` always started null in the same component,
-        // selectedId is a prop a consumer can pass non-null from first mount.
+        api.current.getNodeByIndex = (index) =>
+          index >= 0 && index < nodeCount ? describe(index) : null;
+        api.current.fit = () => rig.fit();
+        api.current.reframe = () => rig.reframe();
+        api.current.focus = (index) => {
+          if (index >= 0 && index < nodeCount) rig.focus(index);
+        };
         applySelection(
           selectedId === null || selectedId === undefined ? -1 : (idToIndex.get(selectedId) ?? -1),
         );
         cameraFollowSelection = true;
+        // After the initial selection, so it isn't a step back() can undo.
+        navigation = {
+          ...initialNavState(selectedIndex >= 0 ? selectedIndex : fallback()),
+          selected: selectedIndex,
+        };
+        refresh(true);
 
-        let drag = -1,
+        rig.intro(reduced);
+
+        const DRAG_SLOP_PX = 3;
+        let draggedIndex = -1,
           panning = false,
           moved = false,
-          lastP = { x: 0, y: 0 };
+          pressedIndex = -1,
+          pressed = false,
+          pressX = 0,
+          pressY = 0,
+          lastPointer = { x: 0, y: 0 };
         const el = renderer.domElement;
-        function pickNode(wx: number, wy: number): number {
-          let best = -1,
-            bd = Infinity;
-          const grab = Math.max(5, 12 / camZoom);
-          for (let i = 0; i < n; i++) {
-            if (nHide[i]) continue;
-            const dx = pos[i * 2]! - wx,
-              dy = pos[i * 2 + 1]! - wy;
-            const d2 = dx * dx + dy * dy,
-              r = nRadius[i]! + grab;
-            if (d2 < r * r && d2 < bd) {
-              bd = d2;
-              best = i;
+        const handlePointerMove = (event: PointerEvent) => {
+          const rect = el.getBoundingClientRect();
+          const sx = event.clientX - rect.left,
+            sy = event.clientY - rect.top,
+            world = toWorld(sx, sy);
+          simulation.cursor(world.x, world.y, true);
+          if (pressed && draggedIndex < 0 && !panning) {
+            if (Math.hypot(sx - pressX, sy - pressY) > DRAG_SLOP_PX) {
+              if (pressedIndex >= 0) {
+                draggedIndex = pressedIndex;
+              } else {
+                // Only panning ends the auto-fit; a node drag would freeze the intro's tracking.
+                rig.takeOver();
+                panning = true;
+                lastPointer = { x: pressX, y: pressY };
+              }
             }
           }
-          return best;
-        }
-        const onMove = (ev: PointerEvent) => {
-          const rc = el.getBoundingClientRect();
-          const sx = ev.clientX - rc.left,
-            sy = ev.clientY - rc.top,
-            w = toWorld(sx, sy);
-          sim.cursor(w.x, w.y, true);
-          if (drag >= 0) {
-            sim.pin(drag, w.x, w.y);
+          if (draggedIndex >= 0) {
+            simulation.pin(draggedIndex, world.x, world.y);
             moved = true;
             return;
           }
           if (panning) {
-            camera.position.x -= (sx - lastP.x) / camZoom;
-            camera.position.y += (sy - lastP.y) / camZoom;
-            camT.x = camera.position.x;
-            camT.y = camera.position.y;
-            lastP = { x: sx, y: sy };
+            rig.panBy(-(sx - lastPointer.x) / rig.live.zoom, (sy - lastPointer.y) / rig.live.zoom);
+            lastPointer = { x: sx, y: sy };
             moved = true;
             return;
           }
-          const idx = pickNode(w.x, w.y);
-          if (idx !== hoverIdx) {
-            hoverIdx = idx;
-            marks();
-            if (selIdx < 0) highlight(idx);
-            el.style.cursor = idx >= 0 ? "crosshair" : "grab";
+          const index = pickNode(
+            world.x,
+            world.y,
+            nodeCount,
+            positions,
+            nodeRadii,
+            nodeHidden,
+            rig.live.zoom,
+          );
+          if (index !== hoveredIndex) {
+            hoveredIndex = index;
+            suppressedTooltip = -1;
+            refresh();
+            el.style.cursor = index >= 0 ? "crosshair" : "grab";
           }
-          showTip(idx, sx, sy);
+          showTooltip(index);
         };
-        const onDown = (ev: PointerEvent) => {
+        const handlePointerDown = (event: PointerEvent) => {
+          // A click focuses the root without a blur, so restore the Tab path here.
+          overlay?.setTabbable(true);
           try {
-            el.setPointerCapture(ev.pointerId);
+            el.setPointerCapture(event.pointerId);
           } catch {
-            /* noop */
+            // The pointer can already be gone.
           }
-          const rc = el.getBoundingClientRect();
-          const w = toWorld(ev.clientX - rc.left, ev.clientY - rc.top);
-          const idx = pickNode(w.x, w.y);
+          const rect = el.getBoundingClientRect();
+          const world = toWorld(event.clientX - rect.left, event.clientY - rect.top);
           moved = false;
-          if (idx >= 0) {
-            drag = idx;
-            sim.pin(idx, w.x, w.y);
-          } else {
-            panning = true;
-            lastP = { x: ev.clientX - rc.left, y: ev.clientY - rc.top };
-          }
+          pressed = true;
+          pressedIndex = pickNode(
+            world.x,
+            world.y,
+            nodeCount,
+            positions,
+            nodeRadii,
+            nodeHidden,
+            rig.live.zoom,
+          );
+          pressX = event.clientX - rect.left;
+          pressY = event.clientY - rect.top;
           el.style.cursor = "grabbing";
         };
-        const onUp = () => {
-          if (drag >= 0) sim.pin(-1, 0, 0);
-          drag = -1;
+        const handlePointerUp = () => {
+          if (draggedIndex >= 0) simulation.pin(-1, 0, 0);
+          draggedIndex = -1;
           panning = false;
-          el.style.cursor = hoverIdx >= 0 ? "crosshair" : "grab";
+          pressed = false;
+          el.style.cursor = hoveredIndex >= 0 ? "crosshair" : "grab";
         };
-        const onClick = (ev: MouseEvent) => {
+        const handleClick = (event: MouseEvent) => {
           if (moved) return;
-          const rc = el.getBoundingClientRect();
-          const w = toWorld(ev.clientX - rc.left, ev.clientY - rc.top);
-          const idx = pickNode(w.x, w.y);
-          const next = idx >= 0 && idx !== selIdx ? idx : -1;
-          onSelectRef.current?.(next >= 0 ? describe(next) : null);
+          const rect = el.getBoundingClientRect();
+          const world = toWorld(event.clientX - rect.left, event.clientY - rect.top);
+          const index = pickNode(
+            world.x,
+            world.y,
+            nodeCount,
+            positions,
+            nodeRadii,
+            nodeHidden,
+            rig.live.zoom,
+          );
+          const next = index >= 0 && index !== selectedIndex ? index : -1;
+          onSelectRef.current?.(next >= 0 ? describe(next) : null, "pointer");
         };
-        const onWheel = (ev: WheelEvent) => {
-          ev.preventDefault();
-          const rc = el.getBoundingClientRect();
-          const sx = ev.clientX - rc.left,
-            sy = ev.clientY - rc.top;
-          // Anchor against the TARGET camera, not the smoothed one. Solving
-          // against a lagging camera makes fast scrolls compound their error.
+        const handleWheel = (event: WheelEvent) => {
+          event.preventDefault();
+          rig.takeOver();
+          const targetCamera = rig.target;
+          const rect = el.getBoundingClientRect();
+          const sx = event.clientX - rect.left,
+            sy = event.clientY - rect.top;
+          // Anchor on the target camera: the smoothed one lags and compounds fast scrolls.
           viewport.curve = opticsRef.current.curve;
-          const b = unproject(sx, sy, camT.zoom, camT.x, camT.y, viewport);
-          camT.zoom = Math.min(16, Math.max(0.12, camT.zoom * Math.exp(-ev.deltaY * 0.0015)));
-          const a = unproject(sx, sy, camT.zoom, camT.x, camT.y, viewport);
-          camT.x += b.x - a.x;
-          camT.y += b.y - a.y;
+          const before = unproject(
+            sx,
+            sy,
+            targetCamera.zoom,
+            targetCamera.x,
+            targetCamera.y,
+            viewport,
+          );
+          targetCamera.zoom = Math.min(
+            ZOOM_MAX,
+            Math.max(ZOOM_MIN, targetCamera.zoom * Math.exp(-event.deltaY * 0.0015)),
+          );
+          const after = unproject(
+            sx,
+            sy,
+            targetCamera.zoom,
+            targetCamera.x,
+            targetCamera.y,
+            viewport,
+          );
+          targetCamera.x += before.x - after.x;
+          targetCamera.y += before.y - after.y;
         };
-        const onLeave = () => {
-          sim.cursor(0, 0, false);
-          hoverIdx = -1;
-          marks();
-          showTip(-1, 0, 0);
-          if (selIdx < 0) highlight(-1);
+        const handlePointerLeave = () => {
+          simulation.cursor(0, 0, false);
+          hoveredIndex = -1;
+          suppressedTooltip = -1;
+          refresh();
+          showTooltip(-1);
         };
-        el.addEventListener("pointermove", onMove);
-        el.addEventListener("pointerdown", onDown);
-        window.addEventListener("pointerup", onUp);
-        el.addEventListener("click", onClick);
-        el.addEventListener("pointerleave", onLeave);
-        el.addEventListener("wheel", onWheel, { passive: false });
+        el.addEventListener("pointermove", handlePointerMove);
+        el.addEventListener("pointerdown", handlePointerDown);
+        window.addEventListener("pointerup", handlePointerUp);
+        el.addEventListener("click", handleClick);
+        el.addEventListener("pointerleave", handlePointerLeave);
+        el.addEventListener("wheel", handleWheel, { passive: false });
         el.style.cursor = "grab";
         disposables.push(() => {
-          el.removeEventListener("pointermove", onMove);
-          el.removeEventListener("pointerdown", onDown);
-          window.removeEventListener("pointerup", onUp);
-          el.removeEventListener("click", onClick);
-          el.removeEventListener("pointerleave", onLeave);
-          el.removeEventListener("wheel", onWheel);
+          el.removeEventListener("pointermove", handlePointerMove);
+          el.removeEventListener("pointerdown", handlePointerDown);
+          window.removeEventListener("pointerup", handlePointerUp);
+          el.removeEventListener("click", handleClick);
+          el.removeEventListener("pointerleave", handlePointerLeave);
+          el.removeEventListener("wheel", handleWheel);
         });
 
-        let raf = 0,
+        let frameRequest = 0,
           last = performance.now(),
-          accum = 0,
+          accumulator = 0,
           dirty = true;
-        let fA = 0,
-          fN = 0,
-          fT = 0;
+        let fpsSum = 0,
+          fpsFrames = 0,
+          fpsElapsed = 0;
 
-        /* Label placement runs every frame over every visible node, so its
-         working set is allocated once here and refilled in place rather than
-         rebuilt per frame. The old version built a fresh `cand` array of
-         `[score, index]` tuples and a `boxes` array of `[x, y, w]` tuples each
-         time: at 60fps on a few hundred nodes that is tens of thousands of
-         short-lived arrays a second, all of it garbage the collector has to
-         walk during the animation it is trying not to interrupt.
-
-         `candOrder` is sorted by score through a subarray view of the first
-         `candN` entries — one view object per frame instead of one array per
-         candidate. */
-        const candScore = new Float64Array(n);
-        const candOrder = new Int32Array(n);
-        const boxX = new Float64Array(POOL),
-          boxY = new Float64Array(POOL),
-          boxW = new Float64Array(POOL);
-        let boxN = 0;
-        const screenPos = new Map<number, [number, number, number, number]>();
+        const screenPositions = new Map<number, PlacedLabel>();
+        const frameGeometry: FrameGeometry = {
+          ids: denseIds,
+          positions,
+          hidden: nodeHidden,
+          radii: nodeRadii,
+          camera: { x: 0, y: 0, zoom: 1 },
+          viewport,
+        };
+        const FOCUS_OUT: [number, number] = [0, 0];
 
         function frame(now: number) {
-          raf = requestAnimationFrame(frame);
+          frameRequest = requestAnimationFrame(frame);
           const dt = Math.min(0.05, (now - last) / 1000);
           last = now;
           clock += dt;
-          const t0 = performance.now();
-          const c = opticsRef.current;
-          viewport.curve = c.curve;
+          const frameStart = performance.now();
+          const optics = opticsRef.current;
+          viewport.curve = optics.curve;
 
           let didStep = false;
-          if (runRef.current || drag >= 0) {
-            accum += dt;
-            let s = 0;
-            while (accum >= 1 / 60 && s < 3) {
-              if (sim.step()) didStep = true;
-              accum -= 1 / 60;
-              s++;
+          if (runRef.current || draggedIndex >= 0) {
+            accumulator += dt;
+            let steps = 0;
+            while (accumulator >= 1 / 60 && steps < 3) {
+              if (simulation.step()) didStep = true;
+              accumulator -= 1 / 60;
+              steps++;
             }
             if (didStep) {
-              aPos.needsUpdate = true;
+              positionAttribute.needsUpdate = true;
               dirty = true;
             }
-          } else accum = 0;
+          } else accumulator = 0;
 
-          const sp = 1 - Math.pow(0.0045, dt);
-          camera.position.x += (camT.x - camera.position.x) * sp;
-          camera.position.y += (camT.y - camera.position.y) * sp;
-          camZoom += (camT.zoom - camZoom) * sp;
-          camera.zoom = camZoom;
+          rig.tick({ dt, stepped: didStep, settled: simulation.isSettled(), reduced });
+          camera.position.x = rig.live.x;
+          camera.position.y = rig.live.y;
+          const zoom = rig.live.zoom;
+          if (onFrameRef.current) {
+            frameGeometry.camera.x = rig.live.x;
+            frameGeometry.camera.y = rig.live.y;
+            frameGeometry.camera.zoom = zoom;
+            onFrameRef.current(frameGeometry);
+          }
+          camera.zoom = zoom;
           camera.updateProjectionMatrix();
-          px = 1 / camZoom;
+          pixelSize = 1 / zoom;
 
           if (dirty) {
-            for (let e = 0; e < m; e++) {
-              const a = eA[e]!,
-                b = eB[e]!;
-              eAPos[e * 2] = pos[a * 2]!;
-              eAPos[e * 2 + 1] = pos[a * 2 + 1]!;
-              eBPos[e * 2] = pos[b * 2]!;
-              eBPos[e * 2 + 1] = pos[b * 2 + 1]!;
+            for (let e = 0; e < edgeCount; e++) {
+              const a = edgeEndA[e]!,
+                b = edgeEndB[e]!;
+              edgeAPositions[e * 2] = positions[a * 2]!;
+              edgeAPositions[e * 2 + 1] = positions[a * 2 + 1]!;
+              edgeBPositions[e * 2] = positions[b * 2]!;
+              edgeBPositions[e * 2 + 1] = positions[b * 2 + 1]!;
             }
-            aEA.needsUpdate = true;
-            aEB.needsUpdate = true;
+            edgeAAttribute.needsUpdate = true;
+            edgeBAttribute.needsUpdate = true;
             dirty = didStep;
           }
 
-          nodeMat.uniforms.uTime!.value = clock;
-          nodeMat.uniforms.uPx!.value = px;
-          nodeMat.uniforms.uGlow!.value = c.glow;
-          edgeMat.uniforms.uTime!.value = clock;
-          edgeMat.uniforms.uPx!.value = px;
-          edgeMat.uniforms.uWidth!.value = c.edgeWidth;
-          edgeMat.uniforms.uOpacity!.value = c.edgeOpacity;
-          edgeMat.uniforms.uFlowSpeed!.value = c.flowSpeed;
-          fadeMat.uniforms.uAlpha!.value = 1 - c.trails * 0.94;
+          nodeMaterial.uniforms.uTime!.value = clock;
+          nodeMaterial.uniforms.uPx!.value = pixelSize;
+          nodeMaterial.uniforms.uGlow!.value = optics.glow;
           const uReduced = reduced ? 1 : 0;
-          edgeMat.uniforms.uReduced!.value = uReduced;
-          nodeMat.uniforms.uReduced!.value = uReduced;
-          fadeMat.uniforms.uReduced!.value = uReduced;
-          compMat.uniforms.uReduced!.value = uReduced;
+          for (const material of [edgeMaterial, edgeLiveMaterial]) {
+            material.uniforms.uTime!.value = clock;
+            material.uniforms.uPx!.value = pixelSize;
+            material.uniforms.uWidth!.value = optics.edgeWidth;
+            material.uniforms.uOpacity!.value = optics.edgeOpacity;
+            material.uniforms.uFlowSpeed!.value = optics.flowSpeed;
+            material.uniforms.uReduced!.value = uReduced;
+          }
+          padMaterial.uniforms.uPx!.value = pixelSize;
+          padMaterial.uniforms.uWidth!.value = optics.edgeWidth;
+          padMaterial.uniforms.uOpacity!.value = optics.edgeOpacity;
+          fadeMaterial.uniforms.uAlpha!.value = 1 - optics.trails * 0.94;
+          nodeMaterial.uniforms.uReduced!.value = uReduced;
+          fadeMaterial.uniforms.uReduced!.value = uReduced;
+          compositeMaterial.uniforms.uReduced!.value = uReduced;
 
-          // The composite shader already gates the bands on uReduced; not
-          // scheduling bursts at all just keeps the uniform at zero instead of
-          // handing the GPU a value it is going to multiply away.
-          if (!reduced && c.glitch > 0 && clock > glitchUntil && Math.random() < 0.0022 * c.glitch)
+          if (
+            !reduced &&
+            optics.glitch > 0 &&
+            clock > glitchUntil &&
+            Math.random() < 0.0022 * optics.glitch
+          )
             kick(0.1 + Math.random() * 0.22);
-          const gActive = !reduced && clock < glitchUntil ? c.glitch : 0;
+          const glitchAmount = !reduced && clock < glitchUntil ? optics.glitch : 0;
 
-          renderer.setRenderTarget(sceneRT);
+          renderer.setRenderTarget(sceneTarget);
           renderer.render(scene, camera);
 
-          blurMat.uniforms.uTex!.value = sceneRT.texture;
-          blurMat.uniforms.uDir!.value.set(1, 0);
-          blurMat.uniforms.uThresh!.value = 0.34;
-          fsQuad.material = blurMat;
+          blurMaterial.uniforms.uTex!.value = sceneTarget.texture;
+          blurMaterial.uniforms.uDir!.value.set(1, 0);
+          blurMaterial.uniforms.uThresh!.value = 0.34;
+          screenQuad.material = blurMaterial;
           renderer.setRenderTarget(bloomA);
           renderer.clear();
-          renderer.render(postScene, postCam);
-          blurMat.uniforms.uTex!.value = bloomA.texture;
-          blurMat.uniforms.uDir!.value.set(0, 1);
-          blurMat.uniforms.uThresh!.value = 0.0;
+          renderer.render(postScene, postCamera);
+          blurMaterial.uniforms.uTex!.value = bloomA.texture;
+          blurMaterial.uniforms.uDir!.value.set(0, 1);
+          blurMaterial.uniforms.uThresh!.value = 0.0;
           renderer.setRenderTarget(bloomB);
           renderer.clear();
-          renderer.render(postScene, postCam);
+          renderer.render(postScene, postCamera);
 
-          compMat.uniforms.uScene!.value = sceneRT.texture;
-          compMat.uniforms.uBloom!.value = bloomB.texture;
-          compMat.uniforms.uTime!.value = clock;
-          compMat.uniforms.uScan!.value = c.scan;
-          compMat.uniforms.uAberr!.value = c.aberr;
-          compMat.uniforms.uCurve!.value = c.curve;
-          compMat.uniforms.uGrain!.value = c.grain;
-          compMat.uniforms.uBloomAmt!.value = c.bloom;
-          compMat.uniforms.uGlitch!.value = gActive;
-          fsQuad.material = compMat;
+          compositeMaterial.uniforms.uScene!.value = sceneTarget.texture;
+          compositeMaterial.uniforms.uBloom!.value = bloomB.texture;
+          compositeMaterial.uniforms.uTime!.value = clock;
+          compositeMaterial.uniforms.uScan!.value = optics.scan;
+          compositeMaterial.uniforms.uAberr!.value = optics.aberr;
+          compositeMaterial.uniforms.uCurve!.value = optics.curve;
+          compositeMaterial.uniforms.uGrain!.value = optics.grain;
+          compositeMaterial.uniforms.uBloomAmt!.value = optics.bloom;
+          compositeMaterial.uniforms.uGlitch!.value = glitchAmount;
+          screenQuad.material = compositeMaterial;
           renderer.setRenderTarget(null);
           renderer.clear();
-          renderer.render(postScene, postCam);
+          renderer.render(postScene, postCamera);
 
-          /* ------------------------------------------------- label placement
-           Anchored via project(), so the label sits at the node's *drawn*
-           position and its gap is a constant number of pixels at any zoom.
-           A leader tick makes the association explicit when nodes crowd.   */
-          boxN = 0;
-          screenPos.clear();
-          const mode = labelModeRef.current;
-          if (mode !== "off") {
-            const cx = camera.position.x,
-              cy = camera.position.y;
-            const hw = (W / 2) * px * 1.15,
-              hh = (H / 2) * px * 1.15;
-            const focused = selIdx >= 0 || hoverIdx >= 0;
-            let candN = 0;
-            for (let i = 0; i < n; i++) {
-              if (nHide[i]) continue;
-              const x = pos[i * 2]!,
-                y = pos[i * 2 + 1]!;
-              if (Math.abs(x - cx) > hw || Math.abs(y - cy) > hh) continue;
-
-              const cat = nodeCategories[nCategoryId[i]!]!;
-              const isTarget = i === selIdx || i === hoverIdx;
-              const inFlow = nDepth[i]! >= 0; // inside the active neighbourhood
-              const landmark = cat.tier === 0;
-
-              // Three ways to earn a name: you're the target, you're in the
-              // active flow, or your tier has come into range at this zoom.
-              let earns: boolean;
-              if (mode === "all") earns = true;
-              else if (mode === "key") earns = landmark || isTarget || nDepth[i] === 1;
-              else earns = isTarget || inFlow || camZoom >= TIER_ZOOM[cat.tier]!;
-              if (!earns) continue;
-
-              // While something is focused, everything outside the flow steps
-              // back — except landmarks, which you need to keep your bearings.
-              if (focused && !inFlow && !isTarget && !landmark) continue;
-
-              let sc = nRadius[i]! + (3 - cat.tier) * 9;
-              if (inFlow) sc += nDepth[i] === 1 ? 70 : 30;
-              if (i === hoverIdx) sc += 1e4;
-              if (i === selIdx) sc += 2e4;
-              candScore[i] = sc;
-              candOrder[candN++] = i;
-            }
-            // Sorts the live prefix in place — a subarray is a view on the same
-            // buffer, not a copy, so nothing here is reallocated per frame.
-            candOrder.subarray(0, candN).sort((a, b) => candScore[b]! - candScore[a]!);
-            for (let k = 0; k < candN && screenPos.size < POOL; k++) {
-              const i = candOrder[k]!;
-              const sp2 = project(pos[i * 2]!, pos[i * 2 + 1]!, camZoom, cx, cy, viewport, OUT);
-              const sx = sp2[0],
-                sy = sp2[1];
-              if (sx < -60 || sx > W + 60 || sy < -24 || sy > H + 24) continue;
-              const bx = sx + glyphRadiusPx(nRadius[i]!, camZoom) + 8;
-              const by = sy - LAB_H * 0.5;
-              const bw = labelWidth(i);
-              let hit = false;
-              for (let q = 0; q < boxN; q++) {
-                const qx = boxX[q]!,
-                  qy = boxY[q]!,
-                  qw = boxW[q]!;
-                if (bx < qx + qw && bx + bw > qx && by < qy + LAB_H && by + LAB_H > qy) {
-                  hit = true;
-                  break;
-                }
-              }
-              if (hit) continue;
-              const cat2 = nodeCategories[nCategoryId[i]!]!;
-              const op =
-                i === selIdx || i === hoverIdx
-                  ? 1
-                  : nDepth[i]! >= 0
-                    ? 0.92
-                    : selIdx >= 0 || hoverIdx >= 0
-                      ? 0.28 // landmark, holding position
-                      : cat2.tier === 0
-                        ? 0.82
-                        : 0.52;
-              boxX[boxN] = bx;
-              boxY[boxN] = by;
-              boxW[boxN] = bw;
-              boxN++;
-              screenPos.set(i, [bx, by, op, cat2.tier === 0 ? 1 : 0]);
-            }
+          labelView.zoom = zoom;
+          labelView.cx = camera.position.x;
+          labelView.cy = camera.position.y;
+          labelView.mode = labelModeRef.current;
+          labelView.selIdx = selectedIndex;
+          const keyboardFocus = focusedNode();
+          labelView.hoverIdx = keyboardFocus >= 0 ? keyboardFocus : hoveredIndex;
+          labelPlacer.place(labelView, screenPositions);
+          if (overlay && navigation && navigation.current >= 0) {
+            const current = navigation.current;
+            const focusPoint = project(
+              positions[current * 2]!,
+              positions[current * 2 + 1]!,
+              zoom,
+              rig.live.x,
+              rig.live.y,
+              viewport,
+              FOCUS_OUT,
+            );
+            overlay.place(
+              focusPoint[0],
+              focusPoint[1],
+              glyphRadiusPx(nodeRadii[current]!, zoom) * 2,
+            );
           }
           for (let k = 0; k < POOL; k++) {
-            if (owner[k]! >= 0 && !screenPos.has(owner[k]!)) {
+            if (owner[k]! >= 0 && !screenPositions.has(owner[k]!)) {
               owner[k] = -1;
               labels[k]!.style.opacity = "0";
             }
@@ -1332,77 +1722,63 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
           const held = new Set<number>();
           for (let k = 0; k < POOL; k++) if (owner[k]! >= 0) held.add(owner[k]!);
           let free = 0;
-          for (const id of screenPos.keys()) {
+          for (const id of screenPositions.keys()) {
             if (held.has(id)) continue;
             while (free < POOL && owner[free]! >= 0) free++;
             if (free >= POOL) break;
             owner[free] = id;
-            const cat3 = nodeCategories[nCategoryId[id]!]!;
-            const L3 = labels[free]!;
-            L3.textContent = nodes[id]!.label;
-            L3.style.color = cat3.color;
-            // Landmarks read heavier so the eye can find structure without
-            // parsing every name on screen.
-            L3.style.fontSize = cat3.tier === 0 ? "10.5px" : "9px";
-            L3.style.fontWeight = cat3.tier === 0 ? "700" : "500";
-            L3.style.letterSpacing = cat3.tier === 0 ? ".16em" : ".08em";
+            const category = nodeCategories[nodeCategoryIds[id]!]!;
+            const poolLabel = labels[free]!;
+            poolLabel.textContent = nodes[id]!.label;
+            poolLabel.style.color = category.color;
+            poolLabel.style.fontSize = category.tier === 0 ? "10.5px" : "9px";
+            poolLabel.style.fontWeight = category.tier === 0 ? "700" : "500";
+            poolLabel.style.letterSpacing = category.tier === 0 ? ".16em" : ".08em";
             held.add(id);
           }
           for (let k = 0; k < POOL; k++) {
             const id = owner[k]!;
             if (id < 0) continue;
-            const p = screenPos.get(id)!;
-            labels[k]!.style.transform = `translate3d(${p[0] | 0}px,${p[1] | 0}px,0)`;
-            labels[k]!.style.opacity = String(p[2]);
+            const placed = screenPositions.get(id)!;
+            labels[k]!.style.transform = `translate3d(${placed[0] | 0}px,${placed[1] | 0}px,0)`;
+            labels[k]!.style.opacity = String(placed[2]);
           }
 
-          fA += 1 / Math.max(dt, 1e-4);
-          fN++;
-          fT += dt;
-          if (fT > 0.5) {
+          fpsSum += 1 / Math.max(dt, 1e-4);
+          fpsFrames++;
+          fpsElapsed += dt;
+          if (fpsElapsed > 0.5) {
             const stats: GraphStats = {
-              fps: Math.round(fA / fN),
-              nodes: n,
-              edges: m,
-              frameMs: +(performance.now() - t0).toFixed(2),
-              settled: sim.isSettled(),
+              fps: Math.round(fpsSum / fpsFrames),
+              nodes: nodeCount,
+              edges: edgeCount,
+              frameMs: +(performance.now() - frameStart).toFixed(2),
+              settled: simulation.isSettled(),
+              drawnNodes,
               drawnEdges: drawnLinks,
             };
             onStatsRef.current?.(stats);
-            fA = 0;
-            fN = 0;
-            fT = 0;
+            fpsSum = 0;
+            fpsFrames = 0;
+            fpsElapsed = 0;
           }
         }
-        raf = requestAnimationFrame(frame);
-        disposables.push(() => cancelAnimationFrame(raf));
+        frameRequest = requestAnimationFrame(frame);
+        disposables.push(() => cancelAnimationFrame(frameRequest));
 
-        // A lost context can't be drawn to. three's WebGLRenderer registers its
-        // own listeners on this canvas: its webglcontextlost handler calls
-        // preventDefault() — so the browser IS asked to restore the context —
-        // and its webglcontextrestored handler re-initialises three's GL state.
-        // This component deliberately does not resume: the frame loop stops
-        // here and the failure surfaces the same way a thrown boot does,
-        // through the halt panel and onFatal, and nothing in this component
-        // listens for webglcontextrestored (a future change could, and restart
-        // the loop). Unmount still drains everything above. Registered last so
-        // it is the first thing removed on teardown — the forceContextLoss() in
-        // cleanup fires this very event.
-        const onContextLost = () => {
-          cancelAnimationFrame(raf);
+        // Not resumed on restore. Registered last so teardown removes it before forceContextLoss() fires it.
+        const handleContextLost = () => {
+          cancelAnimationFrame(frameRequest);
           const message = "WebGL context lost";
           setFatal(message);
           onFatalRef.current?.(message);
         };
-        el.addEventListener("webglcontextlost", onContextLost);
-        disposables.push(() => el.removeEventListener("webglcontextlost", onContextLost));
+        el.addEventListener("webglcontextlost", handleContextLost);
+        disposables.push(() => el.removeEventListener("webglcontextlost", handleContextLost));
       }
-      // Deliberate: this effect builds and tears down the entire WebGL scene, so
-      // it may only re-run when the graph data itself changes. Optics, callbacks
-      // and selection are read through the refs above precisely so a slider drag
-      // doesn't reallocate every buffer on the GPU.
+      // Rebuilds the whole WebGL scene, so only graph data re-runs it; the rest is read through refs.
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [nodes, edges, nodeCategories, linkCategories]);
+    }, [nodes, edges, nodeCategories, linkCategories, seed, invalidEdges, keyboardNavigation]);
 
     if (fatal) {
       return (
@@ -1426,18 +1802,14 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
       );
     }
 
-    // role="img" is only meaningful paired with a name: an image role with no
-    // accessible name is itself a WCAG 2.0 A / axe "role-img-alt" violation —
-    // worse than the bare div this replaced, since a bare div at least isn't
-    // announced as a nameless image. So the role only appears when ariaLabel
-    // is actually supplied; omitting the prop leaves the root role-less, the
-    // same as before this feature existed.
-    const hasAriaLabel = Boolean(ariaLabel);
-
+    // A group, not an image: children of role="img" are hidden from assistive tech.
     return (
       <div
-        role={hasAriaLabel ? "img" : undefined}
-        aria-label={hasAriaLabel ? ariaLabel : undefined}
+        ref={rootRef}
+        role={keyboardNavigation ? "group" : hasName ? "img" : undefined}
+        aria-roledescription={keyboardNavigation ? "graph" : undefined}
+        aria-label={hasName ? ariaLabel : undefined}
+        tabIndex={keyboardNavigation ? -1 : undefined}
         style={{
           position: "relative",
           width: "100%",
@@ -1449,15 +1821,17 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
         className={className}
       >
         <div ref={mountRef} style={{ position: "absolute", inset: 0 }} />
-        {/* Rotating label pool + tooltip are placement-driven decoration, not
-          content — aria-hidden here backstops the same attribute set on each
-          element as it's created in boot(), so the whole layer reads as
-          hidden even before the canvas mounts. */}
         <div
           ref={labelRef}
           aria-hidden="true"
           style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
         />
+        {keyboardNavigation && (
+          <div
+            ref={navigationRef}
+            style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
+          />
+        )}
       </div>
     );
   },

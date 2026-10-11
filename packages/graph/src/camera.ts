@@ -99,3 +99,49 @@ export function unproject(
 export function glyphRadiusPx(radius: number, zoom: number): number {
   return Math.max(radius * zoom, 2.2) * 0.912;
 }
+
+/** Screen-edge padding, in CSS pixels, that framing keeps the graph clear of (floating chrome). */
+export interface FitInset {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
+export const NO_INSET: FitInset = { top: 0, right: 0, bottom: 0, left: 0 };
+
+/** Camera zoom limits; every camera move clamps to these. */
+export const ZOOM_MIN = 0.12;
+export const ZOOM_MAX = 16;
+
+const FIT_PADDING = 1.35;
+
+/** World offset from canvas centre to free-box centre at `zoom`. Subtract x, add y (screen +y is down). */
+export function insetOffset(inset: FitInset, zoom: number): readonly [number, number] {
+  return [(inset.left - inset.right) / 2 / zoom, (inset.top - inset.bottom) / 2 / zoom];
+}
+
+/** Camera target framing (x0, y0)–(x1, y1) in the free area, which is clamped to ≥ 64px a side. */
+export function fitBounds(
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  width: number,
+  height: number,
+  inset: FitInset = NO_INSET,
+): { x: number; y: number; zoom: number } {
+  const boxWidth = Math.max(1, x1 - x0),
+    boxHeight = Math.max(1, y1 - y0);
+  const freeWidth = Math.max(64, width - inset.left - inset.right);
+  const freeHeight = Math.max(64, height - inset.top - inset.bottom);
+  const zoom = Math.min(
+    ZOOM_MAX,
+    Math.max(
+      ZOOM_MIN,
+      Math.min(freeWidth / (boxWidth * FIT_PADDING), freeHeight / (boxHeight * FIT_PADDING)),
+    ),
+  );
+  const [offsetX, offsetY] = insetOffset(inset, zoom);
+  return { x: (x0 + x1) / 2 - offsetX, y: (y0 + y1) / 2 + offsetY, zoom };
+}

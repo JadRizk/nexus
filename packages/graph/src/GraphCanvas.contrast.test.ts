@@ -78,9 +78,9 @@ function literal(re: RegExp, what: string): string {
   return m[1];
 }
 
-/** The secondary span's colour, from showTip(): `b.style.color = "#xxxxxx"`. */
+/** The secondary span's colour, from showTooltip(): `meta.style.color = "#xxxxxx"`. */
 const SHIPPED_TEXT_HEX = literal(
-  /b\.style\.color = "(#[0-9a-fA-F]{6})"/,
+  /meta\.style\.color = "(#[0-9a-fA-F]{6})"/,
   "tooltip secondary-text colour",
 );
 

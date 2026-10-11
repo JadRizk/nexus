@@ -74,13 +74,14 @@
   --nx-btn-border: var(--nx-border-accent);
 }
 
-.nx-btn:disabled {
+/* aria-disabled for a button that loses its action while focused: disabled would drop focus to <body>. */
+.nx-btn:is(:disabled, [aria-disabled="true"]) {
   --nx-btn-fg: var(--nx-fg-disabled);
 
   cursor: not-allowed;
 }
 
-.nx-btn:disabled:hover {
+.nx-btn:is(:disabled, [aria-disabled="true"]):hover {
   --nx-btn-bg: transparent;
   --nx-btn-border: var(--nx-border-default);
 }
@@ -361,6 +362,101 @@
   padding: var(--nx-space-4) var(--nx-space-5);
   border-top: var(--nx-hairline) solid var(--nx-drawer-divider, var(--nx-border-default));
   flex-shrink: 0;
+}
+
+/* -------------------------------------------------------------- GraphOutline */
+/* Plain document styles on purpose: the text alternative should read as text, not a HUD. */
+.nx-graph-outline {
+  font-family: var(--nx-font-mono);
+  font-size: var(--nx-text-md);
+  color: var(--nx-fg-default);
+}
+
+.nx-graph-outline__summary {
+  margin: 0 0 var(--nx-space-4);
+  color: var(--nx-fg-muted);
+}
+
+.nx-graph-outline__group + .nx-graph-outline__group {
+  margin-top: var(--nx-space-5);
+}
+
+.nx-graph-outline__heading {
+  margin: 0 0 var(--nx-space-2);
+  font-size: var(--nx-text-sm);
+  letter-spacing: var(--nx-track-wide);
+  text-transform: uppercase;
+  color: var(--nx-fg-accent);
+}
+
+.nx-graph-outline__count,
+.nx-graph-outline__meta,
+.nx-graph-outline__kind {
+  color: var(--nx-fg-muted);
+}
+
+.nx-graph-outline__nodes,
+.nx-graph-outline__connections {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.nx-graph-outline__node {
+  border-top: var(--nx-hairline) solid var(--nx-border-default);
+}
+
+.nx-graph-outline__node > summary {
+  display: flex;
+  gap: var(--nx-space-3);
+  align-items: baseline;
+  padding: var(--nx-space-2) 0;
+  cursor: pointer;
+}
+
+.nx-graph-outline__node > summary:focus-visible,
+.nx-graph-outline__select:focus-visible,
+.nx-graph-outline__jump:focus-visible {
+  outline: var(--nx-focus-width) solid var(--nx-focus-ring);
+  outline-offset: var(--nx-focus-offset);
+}
+
+.nx-graph-outline__node[data-selected] .nx-graph-outline__label {
+  color: var(--nx-fg-accent);
+}
+
+.nx-graph-outline__meta {
+  margin-left: auto;
+  font-size: var(--nx-text-sm);
+}
+
+.nx-graph-outline__connections {
+  padding: 0 0 var(--nx-space-3) var(--nx-space-4);
+}
+
+.nx-graph-outline__connections > li {
+  padding: var(--nx-space-1) 0;
+}
+
+.nx-graph-outline__select,
+.nx-graph-outline__jump {
+  font: inherit;
+  color: var(--nx-fg-info);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.nx-graph-outline__select,
+.nx-graph-outline__selected {
+  margin: 0 0 var(--nx-space-2) var(--nx-space-4);
+}
+
+.nx-graph-outline__selected {
+  color: var(--nx-fg-accent);
 }
 
 /* ---------------------------------------------------------------- HazardRule */
