@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import type { RefObject } from "react";
+import type { ReactNode, RefObject } from "react";
 import {
   NexusProvider,
   Panel,
@@ -18,6 +18,7 @@ import type { DocPage } from "./site.js";
 import { PageHeader } from "./components/Spec.js";
 import { SitePalette, useSitePalette } from "./components/SitePalette.js";
 import { REPO } from "./repo.js";
+import { useIsPhone } from "./phone.js";
 
 type View =
   | { kind: "home" }
@@ -247,10 +248,19 @@ function RouteContent({ view, path }: { view: View; path: string }) {
   switch (view.kind) {
     case "home":
       return <HomePage />;
+    // Keyed, so "Open it anyway" on one lab is not carried to the other.
     case "graph":
-      return <NexusCyberdeck />;
+      return (
+        <DesktopLab key="graph" name="Graph">
+          <NexusCyberdeck />
+        </DesktopLab>
+      );
     case "glitch":
-      return <GlitchLab />;
+      return (
+        <DesktopLab key="glitch" name="Glitch Lab">
+          <GlitchLab />
+        </DesktopLab>
+      );
     case "doc":
       return (
         <div className="sc-doc">
@@ -396,6 +406,37 @@ function DocsNav({ path, title }: { path: string; title: string }) {
           </div>
         ))}
       </nav>
+    </div>
+  );
+}
+
+/**
+ * A lab is a docked desktop console with no phone layout. On a phone it is not
+ * offered from the header, Home or Search; reached anyway (a shared link), it
+ * says so before mounting, and lets the visitor open it regardless.
+ */
+function DesktopLab({ name, children }: { name: string; children: ReactNode }) {
+  const isPhone = useIsPhone();
+  const [isForced, setIsForced] = useState(false);
+  if (!isPhone || isForced) return <>{children}</>;
+  return (
+    <div style={PAGE}>
+      <h1 style={{ margin: 0, fontSize: "var(--nx-text-xl)", textTransform: "uppercase" }}>
+        {name} is built for a desktop
+      </h1>
+      <p style={{ color: "var(--nx-fg-subtle)", lineHeight: "var(--nx-leading-body)" }}>
+        It is a console of docked panels around a live canvas, laid out for a wide window. On a
+        screen this narrow the panels do not fit.
+      </p>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--nx-space-3)" }}>
+        <a href={href("start")} className="nx-btn sc-cta" data-active="1">
+          Browse the docs
+        </a>
+        <a href={href()} className="nx-btn sc-cta">
+          Home
+        </a>
+        <Button onClick={() => setIsForced(true)}>Open it anyway</Button>
+      </div>
     </div>
   );
 }

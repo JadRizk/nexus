@@ -442,7 +442,8 @@
 /* ------------------------------------------------------------ phone only */
 
 /* The labs (Graph, Glitch Lab) are docked desktop consoles with no phone
-   layout, so a phone is not offered them. Last in the file, so it overrides
+   layout, so a phone is not offered them. phone.ts holds this same width for
+   script: the Search palette and the labs' own phone notice read it. Last in the file, so it overrides
    the display of whatever it is set on. */
 @media (width < 640px) {
   .sc-desktop-only {
