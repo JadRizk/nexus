@@ -1286,17 +1286,17 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
             );
           }
           for (let k = 0; k < LABEL_POOL_SIZE; k++) {
-            if (owner[k]! >= 0 && !screenPositions.has(owner[k]!)) {
+            if (owner[k] >= 0 && !screenPositions.has(owner[k])) {
               owner[k] = -1;
               labels[k].style.opacity = "0";
             }
           }
           const held = new Set<number>();
-          for (let k = 0; k < LABEL_POOL_SIZE; k++) if (owner[k]! >= 0) held.add(owner[k]!);
+          for (let k = 0; k < LABEL_POOL_SIZE; k++) if (owner[k] >= 0) held.add(owner[k]);
           let free = 0;
           for (const id of screenPositions.keys()) {
             if (held.has(id)) continue;
-            while (free < LABEL_POOL_SIZE && owner[free]! >= 0) free++;
+            while (free < LABEL_POOL_SIZE && owner[free] >= 0) free++;
             if (free >= LABEL_POOL_SIZE) break;
             owner[free] = id;
             const category = nodeCategories[nodeCategoryIds[id]];
@@ -1309,7 +1309,7 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
             held.add(id);
           }
           for (let k = 0; k < LABEL_POOL_SIZE; k++) {
-            const id = owner[k]!;
+            const id = owner[k];
             if (id < 0) continue;
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- an owner >= 0 is always in screenPositions: the loop above clears the rest, and new owners come from its keys
             const placed = screenPositions.get(id)!;
