@@ -1,8 +1,10 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import type { ReactElement, RefAttributes } from "react";
 import * as THREE from "three";
-import { createPhysics, computeDegree } from "./physics.js";
-import { mulberry32, seedFromIds } from "./random.js";
+import { createPhysics } from "./physics.js";
+import { mulberry32 } from "./random.js";
+import { prepareGraph } from "./prepare.js";
+import { A_HIDE, A_TIER, packBuffers } from "./buffers.js";
 import { glyphRadiusPx, project, unproject, ZOOM_MAX, ZOOM_MIN } from "./camera.js";
 import { createCameraRig } from "./camera-rig.js";
 import type { FitInset } from "./camera.js";
@@ -10,7 +12,6 @@ import { computeNeighbourhood, isolationSet, TIER_NEARBY } from "./neighbourhood
 import { pickNode } from "./picking.js";
 import { createLabelPlacer } from "./labels.js";
 import type { LabelView, PlacedLabel } from "./labels.js";
-import { validateGraph } from "./validate.js";
 import { buildConnections, defaultRank, visibleConnections } from "./a11y/adjacency.js";
 import { initialNavState, lastVisible, navigate } from "./a11y/navigator.js";
 import type { NavAction, NavContext, NavState } from "./a11y/navigator.js";
@@ -35,16 +36,13 @@ import {
   PAD_VS,
   PAD_FS,
   EDGE_ATTRS,
-  DEFAULT_ARC_BOW,
-  encodeGain,
-  encodeRouting,
   FADE_VS,
   FADE_FS,
   POST_VS,
   BLUR_FS,
   COMPOSITE_FS,
 } from "./shaders.js";
-import { STATE_LABEL, ORPHAN_STATE } from "./types.js";
+import { STATE_LABEL } from "./types.js";
 import type {
   GraphCanvasProps,
   GraphController,
@@ -87,9 +85,6 @@ export const DEFAULT_OPTICS: Readonly<OpticsConfig> = {
   bloom: 0.85,
   glitch: 0.5,
 };
-
-// Where edges stop short of a node's centre, in node radii; the same at both ends.
-const EDGE_END_TRIM = 1.15;
 
 // Four full-screen passes at dpr 2 cost a lot of fill the CRT grain hides anyway.
 const MAX_DPR = 1.6;
@@ -339,62 +334,34 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
       ) {
         const {
           idToIndex,
-          eA: edgeEndA,
-          eB: edgeEndB,
-          edges: liveEdges,
+          edgeEndA,
+          edgeEndB,
+          liveEdges,
           dropped,
-        } = validateGraph(nodes, edges, nodeCategories, linkCategories, invalidEdges);
+          nodeCount,
+          edgeCount,
+          nodeCategoryIds,
+          denseIds,
+          edgeCategoryIds,
+          linkCategoryIds,
+          degree,
+          nodeStates,
+          layoutSeed,
+          physicsGraph,
+        } = prepareGraph({ nodes, edges, nodeCategories, linkCategories, invalidEdges, seed });
         idToIndexRef.current = idToIndex;
-        const nodeCount = nodes.length,
-          edgeCount = liveEdges.length;
         if (dropped.length > 0) {
           const message = `GraphCanvas: dropped ${dropped.length} edge(s) whose endpoint matches no node`;
           if (onWarningRef.current) onWarningRef.current(message, { dropped });
           else console.warn(message, dropped);
         }
 
-        const nodeCategoryIds = nodes.map((node) => node.categoryId);
-        const denseIds = nodes.map((node) => node.id);
-        const edgeCategoryIds = liveEdges.map((edge) => edge.categoryId);
-        const linkCategoryIds = Object.keys(linkCategories);
-        const degree = computeDegree(
-          Array.from({ length: edgeCount }, (_, e) => ({ a: edgeEndA[e]!, b: edgeEndB[e]! })),
-          nodeCount,
-        );
-        const nodeStates = new Uint8Array(nodeCount);
-        for (let i = 0; i < nodeCount; i++)
-          nodeStates[i] = degree[i] === 0 ? ORPHAN_STATE : (nodes[i]!.state ?? 1);
-
-        const layoutSeed =
-          seed === null ? undefined : (seed ?? seedFromIds(nodes.map((node) => node.id)));
         // A separate stream, so drawing shader seeds never moves a node.
         const visualRandom =
           layoutSeed === undefined ? Math.random : mulberry32(layoutSeed ^ 0x5bd1e995);
 
         const simulation = createPhysics(
-          {
-            nodes: nodes.map((node) => {
-              const category = nodeCategories[node.categoryId]!;
-              // Spread only when defined: under exactOptionalPropertyTypes `undefined` isn't absent.
-              const sectorAngle = node.sectorAngle ?? category.sectorAngle;
-              const radiusTarget = node.radiusTarget ?? category.radiusTarget;
-              return {
-                charge: category.charge,
-                mass: category.mass,
-                ...(sectorAngle === undefined ? {} : { sectorAngle }),
-                ...(radiusTarget === undefined ? {} : { radiusTarget }),
-              };
-            }),
-            edges: Array.from({ length: edgeCount }, (_, e) => {
-              const category = linkCategories[edgeCategoryIds[e]!]!;
-              return {
-                a: edgeEndA[e]!,
-                b: edgeEndB[e]!,
-                dist: category.dist,
-                strength: category.strength,
-              };
-            }),
-          },
+          physicsGraph,
           layoutSeed === undefined ? {} : { seed: layoutSeed },
         );
         // The params effect can't reach the solver on the render that creates it.
@@ -423,60 +390,34 @@ export const GraphCanvas = forwardRef<GraphController, GraphCanvasProps>(
         const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, -10, 10);
         camera.position.z = 5;
 
-        const nodeRadii = new Float32Array(nodeCount),
-          nodeShapes = new Float32Array(nodeCount);
-        const nodeColors = new Float32Array(nodeCount * 3),
-          nodeSeeds = new Float32Array(nodeCount);
-        const nodeDepths = new Float32Array(nodeCount).fill(-1);
-        const nodeMarks = new Float32Array(nodeCount),
-          nodeHidden = new Float32Array(nodeCount);
-        const nodeTiers = new Float32Array(nodeCount);
-        const scratchColor = new THREE.Color();
-        for (let i = 0; i < nodeCount; i++) {
-          const category = nodeCategories[nodeCategoryIds[i]!]!;
-          nodeRadii[i] =
-            (nodes[i]!.size ?? category.size) *
-            (1 + Math.min(1.4, Math.log2(1 + degree[i]!) * 0.16));
-          nodeShapes[i] = category.shape;
-          scratchColor.set(category.color);
-          nodeColors[i * 3] = scratchColor.r;
-          nodeColors[i * 3 + 1] = scratchColor.g;
-          nodeColors[i * 3 + 2] = scratchColor.b;
-          nodeSeeds[i] = visualRandom();
-          nodeTiers[i] = category.tier;
-        }
-        const edgeAPositions = new Float32Array(edgeCount * 2),
-          edgeBPositions = new Float32Array(edgeCount * 2);
-        const edgeColors = new Float32Array(edgeCount * 3);
-        const edgeParams0 = new Float32Array(edgeCount * EDGE_ATTRS.iP0); // width, curve, dash, signed gain
-        const edgeParams1 = new Float32Array(edgeCount * EDGE_ATTRS.iP1); // flow, seed, radA, radB
-        const edgeParams2 = new Float32Array(edgeCount * EDGE_ATTRS.iP2); // tier, hide, jit, fray
-        const A_TIER = 0,
-          A_HIDE = 1,
-          A_JIT = 2,
-          A_FRAY = 3;
-        for (let e = 0; e < edgeCount; e++) {
-          const category = linkCategories[edgeCategoryIds[e]!]!;
-          scratchColor.set(category.color);
-          edgeColors[e * 3] = scratchColor.r;
-          edgeColors[e * 3 + 1] = scratchColor.g;
-          edgeColors[e * 3 + 2] = scratchColor.b;
-          edgeParams0[e * 4] = category.width;
-          // Alternating sign keeps adjacent arcs from overlapping.
-          edgeParams0[e * 4 + 1] = encodeRouting(
-            category.routing,
-            (category.curve ?? DEFAULT_ARC_BOW) * (e % 2 === 0 ? 1 : -1),
-          );
-          edgeParams0[e * 4 + 2] = category.dash ?? 0;
-          edgeParams0[e * 4 + 3] = encodeGain(category.gain ?? 1, category.directed ?? true);
-          edgeParams1[e * 4] = category.flow ?? 0;
-          edgeParams1[e * 4 + 1] = visualRandom();
-          edgeParams1[e * 4 + 2] = nodeRadii[edgeEndA[e]!]! * EDGE_END_TRIM;
-          edgeParams1[e * 4 + 3] = nodeRadii[edgeEndB[e]!]! * EDGE_END_TRIM;
-          edgeParams2[e * 4 + A_JIT] = category.jit ?? 0;
-          const absent = liveEdges[e]!.absentEnd;
-          edgeParams2[e * 4 + A_FRAY] = absent === "b" ? 1 : absent === "a" ? 2 : 0;
-        }
+        // After the Scene and Camera: unseeded, their uuids draw from the same Math.random.
+        const {
+          nodeRadii,
+          nodeShapes,
+          nodeColors,
+          nodeSeeds,
+          nodeDepths,
+          nodeMarks,
+          nodeHidden,
+          nodeTiers,
+          edgeAPositions,
+          edgeBPositions,
+          edgeColors,
+          edgeParams0,
+          edgeParams1,
+          edgeParams2,
+        } = packBuffers({
+          nodes,
+          nodeCategories,
+          nodeCategoryIds,
+          degree,
+          liveEdges,
+          linkCategories,
+          edgeCategoryIds,
+          edgeEndA,
+          edgeEndB,
+          visualRandom,
+        });
         const dynamicAttribute = (values: Float32Array, size: number) => {
           const attribute = new THREE.InstancedBufferAttribute(values, size);
           attribute.setUsage(THREE.DynamicDrawUsage);
