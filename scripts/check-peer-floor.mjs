@@ -76,9 +76,9 @@ try {
         extends: undefined,
         compilerOptions,
         include: ["src"],
-        // The unit tests import vitest, which a consumer never installs; the
-        // point here is the published surface, not the suite.
-        exclude: ["src/**/*.test.ts", "src/**/*.test.tsx"],
+        // The unit tests and their harness import vitest, which a consumer
+        // never installs; the point here is the published surface, not the suite.
+        exclude: ["src/**/*.test.ts", "src/**/*.test.tsx", "src/harness/**"],
       },
       null,
       2,

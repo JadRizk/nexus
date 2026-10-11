@@ -1,0 +1,211 @@
+== isolateId n0
+-- frame 61 +16ms
+  p0.target = rt0
+  p0.camera = 0.0125279,0,0,0,0,0.0167038,0,0,0,0,-0.1,0,0,0,0,1,-4.00344,-2.48993,5
+  p0.FADE@-10 = visible=true g0 instances=- range=0+Infinity
+  FADE@-10.material = blend=Normal(SrcAlpha,OneMinusSrcAlpha,Add) premultiplied=false side=Front transparent=true depthTest=false depthWrite=false
+  p0.FADE@-10.uColor = [0.00242822,0.00273174,0.00303527]
+  p0.FADE@-10.uAlpha = 0.8496
+  p0.FADE@-10.uReduced = 0
+  g0.position = +0 2df7970aef29
+  p0.EDGE@0 = visible=true g1 instances=12 range=0+Infinity
+  EDGE@0.material = blend=Custom(One,OneMinusSrcAlpha,Add) premultiplied=true side=Double transparent=true depthTest=false depthWrite=false
+  p0.EDGE@0.uPx = 0.199555
+  p0.EDGE@0.uWidth = 1.3
+  p0.EDGE@0.uTime = 0.976
+  p0.EDGE@0.uOpacity = 0.4
+  p0.EDGE@0.uFlowSpeed = 0.24
+  p0.EDGE@0.uFocus = 0
+  p0.EDGE@0.uSignal = 1
+  p0.EDGE@0.uPass = 0
+  p0.EDGE@0.uReduced = 0
+  g1.position = +0 1bf59c962ef9
+  g1.iA = +1 e01cb147204c
+  g1.iB = +1 89cdd12f6ee9
+  g1.iColor = +0 dc321c508c57
+  g1.iP0 = +0 28a50cf3df55
+  g1.iP1 = +0 73811d635264
+  g1.iP2 = +2 eb8c1e214478
+  g1.index = +0 393b80d3d117
+  p0.PAD@1 = visible=true g2 instances=12 range=0+Infinity
+  PAD@1.material = blend=Custom(One,OneMinusSrcAlpha,Add) premultiplied=true side=Double transparent=true depthTest=false depthWrite=false
+  p0.PAD@1.uPx = 0.199555
+  p0.PAD@1.uWidth = 1.3
+  p0.PAD@1.uOpacity = 0.4
+  p0.PAD@1.uFocus = 0
+  g2.aPad = +0 7f7caa2f12a7
+  g2.iA = same as g1.iA
+  g2.iB = same as g1.iB
+  g2.iColor = same as g1.iColor
+  g2.iP0 = same as g1.iP0
+  g2.iP1 = same as g1.iP1
+  g2.iP2 = same as g1.iP2
+  g2.index = +0 76cc1cfa7521
+  p0.EDGE@2 = visible=true g1 instances=12 range=0+Infinity
+  EDGE@2.material = blend=Custom(One,One,Add) premultiplied=false side=Double transparent=true depthTest=false depthWrite=false
+  p0.EDGE@2.uPx = 0.199555
+  p0.EDGE@2.uWidth = 1.3
+  p0.EDGE@2.uTime = 0.976
+  p0.EDGE@2.uOpacity = 0.4
+  p0.EDGE@2.uFlowSpeed = 0.24
+  p0.EDGE@2.uFocus = 0
+  p0.EDGE@2.uSignal = 1
+  p0.EDGE@2.uPass = 1
+  p0.EDGE@2.uReduced = 0
+  p0.NODE@3 = visible=true g3 instances=10 range=0+Infinity
+  NODE@3.material = blend=Custom(One,One,Add) premultiplied=false side=Front transparent=true depthTest=false depthWrite=false
+  p0.NODE@3.uTime = 0.976
+  p0.NODE@3.uPx = 0.199555
+  p0.NODE@3.uHlStart = -999
+  p0.NODE@3.uGlow = 0.8
+  p0.NODE@3.uFocus = 0
+  p0.NODE@3.uReduced = 0
+  g3.position = +0 648d854b9b02
+  g3.iPos = +1 a2f3991d6935
+  g3.iColor = +0 0b6311e3c1d5
+  g3.iN0 = +4 4794de960729
+  g3.iN1 = +4 330dcb55edfb
+  g3.index = +0 3afbb62a75d6
+  p1.target = rt1
+  p1.camera = 1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0
+  p1.POST/BLUR@0 = visible=true g4 instances=- range=0+Infinity
+  POST/BLUR@0.material = blend=Normal(SrcAlpha,OneMinusSrcAlpha,Add) premultiplied=false side=Front transparent=false depthTest=false depthWrite=false
+  p1.POST/BLUR@0.uTex = rt0.texture
+  p1.POST/BLUR@0.uTexel = [0.00234742,0.003125]
+  p1.POST/BLUR@0.uDir = [1,0]
+  p1.POST/BLUR@0.uThresh = 0.34
+  g4.position = +0 2df7970aef29
+  g4.uv = +0 5564a224d45a
+  p2.target = rt2
+  p2.camera = 1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0
+  p2.POST/BLUR@0 = visible=true g4 instances=- range=0+Infinity
+  p2.POST/BLUR@0.uTex = rt1.texture
+  p2.POST/BLUR@0.uTexel = [0.00234742,0.003125]
+  p2.POST/BLUR@0.uDir = [0,1]
+  p2.POST/BLUR@0.uThresh = 0
+  p3.target = screen
+  p3.camera = 1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0
+  p3.POST/COMPOSITE@0 = visible=true g4 instances=- range=0+Infinity
+  POST/COMPOSITE@0.material = blend=Normal(SrcAlpha,OneMinusSrcAlpha,Add) premultiplied=false side=Front transparent=false depthTest=false depthWrite=false
+  p3.POST/COMPOSITE@0.uScene = rt0.texture
+  p3.POST/COMPOSITE@0.uBloom = rt2.texture
+  p3.POST/COMPOSITE@0.uRes = [1280,960]
+  p3.POST/COMPOSITE@0.uTime = 0.976
+  p3.POST/COMPOSITE@0.uScan = 0.55
+  p3.POST/COMPOSITE@0.uAberr = 0.5
+  p3.POST/COMPOSITE@0.uCurve = 0.55
+  p3.POST/COMPOSITE@0.uGrain = 0.45
+  p3.POST/COMPOSITE@0.uBloomAmt = 0.85
+  p3.POST/COMPOSITE@0.uGlitch = 0.5
+  p3.POST/COMPOSITE@0.uReduced = 0
+  renderer.calls = target:rt0 render target:rt1 clear render target:rt2 clear render target:screen clear render
+  onFrame.ids = ["n0","n1","n2","n3","n4","n5","n6","n7","n8","n9"]
+  onFrame.positions = "#a2f3991d6935"
+  onFrame.hidden = "#33d74b2ecaf5"
+  onFrame.radii = "#880e433a0fea"
+  onFrame.camera = {"x":-4.00344,"y":-2.48993,"zoom":5.01115}
+  onFrame.viewport = {"width":800,"height":600,"curve":0.55}
+  label.0 = Node 0 | translate3d(759px,316px,0) | opacity 0.82
+  label.1 = Node 8 | translate3d(627px,234px,0) | opacity 0
+  label.2 = Node 2 | translate3d(476px,256px,0) | opacity 0
+  label.3 = Node 9 | translate3d(244px,149px,0) | opacity 0
+  label.4 = Node 1 | translate3d(327px,352px,0) | opacity 0.52
+  label.5 = Node 6 | translate3d(616px,108px,0) | opacity 0
+  label.6 = Node 4 | translate3d(670px,469px,0) | opacity 0
+  label.7 = Node 3 | translate3d(434px,112px,0) | opacity 0.82
+  label.8 = Node 7 | translate3d(114px,365px,0) | opacity 0
+  label.9 = Node 5 | translate3d(411px,514px,0) | opacity 0
+  dom = 63908f8950ed
+-- frame 62 +16ms
+  p0.camera = 0.0125218,0,0,0,0,0.0166957,0,0,0,0,-0.1,0,0,0,0,1,-3.98884,-2.51507,5
+  p0.EDGE@0.uPx = 0.199652
+  p0.EDGE@0.uTime = 0.992
+  g1.iA = +1 f18e65aad864
+  g1.iB = +1 58be7f1dcc6e
+  g1.iP2 = +0 eb8c1e214478
+  p0.PAD@1.uPx = 0.199652
+  p0.EDGE@2.uPx = 0.199652
+  p0.EDGE@2.uTime = 0.992
+  p0.NODE@3.uTime = 0.992
+  p0.NODE@3.uPx = 0.199652
+  g3.iPos = +1 bc0229cde7e9
+  g3.iN0 = +0 4794de960729
+  g3.iN1 = +0 330dcb55edfb
+  p3.POST/COMPOSITE@0.uTime = 0.992
+  onFrame.positions = "#bc0229cde7e9"
+  onFrame.camera = {"x":-3.98884,"y":-2.51507,"zoom":5.00872}
+  label.4 = Node 1 | translate3d(326px,351px,0) | opacity 0.52
+  dom = b62ef9b4e224
+-- frame 63 +16ms
+  p0.camera = 0.0125231,0,0,0,0,0.0166975,0,0,0,0,-0.1,0,0,0,0,1,-3.94352,-2.51509,5
+  p0.EDGE@0.uPx = 0.199631
+  p0.EDGE@0.uTime = 1.008
+  g1.iA = +1 82a4f320819c
+  g1.iB = +1 29a9fc820768
+  p0.PAD@1.uPx = 0.199631
+  p0.EDGE@2.uPx = 0.199631
+  p0.EDGE@2.uTime = 1.008
+  p0.NODE@3.uTime = 1.008
+  p0.NODE@3.uPx = 0.199631
+  g3.iPos = +1 3c8e0be1ec12
+  p3.POST/COMPOSITE@0.uTime = 1.008
+  onFrame.positions = "#3c8e0be1ec12"
+  onFrame.camera = {"x":-3.94352,"y":-2.51509,"zoom":5.00924}
+  label.0 = Node 0 | translate3d(758px,317px,0) | opacity 0.82
+  dom = 0b2e6b824888
+== isolateId null
+-- frame 64 +16ms
+onStats [{"fps":63,"nodes":10,"edges":12,"frameMs":0,"settled":false,"drawnNodes":10,"drawnEdges":12}]
+  p0.camera = 0.012523,0,0,0,0,0.0166974,0,0,0,0,-0.1,0,0,0,0,1,-3.90877,-2.52011,5
+  p0.EDGE@0.uPx = 0.199632
+  p0.EDGE@0.uTime = 1.024
+  g1.iA = +1 f04077fa0e9a
+  g1.iB = +1 64ec96d819bd
+  g1.iP2 = +2 d7699308c38c
+  p0.PAD@1.uPx = 0.199632
+  p0.EDGE@2.uPx = 0.199632
+  p0.EDGE@2.uTime = 1.024
+  p0.NODE@3.uTime = 1.024
+  p0.NODE@3.uPx = 0.199632
+  g3.iPos = +1 6819058f133c
+  g3.iN0 = +4 4794de960729
+  g3.iN1 = +4 38d6224695d1
+  p3.POST/COMPOSITE@0.uTime = 1.024
+  onFrame.positions = "#6819058f133c"
+  onFrame.hidden = "#b80de5d13875"
+  onFrame.camera = {"x":-3.90877,"y":-2.52011,"zoom":5.00921}
+  label.0 = Node 0 | translate3d(758px,318px,0) | opacity 0.82
+  label.1 = Node 6 | translate3d(615px,105px,0) | opacity 0.82
+  label.2 = Node 9 | translate3d(244px,148px,0) | opacity 0.82
+  label.3 = Node 4 | translate3d(668px,469px,0) | opacity 0.52
+  label.4 = Node 1 | translate3d(325px,351px,0) | opacity 0.52
+  label.5 = Node 2 | translate3d(477px,261px,0) | opacity 0.52
+  label.6 = Node 5 | translate3d(413px,511px,0) | opacity 0.52
+  label.7 = Node 3 | translate3d(434px,113px,0) | opacity 0.82
+  label.8 = Node 7 | translate3d(113px,366px,0) | opacity 0.52
+  label.9 = Node 8 | translate3d(629px,229px,0) | opacity 0.52
+  dom = 02873a3c1613
+-- frame 65 +16ms
+  p0.camera = 0.0125217,0,0,0,0,0.0166956,0,0,0,0,-0.1,0,0,0,0,1,-3.88362,-2.52938,5
+  p0.EDGE@0.uPx = 0.199653
+  p0.EDGE@0.uTime = 1.04
+  g1.iA = +1 dcaad4be4b42
+  g1.iB = +1 55923698bed1
+  g1.iP2 = +0 d7699308c38c
+  p0.PAD@1.uPx = 0.199653
+  p0.EDGE@2.uPx = 0.199653
+  p0.EDGE@2.uTime = 1.04
+  p0.NODE@3.uTime = 1.04
+  p0.NODE@3.uPx = 0.199653
+  g3.iPos = +1 eb0bbbd57c73
+  g3.iN0 = +0 4794de960729
+  g3.iN1 = +0 38d6224695d1
+  p3.POST/COMPOSITE@0.uTime = 1.04
+  onFrame.positions = "#eb0bbbd57c73"
+  onFrame.camera = {"x":-3.88362,"y":-2.52938,"zoom":5.00869}
+  label.0 = Node 0 | translate3d(757px,319px,0) | opacity 0.82
+  label.1 = Node 6 | translate3d(614px,104px,0) | opacity 0.82
+  label.3 = Node 4 | translate3d(667px,469px,0) | opacity 0.52
+  label.5 = Node 2 | translate3d(477px,263px,0) | opacity 0.52
+  label.9 = Node 8 | translate3d(629px,228px,0) | opacity 0.52
+  dom = 14e5eb98ae5f

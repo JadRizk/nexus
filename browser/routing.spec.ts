@@ -29,14 +29,91 @@ test("a deep link opens its page and marks it current in both navs", async ({ pa
   );
 });
 
-test("the header nav is links with real hrefs, and Home is the bare URL", async ({ page }) => {
+test("the header nav is links with real hrefs, and the wordmark is Home", async ({ page }) => {
   await gotoPage(page, "home");
-  await expect(nav(page).getByRole("link", { name: "Home" })).toHaveAttribute("href", "#/");
+  const home = banner(page).getByRole("link", { name: "Nexus, home" });
+  await expect(home).toHaveAttribute("href", "#/");
+  await expect(home).toHaveAttribute("aria-current", "page");
+  await expect(nav(page).getByRole("link", { name: "Home" })).toHaveCount(0);
   await expect(nav(page).getByRole("link", { name: "Docs" })).toHaveAttribute("href", "#/start");
   await expect(nav(page).getByRole("link", { name: "Graph" })).toHaveAttribute(
     "href",
     "#/labs/graph",
   );
+});
+
+test("the header links the repository to star", async ({ page }) => {
+  await gotoPage(page, "home");
+  await expect(banner(page).getByRole("link", { name: "Star Nexus on GitHub" })).toHaveAttribute(
+    "href",
+    "https://github.com/JadRizk/nexus",
+  );
+});
+
+test("a phone is not offered the labs, which have no phone layout", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await gotoPage(page, "home");
+  for (const name of ["Graph", "Glitch Lab"]) {
+    await expect(nav(page).getByRole("link", { name })).toBeHidden();
+    await expect(page.locator(".sc-route", { hasText: name })).toBeHidden();
+  }
+  await expect(nav(page).getByRole("link", { name: "Docs" })).toBeVisible();
+  // The header still fits one row: nothing pushes the page sideways.
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
+
+  // Nor does Search offer them, and they come back at desktop width: the
+  // control, so the absence is not just a query that matches nothing.
+  await banner(page)
+    .getByRole("button", { name: /Search/ })
+    .click();
+  const search = page.getByRole("dialog");
+  await search.getByRole("combobox").fill("lab");
+  const glitchLab = search.getByRole("option").filter({ hasText: "Glitch Lab" });
+  await expect(glitchLab).toHaveCount(0);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await expect(glitchLab).toHaveCount(1);
+});
+
+test("a lab reached on a phone says it is built for a desktop, and opens anyway on request", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await gotoPage(page, "labs/graph");
+  await expect(page.getByRole("heading", { name: "Graph is built for a desktop" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Browse the docs" })).toHaveAttribute(
+    "href",
+    "#/start",
+  );
+  await page.getByRole("button", { name: "Open it anyway" }).click();
+  await expect(page.getByRole("heading", { name: /built for a desktop/ })).toHaveCount(0);
+  await expect(page.locator("main canvas").first()).toBeAttached();
+
+  // Opening one lab anyway does not open the other.
+  await page.evaluate(() => (window.location.hash = "#/labs/glitch"));
+  await expect(
+    page.getByRole("heading", { name: "Glitch Lab is built for a desktop" }),
+  ).toBeVisible();
+});
+
+test("on a phone the docs sidebar folds behind a toggle and closes on a choice", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await gotoPage(page, "components/button");
+  const toggle = page.getByRole("button", { name: /Pages/ });
+  const sidebar = page.getByRole("navigation", { name: "Documentation" });
+  await expect(toggle).toContainText("Button");
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await expect(sidebar).toBeHidden();
+
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await sidebar.getByRole("link", { name: "Slider" }).click();
+  await expect(page).toHaveURL(/#\/components\/slider$/);
+  await expect(toggle).toContainText("Slider");
+  await expect(sidebar).toBeHidden();
+  // The page has the width the sidebar used to take.
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
 });
 
 test("the sidebar lists exactly the pages the suite tests", async ({ page }) => {

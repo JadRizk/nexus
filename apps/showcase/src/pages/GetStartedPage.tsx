@@ -38,7 +38,9 @@ export default function App() {
   );
 }`}
       >
-        <Panel corners={["tl", "br"]} raised style={{ width: 280 }}>
+        {/* The snippet's panel, capped so a 320px phone does not push it
+            past the edge. */}
+        <Panel corners={["tl", "br"]} raised style={{ width: 280, maxWidth: "100%" }}>
           <SectionHeading>/// subject</SectionHeading>
           <Stat label="Class" value="NODE" tone="info" />
           <Button active>Isolate</Button>
