@@ -40,7 +40,7 @@
     "@changesets/cli": "^3.0.3",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.63.0",
-    "@types/node": "^20.19.43",
+    "@types/node": "^26.6.5",
     "@vitest/coverage-v8": "^4.1.11",
     "axe-core": "^4.13.0",
     "esbuild": "^0.27.0",
